@@ -44,17 +44,21 @@ export async function POST(req: NextRequest) {
       // @ts-ignore
       const discordUserId = session.user.discordId || "Unknown";
       
+      // Dopasuj pytania (labels) do odpowiedzi
+      const templateFields = JSON.parse(template.fields);
+      const dynamicFields = Object.keys(data).map(key => {
+        const fieldConfig = templateFields.find((f: any) => f.id === key);
+        const label = fieldConfig ? fieldConfig.label : key;
+        const value = data[key]?.toString().trim() || "Brak";
+        return { name: label, value: value.length > 1024 ? value.substring(0, 1020) + "..." : value, inline: fieldConfig?.type !== "long" };
+      });
+
       const embed = {
         title: "📄 Nowe podanie o rekrutację!",
         color: 0x00FF00,
         fields: [
-          { name: "👤 Użytkownik", value: `<@${discordUserId}>`, inline: true },
-          { name: "🎮 Nick", value: data.nickname || "Brak", inline: true },
-          { name: "🎂 Wiek", value: data.age?.toString() || "Brak", inline: true },
-          { name: "⏱ Godziny (Steam)", value: data.hours?.toString() || "Brak", inline: true },
-          { name: "⚔ Rola", value: data.role || "Brak", inline: true },
-          { name: "🎙 Mikrofon", value: data.mic || "Brak", inline: true },
-          { name: "📝 Powód", value: data.reason || "Brak", inline: false },
+          { name: "👤 Użytkownik", value: `<@${discordUserId}>`, inline: false },
+          ...dynamicFields
         ],
         footer: { text: `Submission ID: ${submission.id}` }
       };

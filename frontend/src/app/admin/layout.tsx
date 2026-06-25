@@ -37,6 +37,9 @@ export default async function AdminLayout({
           <Link href="/admin/submissions" className="nav-link">
             <FolderIcon /> Archiwum Podań
           </Link>
+          <Link href="/admin/form-builder" className="nav-link">
+            <FormIcon /> Kreator Formularza
+          </Link>
         </nav>
 
         <div style={{ padding: '1.5rem 1rem', borderTop: '1px solid var(--border-color)' }}>
@@ -64,6 +67,12 @@ const SettingsIcon = () => (
 const FolderIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
     <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+  </svg>
+);
+
+const FormIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px' }}>
+    <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 7h10"/><path d="M7 12h10"/><path d="M7 17h10"/>
   </svg>
 );
 
