@@ -29,7 +29,21 @@ const translations: Translations = {
   feat2Desc: { en: "We verify stats directly through Steam and Discord to ensure only the best join our ranks.", pl: "Weryfikujemy statystyki bezpośrednio przez Steam i Discord, aby upewnić się, że dołączają tylko najlepsi." },
   feat3Title: { en: "Regular Events", pl: "Regularne Wydarzenia" },
   feat3Desc: { en: "Participate in clan wars, server raids, and internal tournaments with epic prizes.", pl: "Bierz udział w wojnach klanów, rajdach na serwerach i wewnętrznych turniejach z epickimi nagrodami." },
-  rights: { en: "777 Clan. All rights reserved.", pl: "777 Clan. Wszelkie prawa zastrzeżone." }
+  rights: { en: "777 Clan. All rights reserved.", pl: "777 Clan. Wszelkie prawa zastrzeżone." },
+  applyTitle: { en: "Recruitment Form", pl: "Formularz Rekrutacyjny" },
+  authenticatedAs: { en: "Authenticated as: ", pl: "Zalogowano jako: " },
+  step1: { en: "Step 1: Login required for identification (Discord) and hours verification (Steam).", pl: "Krok 1: Logowanie wymagane do weryfikacji tożsamości (Discord) i godzin w grze (Steam)." },
+  logInFirst: { en: "Log in first to unlock the form.", pl: "Zaloguj się najpierw, aby odblokować formularz." },
+  loadingForm: { en: "Loading form...", pl: "Ładowanie formularza..." },
+  fillRequired: { en: "Please fill required field: ", pl: "Proszę wypełnić wymagane pole: " },
+  successSubmit: { en: "Success! Your application has been sent.", pl: "Sukces! Twoja aplikacja została wysłana." },
+  errorOccurred: { en: "An error occurred.", pl: "Wystąpił błąd." },
+  errorSending: { en: "An error occurred during submission.", pl: "Wystąpił błąd podczas wysyłania." },
+  submitApp: { en: "Submit Application", pl: "Wyślij Podanie" },
+  submitting: { en: "Submitting...", pl: "Wysyłanie..." },
+  connectDiscord: { en: "Connect with Discord", pl: "Połącz z Discord" },
+  connectSteam: { en: "Connect with Steam", pl: "Połącz ze Steam" },
+  logOut: { en: "LOG OUT", pl: "WYLOGUJ SIĘ" }
 };
 
 interface LanguageContextType {

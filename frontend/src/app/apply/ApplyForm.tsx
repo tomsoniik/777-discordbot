@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function ApplyForm() {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [formData, setFormData] = useState<Record<string, string>>({});
@@ -42,7 +44,7 @@ export default function ApplyForm() {
     // Check required fields
     const missing = fields.find(f => f.required && !formData[f.id]);
     if (missing) {
-      setMessage(`Proszę wypełnić wymagane pole: ${missing.label}`);
+      setMessage(`${t("fillRequired")}${missing.label}`);
       return;
     }
 
@@ -57,7 +59,7 @@ export default function ApplyForm() {
       });
 
       if (res.ok) {
-        setMessage("Sukces! Twoja aplikacja została wysłana.");
+        setMessage(t("successSubmit"));
         // Reset
         const resetData: Record<string, string> = {};
         fields.forEach(f => {
@@ -66,16 +68,16 @@ export default function ApplyForm() {
         setFormData(resetData);
       } else {
         const data = await res.json();
-        setMessage(data.error || "Wystąpił błąd.");
+        setMessage(data.error || t("errorOccurred"));
       }
     } catch (err) {
-      setMessage("Wystąpił błąd podczas wysyłania.");
+      setMessage(t("errorSending"));
     }
 
     setLoading(false);
   };
 
-  if (loadingConfig) return <div style={{ textAlign: 'center', padding: '2rem' }}>Ładowanie formularza...</div>;
+  if (loadingConfig) return <div style={{ textAlign: 'center', padding: '2rem' }}>{t("loadingForm")}</div>;
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
@@ -112,7 +114,7 @@ export default function ApplyForm() {
       ))}
 
       <button type="submit" className="btn" disabled={loading} style={{ marginTop: '1rem' }}>
-        {loading ? "Wysyłanie..." : "Wyślij Podanie"}
+        {loading ? t("submitting") : t("submitApp")}
       </button>
     </form>
   );
