@@ -20,8 +20,9 @@ export default function Navbar() {
     <header className="container" style={{ paddingBottom: 0 }}>
       <nav className="navbar animate-fade-in-up">
         <div className="navbar-brand">
-          <Link href="/">
-            <img src="/img/untlogo.png" alt="Unturned Logo" style={{ height: '40px', verticalAlign: 'middle', filter: 'drop-shadow(0 0 8px rgba(46,204,113,0.6))' }} />
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', textDecoration: 'none' }}>
+            <img src="/img/untlogo.png" alt="777 Clan Logo" style={{ height: '40px', filter: 'drop-shadow(0 0 8px rgba(46,204,113,0.6))' }} />
+            <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent-green)', letterSpacing: '1px' }}>777</span>
           </Link>
         </div>
         <div className="navbar-nav" style={{ alignItems: 'center' }}>

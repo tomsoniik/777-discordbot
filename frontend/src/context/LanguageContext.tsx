@@ -16,7 +16,7 @@ const translations: Translations = {
   recruitment: { en: "Recruitment", pl: "Rekrutacja" },
   about: { en: "About Us", pl: "O nas" },
   heroTitle: { en: "Welcome to the ", pl: "Witaj w " },
-  heroSquad: { en: "Unturned Squad", pl: "Ekipie Unturned" },
+  heroSquad: { en: "777 Clan", pl: "777 Clan" },
   heroSubtitle: { 
     en: "Do you have what it takes to survive? Join our elite unit, conquer the wasteland, and become part of a community built on trust and skill.", 
     pl: "Masz to, czego potrzeba, by przetrwać? Dołącz do naszej elitarnej jednostki, podbijaj pustkowia i stań się częścią społeczności opartej na zaufaniu i umiejętnościach." 
@@ -29,7 +29,7 @@ const translations: Translations = {
   feat2Desc: { en: "We verify stats directly through Steam and Discord to ensure only the best join our ranks.", pl: "Weryfikujemy statystyki bezpośrednio przez Steam i Discord, aby upewnić się, że dołączają tylko najlepsi." },
   feat3Title: { en: "Regular Events", pl: "Regularne Wydarzenia" },
   feat3Desc: { en: "Participate in clan wars, server raids, and internal tournaments with epic prizes.", pl: "Bierz udział w wojnach klanów, rajdach na serwerach i wewnętrznych turniejach z epickimi nagrodami." },
-  rights: { en: "Unturned Squad. All rights reserved.", pl: "Ekipa Unturned. Wszelkie prawa zastrzeżone." }
+  rights: { en: "777 Clan. All rights reserved.", pl: "777 Clan. Wszelkie prawa zastrzeżone." }
 };
 
 interface LanguageContextType {
