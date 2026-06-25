@@ -22,15 +22,11 @@ export default async function SubmissionsPage() {
   });
 
   return (
-    <main style={{ minHeight: '100vh', padding: '4rem 2rem', backgroundColor: 'var(--bg-main)' }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ color: 'var(--accent-green)', margin: 0 }}>Archiwum Podań</h1>
-          <Link href="/admin" className="btn" style={{ backgroundColor: 'var(--bg-card)' }}>
-            Powrót do Ustawień
-          </Link>
-        </div>
+    <div style={{ maxWidth: '1200px' }}>
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ color: 'var(--accent-green)', margin: 0 }}>Archiwum Podań</h1>
+        <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>Przeglądaj wszystkie podania złożone przez graczy.</p>
+      </div>
 
         {submissions.length === 0 ? (
           <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: 'var(--bg-card)', borderRadius: '8px' }}>
@@ -88,6 +84,6 @@ export default async function SubmissionsPage() {
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }

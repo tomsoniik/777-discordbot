@@ -27,27 +27,13 @@ export default async function AdminPage() {
   }
 
   return (
-    <main className="container">
-      <nav className="navbar">
-        <Link href="/" className="navbar-brand">
-          <img src="/img/untlogo.png" alt="Unturned Logo" style={{ height: '40px', verticalAlign: 'middle' }} />
-        </Link>
-        <div className="navbar-nav">
-          <Link href="/">Home</Link>
-          <Link href="/apply">Recruitment</Link>
-          <Link href="/admin" style={{ color: 'var(--accent-green)' }}>Admin Panel</Link>
-        </div>
-      </nav>
+    <div style={{ maxWidth: '800px', backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+      <h1 style={{ color: 'var(--accent-green)', marginTop: 0 }}>Konfiguracja Bota</h1>
+      <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
+        Zarządzaj ustawieniami integracji, kanałami na Discordzie i powiadomieniami.
+      </p>
 
-      <div style={{ maxWidth: '800px', margin: '0 auto', backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-        <h1 style={{ textAlign: 'center', color: 'var(--accent-green)', marginTop: 0 }}>Bot Configuration</h1>
-        <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: '2rem' }}>
-          Manage Discord bot settings, channel IDs, and permissions.
-        </p>
-
-        <AdminConfigForm initialConfig={config} clientId={process.env.DISCORD_CLIENT_ID || ""} />
-
-      </div>
-    </main>
+      <AdminConfigForm initialConfig={config} clientId={process.env.DISCORD_CLIENT_ID || ""} />
+    </div>
   );
 }
