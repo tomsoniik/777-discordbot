@@ -7,7 +7,7 @@ export function DiscordLoginButton() {
       onClick={() => signIn("discord")} 
       className="btn" 
       style={{ width: '100%', marginBottom: '1rem', backgroundColor: '#5865F2', color: 'white' }}>
-      Połącz z Discord
+      Connect with Discord
     </button>
   );
 }
@@ -15,7 +15,7 @@ export function DiscordLoginButton() {
 export function LogoutButton() {
   return (
     <button onClick={() => signOut()} className="btn btn-outline" style={{ width: '100%', marginTop: '1rem' }}>
-      Wyloguj się
+      Log Out
     </button>
   );
 }

@@ -6,40 +6,40 @@ export default function Home() {
       <nav className="navbar">
         <div className="navbar-brand">TICKET SYSTEM</div>
         <div className="navbar-nav">
-          <Link href="/">Strona Główna</Link>
-          <Link href="/apply">Rekrutacja</Link>
-          <Link href="/about">O nas</Link>
+          <Link href="/">Home</Link>
+          <Link href="/apply">Recruitment</Link>
+          <Link href="/about">About Us</Link>
         </div>
       </nav>
 
       <section className="hero">
-        <h1>Witaj na portalu rekrutacyjnym</h1>
-        <p>Zaloguj się za pomocą konta Steam i Discord, aby złożyć formularz i dołączyć do naszego zespołu.</p>
+        <h1>Welcome to the recruitment portal</h1>
+        <p>Log in with your Steam and Discord accounts to submit the form and join our team.</p>
         <Link href="/apply" className="btn">
-          Rozpocznij aplikację
+          Start Application
         </Link>
       </section>
 
       <section>
-        <h2 style={{ textAlign: 'center', marginTop: '4rem' }}>Nasze dywizje (Kategorie)</h2>
+        <h2 style={{ textAlign: 'center', marginTop: '4rem' }}>Our Divisions (Categories)</h2>
         <div className="categories">
           
           <div className="category-card">
-            <h3>Rust (Gra)</h3>
-            <p>Szukamy doświadczonych graczy z ponad 1000 godzin na koncie, którzy potrafią grać zespołowo.</p>
-            <Link href="/apply?category=rust" className="btn btn-outline">Aplikuj do Rust</Link>
+            <h3>Rust (Game)</h3>
+            <p>We are looking for experienced players with over 1000 hours who can play as a team.</p>
+            <Link href="/apply?category=rust" className="btn btn-outline">Apply for Rust</Link>
           </div>
 
           <div className="category-card">
             <h3>CS2 / CS:GO</h3>
-            <p>Dołącz do sekcji taktycznej strzelanki. Wymagany Prime, wysoki level Faceit i komunikatywność.</p>
-            <Link href="/apply?category=cs2" className="btn btn-outline">Aplikuj do CS2</Link>
+            <p>Join our tactical shooter section. Prime status, high Faceit level, and good communication required.</p>
+            <Link href="/apply?category=cs2" className="btn btn-outline">Apply for CS2</Link>
           </div>
 
           <div className="category-card">
-            <h3>Moderacja</h3>
-            <p>Chcesz nam pomóc ogarniać Discorda i serwery? Zgłoś się na stanowisko Moderatora.</p>
-            <Link href="/apply?category=mod" className="btn btn-outline">Aplikuj na Moda</Link>
+            <h3>Moderation</h3>
+            <p>Want to help us manage Discord and our servers? Apply for the Moderator position.</p>
+            <Link href="/apply?category=mod" className="btn btn-outline">Apply for Mod</Link>
           </div>
 
         </div>
