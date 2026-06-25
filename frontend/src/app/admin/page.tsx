@@ -45,7 +45,7 @@ export default async function AdminPage() {
           Manage Discord bot settings, channel IDs, and permissions.
         </p>
 
-        <AdminConfigForm initialConfig={config} />
+        <AdminConfigForm initialConfig={config} clientId={process.env.DISCORD_CLIENT_ID || ""} />
 
       </div>
     </main>
