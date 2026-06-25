@@ -40,7 +40,6 @@ export default function Navbar() {
                 cursor: 'pointer',
                 padding: '0.4rem 0.6rem',
                 borderRadius: '8px',
-                fontSize: '1.2rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -48,7 +47,13 @@ export default function Navbar() {
                 boxShadow: '0 2px 8px rgba(46, 204, 113, 0.2)'
               }}
             >
-              {language === "pl" ? "🇵🇱" : "🇬🇧"}
+              <img 
+                src={language === "pl" ? "https://flagcdn.com/pl.svg" : "https://flagcdn.com/gb.svg"} 
+                alt={language === "pl" ? "Polski" : "English"} 
+                width="24" 
+                height="18"
+                style={{ borderRadius: '2px', display: 'block' }} 
+              />
             </button>
           </div>
         </div>
