@@ -69,53 +69,38 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
-            content: `✅ Podanie zaakceptowane przez <@${interaction.member.user.id}>! Trwa tworzenie ticketu...`,
+            content: `✅ Podanie zaakceptowane przez <@${interaction.member.user.id}>! Wysyłanie wiadomości prywatnej...`,
             components: [] 
           }
         })
       });
 
-      // Tworzymy kanał Ticket
-      const guildId = botConfig.guildId;
       const applicantDiscordId = submission.user.discordId;
 
-      const createChannelRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/channels`, {
+      // Tworzymy kanał DM z aplikantem
+      const dmChannelRes = await fetch(`https://discord.com/api/v10/users/@me/channels`, {
         method: "POST",
         headers: {
           "Authorization": `Bot ${token}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          name: `ticket-${submission.user.name || "gracz"}`,
-          type: 0, // Text channel
-          parent_id: botConfig.ticketCategoryId,
-          permission_overwrites: [
-            {
-              id: guildId, // @everyone role
-              type: 0,
-              deny: "1024" // VIEW_CHANNEL
-            },
-            {
-              id: applicantDiscordId, // Aplikant
-              type: 1, // User
-              allow: "3072" // VIEW_CHANNEL + SEND_MESSAGES
-            },
-            // Tutaj można dodać role adminów do overwrites, ale jak mają admina, to i tak widzą.
-          ]
+          recipient_id: applicantDiscordId
         })
       });
 
-      if (createChannelRes.ok) {
-        const channel = await createChannelRes.json();
-        // Wysyłamy wiadomość do nowo utworzonego ticketu
-        await fetch(`https://discord.com/api/v10/channels/${channel.id}/messages`, {
+      if (dmChannelRes.ok) {
+        const dmChannel = await dmChannelRes.json();
+        
+        // Wysyłamy wiadomość prywatną (DM) do gracza
+        await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
           method: "POST",
           headers: {
             "Authorization": `Bot ${token}`,
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            content: `Witaj <@${applicantDiscordId}>! Twoje podanie zostało zaakceptowane. Administracja zaraz się Tobą zajmie. <@&${botConfig.adminRoleIds?.split(',')[0]?.trim()}>`
+            content: `Witaj <@${applicantDiscordId}>! 🎉\nTwoje podanie zostało **zaakceptowane**. Rekrutacja przebiegła pomyślnie, zapraszamy na drugi etap! Skontaktuj się z administracją na serwerze.`
           })
         });
       }
