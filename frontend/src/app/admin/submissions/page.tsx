@@ -17,7 +17,7 @@ export default async function SubmissionsPage() {
   }
 
   const submissions = await prisma.submission.findMany({
-    include: { user: true },
+    include: { user: true, formTemplate: true },
     orderBy: { createdAt: "desc" }
   });
 
@@ -41,7 +41,7 @@ export default async function SubmissionsPage() {
                   <th style={{ padding: '1rem' }}>Gracz (Discord)</th>
                   <th style={{ padding: '1rem' }}>Data</th>
                   <th style={{ padding: '1rem' }}>Status</th>
-                  <th style={{ padding: '1rem' }}>Szczegóły (Nick/Wiek)</th>
+                  <th style={{ padding: '1rem' }}>Szczegóły Podania</th>
                 </tr>
               </thead>
               <tbody>
@@ -73,8 +73,28 @@ export default async function SubmissionsPage() {
                         </span>
                       </td>
                       <td style={{ padding: '1rem', fontSize: '0.9rem' }}>
-                        Nick: <strong>{answers.nickname || "?"}</strong><br/>
-                        Wiek: {answers.age || "?"} | Godziny: {answers.hours || "?"}
+                        <details style={{ cursor: 'pointer' }}>
+                          <summary style={{ outline: 'none', color: 'var(--accent-green)', fontWeight: 'bold' }}>Pokaż Odpowiedzi</summary>
+                          <div style={{ marginTop: '0.5rem', padding: '0.5rem', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
+                            {(() => {
+                              try {
+                                const templateFields = JSON.parse(sub.formTemplate.fields);
+                                return Object.keys(answers).map(key => {
+                                  const field = templateFields.find((f: any) => f.id === key);
+                                  const label = field ? field.label : key;
+                                  return (
+                                    <div key={key} style={{ marginBottom: '0.3rem' }}>
+                                      <strong style={{ color: 'var(--text-light)' }}>{label}:</strong><br/>
+                                      <span style={{ color: 'var(--text-muted)' }}>{answers[key] || "Brak"}</span>
+                                    </div>
+                                  );
+                                });
+                              } catch (e) {
+                                return <span>Błąd odczytu struktury formularza.</span>;
+                              }
+                            })()}
+                          </div>
+                        </details>
                       </td>
                     </tr>
                   )
