@@ -38,6 +38,61 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    // Notify Discord Channel using Bot Token
+    const botConfig = await prisma.botConfig.findFirst();
+    if (botConfig && botConfig.applyChannelId && process.env.DISCORD_BOT_TOKEN) {
+      // @ts-ignore
+      const discordUserId = session.user.discordId || "Unknown";
+      
+      const embed = {
+        title: "📄 Nowe podanie o rekrutację!",
+        color: 0x00FF00,
+        fields: [
+          { name: "👤 Użytkownik", value: `<@${discordUserId}>`, inline: true },
+          { name: "🎮 Nick", value: data.nickname || "Brak", inline: true },
+          { name: "🎂 Wiek", value: data.age?.toString() || "Brak", inline: true },
+          { name: "⏱ Godziny (Steam)", value: data.hours?.toString() || "Brak", inline: true },
+          { name: "⚔ Rola", value: data.role || "Brak", inline: true },
+          { name: "🎙 Mikrofon", value: data.mic || "Brak", inline: true },
+          { name: "📝 Powód", value: data.reason || "Brak", inline: false },
+        ],
+        footer: { text: `Submission ID: ${submission.id}` }
+      };
+
+      const components = [
+        {
+          type: 1, // ActionRow
+          components: [
+            {
+              type: 2, // Button
+              style: 3, // Success (Green)
+              label: "Akceptuj",
+              custom_id: `accept_${submission.id}`
+            },
+            {
+              type: 2, // Button
+              style: 4, // Danger (Red)
+              label: "Odrzuć",
+              custom_id: `reject_${submission.id}`
+            }
+          ]
+        }
+      ];
+
+      await fetch(`https://discord.com/api/v10/channels/${botConfig.applyChannelId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          content: `<@&${botConfig.adminRoleIds?.split(',')[0]?.trim()}> Nowe podanie!`,
+          embeds: [embed],
+          components: components
+        })
+      });
+    }
+
     return NextResponse.json({ success: true, submissionId: submission.id });
   } catch (error) {
     console.error("Submission error:", error);
