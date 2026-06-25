@@ -12,6 +12,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
     "@prisma/client": "^5.22.0",
+    "discord-interactions": "^4.4.0",
     "next": "16.2.9",
     "next-auth": "^4.24.14",
     "next-auth-steam": "^0.4.0",
