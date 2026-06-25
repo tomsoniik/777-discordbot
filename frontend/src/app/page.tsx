@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
-import { Crown, ShieldTick, Target } from 'iconsax-react';
+import { Crown, ShieldTick, Radar } from 'iconsax-react';
 
 export default function Home() {
   const { t } = useLanguage();
@@ -39,7 +39,7 @@ export default function Home() {
           <p>{t("feat2Desc")}</p>
         </div>
         <div className="category-card">
-          <div className="card-icon"><Target size="48" color="var(--accent-green)" variant="TwoTone" /></div>
+          <div className="card-icon"><Radar size="48" color="var(--accent-green)" variant="TwoTone" /></div>
           <h3>{t("feat3Title")}</h3>
           <p>{t("feat3Desc")}</p>
         </div>
