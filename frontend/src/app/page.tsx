@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
+import { Crown, ShieldTick, Target } from 'iconsax-react';
 
 export default function Home() {
   const { t } = useLanguage();
@@ -28,17 +29,17 @@ export default function Home() {
 
       <section className="features categories animate-fade-in-up delay-300">
         <div className="category-card">
-          <div className="card-icon">⚔️</div>
+          <div className="card-icon"><Crown size="48" color="var(--accent-green)" variant="TwoTone" /></div>
           <h3>{t("feat1Title")}</h3>
           <p>{t("feat1Desc")}</p>
         </div>
         <div className="category-card">
-          <div className="card-icon">🛡️</div>
+          <div className="card-icon"><ShieldTick size="48" color="var(--accent-green)" variant="TwoTone" /></div>
           <h3>{t("feat2Title")}</h3>
           <p>{t("feat2Desc")}</p>
         </div>
         <div className="category-card">
-          <div className="card-icon">🎯</div>
+          <div className="card-icon"><Target size="48" color="var(--accent-green)" variant="TwoTone" /></div>
           <h3>{t("feat3Title")}</h3>
           <p>{t("feat3Desc")}</p>
         </div>
