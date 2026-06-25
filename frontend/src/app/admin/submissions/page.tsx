@@ -50,7 +50,7 @@ export default async function SubmissionsPage() {
                   try { answers = JSON.parse(sub.answers); } catch (e) {}
 
                   return (
-                    <tr key={sub.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <tr key={sub.id} className="table-row-hover" style={{ borderBottom: '1px solid var(--border-color)' }}>
                       <td style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                         {sub.id.substring(0, 8)}...
                       </td>
