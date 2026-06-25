@@ -4,7 +4,9 @@ export default function ApplyPage() {
   return (
     <main className="container">
       <nav className="navbar">
-        <Link href="/" className="navbar-brand">TICKET SYSTEM</Link>
+        <Link href="/" className="navbar-brand">
+          <img src="/img/untlogo.png" alt="Unturned Logo" style={{ height: '40px', verticalAlign: 'middle' }} />
+        </Link>
         <div className="navbar-nav">
           <Link href="/">Home</Link>
           <Link href="/apply">Recruitment</Link>
