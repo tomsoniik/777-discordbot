@@ -79,3 +79,12 @@ model Submission {
   user         User         @relation(fields: [userId], references: [id])
   formTemplate FormTemplate @relation(fields: [formTemplateId], references: [id])
 }
+
+model BotConfig {
+  id               String   @id @default(cuid())
+  guildId          String   @unique
+  applyChannelId   String?  // Gdzie wysylane sa aplikacje
+  ticketCategoryId String?  // Gdzie tworzone sa tickety 
+  adminRoleIds     String?  // ID ról (json)
+  updatedAt        DateTime @updatedAt
+}
