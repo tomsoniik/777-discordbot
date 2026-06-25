@@ -22,30 +22,7 @@ export default function Home() {
         </Link>
       </section>
 
-      <section>
-        <h2 style={{ textAlign: 'center', marginTop: '4rem' }}>Our Divisions (Categories)</h2>
-        <div className="categories">
-          
-          <div className="category-card">
-            <h3>PvP Squad</h3>
-            <p>We are looking for experienced shooters who can hold their own in intense Unturned firefights.</p>
-            <Link href="/apply?category=pvp" className="btn btn-outline">Apply for PvP</Link>
-          </div>
 
-          <div className="category-card">
-            <h3>Builders & Farmers</h3>
-            <p>Join our base building and resource gathering section. Map knowledge and creativity required.</p>
-            <Link href="/apply?category=build" className="btn btn-outline">Apply for Builder</Link>
-          </div>
-
-          <div className="category-card">
-            <h3>Moderation</h3>
-            <p>Want to help us manage Discord and our Unturned servers? Apply for the Moderator position.</p>
-            <Link href="/apply?category=mod" className="btn btn-outline">Apply for Mod</Link>
-          </div>
-
-        </div>
-      </section>
     </main>
   );
 }
