@@ -43,7 +43,11 @@ const translations: Translations = {
   submitting: { en: "Submitting...", pl: "Wysyłanie..." },
   connectDiscord: { en: "Connect with Discord", pl: "Połącz z Discord" },
   connectSteam: { en: "Connect with Steam", pl: "Połącz ze Steam" },
-  logOut: { en: "LOG OUT", pl: "WYLOGUJ SIĘ" }
+  logOut: { en: "LOG OUT", pl: "WYLOGUJ SIĘ" },
+  aboutStory: { 
+    en: "We are a group of friends who met in Unturned and founded the 777 clan in 2022. Since then, we've been regularly terrorizing the servers we play on.", 
+    pl: "Jesteśmy grupką znajomych, którzy poznali się właśnie w Unturned i założyli w 2022 clan 777. Od tego czasu regularnie terroryzujemy serwery, na których gramy." 
+  }
 };
 
 interface LanguageContextType {
