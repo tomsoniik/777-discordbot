@@ -17,8 +17,8 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
   providers: [
     DiscordProvider({
-      clientId: process.env.DISCORD_CLIENT_ID!,
-      clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+      clientId: process.env.DISCORD_CLIENT_ID || "missing_discord_client_id",
+      clientSecret: process.env.DISCORD_CLIENT_SECRET || "missing_discord_client_secret",
       authorization: { params: { scope: 'identify email' } },
       profile(profile) {
         if (profile.avatar === null) {
@@ -51,7 +51,8 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     }
-  }
+  },
+  secret: process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only_change_me",
 };
 
 const handler = NextAuth(authOptions);
