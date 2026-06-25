@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String       @id @default(cuid())
+  discordId     String?      @unique
+  steamId       String?      @unique
+  name          String?
+  image         String?
+  role          String       @default("USER") // USER, ADMIN
+  createdAt     DateTime     @default(now())
+  submissions   Submission[]
+}
+
+model FormTemplate {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  category    String       // e.g. 'rust', 'cs2'
+  fields      String       // JSON string z pytaniami
+  createdAt   DateTime     @default(now())
+  submissions Submission[]
+}
+
+model Submission {
+  id             String       @id @default(cuid())
+  userId         String
+  formTemplateId String
+  answers        String       // JSON string z odpowiedziami
+  status         String       @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt      DateTime     @default(now())
+
+  user         User         @relation(fields: [userId], references: [id])
+  formTemplate FormTemplate @relation(fields: [formTemplateId], references: [id])
+}
