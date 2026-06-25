@@ -29,17 +29,17 @@ export default function Home() {
 
       <section className="features categories animate-fade-in-up delay-300">
         <div className="category-card">
-          <div className="card-icon"><Crown size="48" color="var(--accent-green)" variant="TwoTone" /></div>
+          <div className="card-icon"><Crown size="42" color="var(--accent-green)" variant="Bulk" /></div>
           <h3>{t("feat1Title")}</h3>
           <p>{t("feat1Desc")}</p>
         </div>
         <div className="category-card">
-          <div className="card-icon"><ShieldTick size="48" color="var(--accent-green)" variant="TwoTone" /></div>
+          <div className="card-icon"><ShieldTick size="42" color="var(--accent-green)" variant="Bulk" /></div>
           <h3>{t("feat2Title")}</h3>
           <p>{t("feat2Desc")}</p>
         </div>
         <div className="category-card">
-          <div className="card-icon"><Radar size="48" color="var(--accent-green)" variant="TwoTone" /></div>
+          <div className="card-icon"><Radar size="42" color="var(--accent-green)" variant="Bulk" /></div>
           <h3>{t("feat3Title")}</h3>
           <p>{t("feat3Desc")}</p>
         </div>
