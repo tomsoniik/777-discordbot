@@ -9,17 +9,7 @@ export default async function ApplyPage() {
   const isLoggedIn = !!session;
 
   return (
-    <main className="container">
-      <nav className="navbar">
-        <Link href="/" className="navbar-brand">
-          <img src="/img/untlogo.png" alt="Unturned Logo" style={{ height: '40px', verticalAlign: 'middle' }} />
-        </Link>
-        <div className="navbar-nav">
-          <Link href="/">Home</Link>
-          <Link href="/apply">Recruitment</Link>
-        </div>
-      </nav>
-
+    <main className="container" style={{ paddingTop: 0 }}>
       <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
         <h1 style={{ textAlign: 'center', color: 'var(--accent-green)', marginTop: 0 }}>Recruitment Form</h1>
         

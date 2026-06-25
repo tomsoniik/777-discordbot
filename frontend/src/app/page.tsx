@@ -4,46 +4,10 @@ import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function Home() {
-  const { t, language, setLanguage } = useLanguage();
+  const { t } = useLanguage();
 
   return (
-    <main className="container">
-      <nav className="navbar animate-fade-in-up">
-        <div className="navbar-brand">
-          <img src="/img/untlogo.png" alt="Unturned Logo" style={{ height: '40px', verticalAlign: 'middle', filter: 'drop-shadow(0 0 8px rgba(46,204,113,0.6))' }} />
-        </div>
-        <div className="navbar-nav" style={{ alignItems: 'center' }}>
-          <Link href="/" className="nav-link">{t("home")}</Link>
-          <Link href="/apply" className="nav-link">{t("recruitment")}</Link>
-          <Link href="/about" className="nav-link">{t("about")}</Link>
-          <div style={{ marginLeft: '1rem', display: 'flex', gap: '0.5rem' }}>
-            <button 
-              onClick={() => setLanguage("pl")}
-              style={{
-                background: 'transparent', 
-                border: language === "pl" ? '1px solid var(--accent-green)' : '1px solid transparent', 
-                color: language === "pl" ? 'var(--accent-green)' : 'var(--text-muted)',
-                cursor: 'pointer',
-                padding: '0.2rem 0.5rem',
-                borderRadius: '4px',
-                fontWeight: 'bold',
-                transition: 'all 0.2s'
-              }}>PL</button>
-            <button 
-              onClick={() => setLanguage("en")}
-              style={{
-                background: 'transparent', 
-                border: language === "en" ? '1px solid var(--accent-green)' : '1px solid transparent', 
-                color: language === "en" ? 'var(--accent-green)' : 'var(--text-muted)',
-                cursor: 'pointer',
-                padding: '0.2rem 0.5rem',
-                borderRadius: '4px',
-                fontWeight: 'bold',
-                transition: 'all 0.2s'
-              }}>EN</button>
-          </div>
-        </div>
-      </nav>
+    <main className="container" style={{ paddingTop: 0 }}>
 
       <section className="hero">
         <div className="hero-content animate-fade-in-up delay-100">
