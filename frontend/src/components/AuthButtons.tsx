@@ -4,10 +4,21 @@ import { signIn, signOut } from "next-auth/react";
 export function DiscordLoginButton() {
   return (
     <button 
-      onClick={() => signIn("discord")} 
+      onClick={(e) => { e.preventDefault(); signIn("discord"); }} 
       className="btn" 
       style={{ width: '100%', marginBottom: '1rem', backgroundColor: '#5865F2', color: 'white' }}>
       Connect with Discord
+    </button>
+  );
+}
+
+export function SteamLoginButton() {
+  return (
+    <button 
+      onClick={(e) => { e.preventDefault(); signIn("steam"); }} 
+      className="btn" 
+      style={{ width: '100%', backgroundColor: '#171a21', color: 'white' }}>
+      Connect with Steam
     </button>
   );
 }
