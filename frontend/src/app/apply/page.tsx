@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { getServerSession } from "next-auth/next";
 import { DiscordLoginButton, SteamLoginButton, LogoutButton } from "@/components/AuthButtons";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export default async function ApplyPage() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const isLoggedIn = !!session;
 
   return (
