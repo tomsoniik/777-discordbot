@@ -12,6 +12,12 @@ export default function AdminConfigForm({ initialConfig, clientId }: { initialCo
     applyChannelId: initialConfig.applyChannelId || "",
     ticketCategoryId: initialConfig.ticketCategoryId || "",
     adminRoleIds: initialConfig.adminRoleIds || "",
+    welcomeChannelId: initialConfig.welcomeChannelId || "",
+    welcomeMessage: initialConfig.welcomeMessage || "",
+    leaveChannelId: initialConfig.leaveChannelId || "",
+    leaveMessage: initialConfig.leaveMessage || "",
+    autoRoleId: initialConfig.autoRoleId || "",
+    logChannelId: initialConfig.logChannelId || "",
   });
 
   const fetchDiscordData = async (guildId: string) => {
@@ -35,7 +41,7 @@ export default function AdminConfigForm({ initialConfig, clientId }: { initialCo
     }
   }, [formData.guildId]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -149,6 +155,76 @@ export default function AdminConfigForm({ initialConfig, clientId }: { initialCo
                 );
               })}
             </div>
+          </label>
+
+          <hr style={{ borderColor: 'var(--border-color)', margin: '1rem 0' }} />
+          <h4 style={{ margin: 0, color: 'var(--accent-green)' }}>Server Management (StartIT style)</h4>
+
+          <label>
+            Welcome Channel:
+            <select name="welcomeChannelId" value={formData.welcomeChannelId} onChange={handleChange} className="form-input">
+              <option value="">Disabled / Select a text channel...</option>
+              {discordData.textChannels.map((c) => (
+                <option key={c.id} value={c.id}>#{c.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Welcome Message (Use {"{user}"} to mention user, {"{server}"} for server name):
+            <textarea 
+              name="welcomeMessage" 
+              value={formData.welcomeMessage} 
+              onChange={handleChange} 
+              className="form-input" 
+              placeholder="Welcome {user} to {server}!" 
+              style={{ minHeight: '80px', resize: 'vertical' }}
+            />
+          </label>
+
+          <label>
+            Leave Channel:
+            <select name="leaveChannelId" value={formData.leaveChannelId} onChange={handleChange} className="form-input">
+              <option value="">Disabled / Select a text channel...</option>
+              {discordData.textChannels.map((c) => (
+                <option key={c.id} value={c.id}>#{c.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Leave Message (Use {"{user}"} to show username, {"{server}"} for server name):
+            <textarea 
+              name="leaveMessage" 
+              value={formData.leaveMessage} 
+              onChange={handleChange} 
+              className="form-input" 
+              placeholder="{user} has left the server." 
+              style={{ minHeight: '80px', resize: 'vertical' }}
+            />
+          </label>
+
+          <label>
+            Auto Role (Role given on join):
+            <select name="autoRoleId" value={formData.autoRoleId} onChange={handleChange} className="form-input">
+              <option value="">Disabled / Select a role...</option>
+              {discordData.roles.map((r) => {
+                if (r.id === formData.guildId) return null;
+                return (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                );
+              })}
+            </select>
+          </label>
+
+          <label>
+            Log Channel (For mod actions/tickets):
+            <select name="logChannelId" value={formData.logChannelId} onChange={handleChange} className="form-input">
+              <option value="">Disabled / Select a text channel...</option>
+              {discordData.textChannels.map((c) => (
+                <option key={c.id} value={c.id}>#{c.name}</option>
+              ))}
+            </select>
           </label>
         </>
       ) : (

@@ -5,6 +5,23 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+
+  // @ts-ignore
+  if (!session || session.user?.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const config = await prisma.botConfig.findFirst();
+    return NextResponse.json({ config: config || {} });
+  } catch (error) {
+    console.error("Failed to fetch config", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
 
@@ -15,7 +32,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const data = await req.json();
-    const { guildId, applyChannelId, ticketCategoryId, adminRoleIds } = data;
+    const { 
+      guildId, applyChannelId, ticketCategoryId, adminRoleIds,
+      welcomeChannelId, welcomeMessage, leaveChannelId, leaveMessage,
+      autoRoleId, logChannelId
+    } = data;
 
     // We assume there's only one config for now. If not, update first one.
     let config = await prisma.botConfig.findFirst();
@@ -27,6 +48,12 @@ export async function POST(req: NextRequest) {
           applyChannelId,
           ticketCategoryId,
           adminRoleIds,
+          welcomeChannelId,
+          welcomeMessage,
+          leaveChannelId,
+          leaveMessage,
+          autoRoleId,
+          logChannelId,
         },
       });
     } else {
@@ -36,6 +63,12 @@ export async function POST(req: NextRequest) {
           applyChannelId,
           ticketCategoryId,
           adminRoleIds,
+          welcomeChannelId,
+          welcomeMessage,
+          leaveChannelId,
+          leaveMessage,
+          autoRoleId,
+          logChannelId,
         },
       });
     }

@@ -86,5 +86,11 @@ model BotConfig {
   applyChannelId   String?  // Gdzie wysylane sa aplikacje
   ticketCategoryId String?  // Gdzie tworzone sa tickety 
   adminRoleIds     String?  // ID ról (json)
+  welcomeChannelId String?
+  welcomeMessage   String?
+  leaveChannelId   String?
+  leaveMessage     String?
+  autoRoleId       String?
+  logChannelId     String?
   updatedAt        DateTime @updatedAt
 }

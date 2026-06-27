@@ -8,10 +8,11 @@ dotenv.config();
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
     ],
-    partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.GuildMember],
 });
 
 const app = express();
@@ -39,6 +40,58 @@ client.on('messageCreate', async (message) => {
             content: 'Kliknij poniższy przycisk, aby przejść do panelu rekrutacji i wypełnić formularz logując się przez Steam:',
             components: [row]
         });
+    }
+});
+
+async function fetchConfig() {
+    try {
+        const res = await fetch(`${WEB_URL}/api/bot/config`);
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (e) {
+        console.error("Failed to fetch bot config from API", e);
+        return null;
+    }
+}
+
+client.on('guildMemberAdd', async (member) => {
+    const config = await fetchConfig();
+    if (!config) return;
+
+    // Auto Role
+    if (config.autoRoleId) {
+        try {
+            await member.roles.add(config.autoRoleId);
+        } catch (e) {
+            console.error("Failed to add auto role", e);
+        }
+    }
+
+    // Welcome Message
+    if (config.welcomeChannelId && config.welcomeMessage) {
+        const channel = member.guild.channels.cache.get(config.welcomeChannelId);
+        if (channel && channel.isTextBased()) {
+            const msg = config.welcomeMessage
+                .replace(/{user}/g, `<@${member.id}>`)
+                .replace(/{server}/g, member.guild.name);
+            await channel.send(msg);
+        }
+    }
+});
+
+client.on('guildMemberRemove', async (member) => {
+    const config = await fetchConfig();
+    if (!config) return;
+
+    // Leave Message
+    if (config.leaveChannelId && config.leaveMessage) {
+        const channel = member.guild.channels.cache.get(config.leaveChannelId);
+        if (channel && channel.isTextBased()) {
+            const msg = config.leaveMessage
+                .replace(/{user}/g, member.user.username)
+                .replace(/{server}/g, member.guild.name);
+            await channel.send(msg);
+        }
     }
 });
 
