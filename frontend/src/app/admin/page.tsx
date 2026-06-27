@@ -27,7 +27,7 @@ export default async function AdminPage() {
   }
 
   return (
-    <div style={{ maxWidth: '800px', backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+    <div style={{ width: '100%', backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
       <h1 style={{ color: 'var(--accent-green)', marginTop: 0 }}>Konfiguracja Bota</h1>
       <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
         Zarządzaj ustawieniami integracji, kanałami na Discordzie i powiadomieniami.
