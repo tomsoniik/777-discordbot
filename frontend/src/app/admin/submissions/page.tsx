@@ -111,7 +111,7 @@ export default async function SubmissionsPage() {
                       letterSpacing: '1px',
                       backgroundColor: statusBg,
                       color: statusColor,
-                      border: \`1px solid \${statusBg.replace('0.1', '0.3')}\`
+                      border: `1px solid ${statusBg.replace('0.1', '0.3')}`
                     }}>
                       {sub.status}
                     </span>
@@ -155,11 +155,11 @@ export default async function SubmissionsPage() {
       )}
 
       {/* Hide native details arrow */}
-      <style dangerouslySetInnerHTML={{__html: \`
+      <style dangerouslySetInnerHTML={{__html: `
         details > summary::-webkit-details-marker {
           display: none;
         }
-      \`}} />
+      `}} />
     </div>
   );
 }
