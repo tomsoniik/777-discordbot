@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { ArrowUp2, ArrowDown2, Trash, Add, Save2, Setting4 } from "iconsax-react";
 
 type FieldType = "short" | "long" | "number" | "select";
 
@@ -9,7 +10,7 @@ interface FormField {
   label: string;
   type: FieldType;
   required: boolean;
-  options?: string; // Comma separated for 'select'
+  options?: string;
 }
 
 export default function FormBuilderPage() {
@@ -32,7 +33,7 @@ export default function FormBuilderPage() {
 
   const handleAddField = () => {
     const newId = `field_${Date.now()}`;
-    setFields([...fields, { id: newId, label: "Nowe pytanie", type: "short", required: true }]);
+    setFields([...fields, { id: newId, label: "New Inquiry", type: "short", required: true }]);
   };
 
   const handleRemoveField = (id: string) => {
@@ -63,84 +64,157 @@ export default function FormBuilderPage() {
         body: JSON.stringify({ fields }),
       });
       if (res.ok) {
-        setMessage("Zapisano pomyślnie!");
+        setMessage("Architecture synchronized successfully.");
       } else {
-        setMessage("Błąd podczas zapisywania.");
+        setMessage("Synchronization failure detected.");
       }
     } catch (err) {
-      setMessage("Wystąpił błąd.");
+      setMessage("Critical connection error.");
     }
     setSaving(false);
+    setTimeout(() => setMessage(""), 5000);
   };
 
-  if (loading) return <div>Ładowanie konfiguratora...</div>;
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh', color: '#2ecc71', fontSize: '1.25rem', fontWeight: 600 }}>
+        <Setting4 size="32" className="btn-pulse" style={{ marginRight: '1rem' }} /> Loading Module...
+      </div>
+    );
+  }
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '0.85rem',
+    color: '#8ebf9e',
+    fontWeight: 600,
+    marginBottom: '0.5rem',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '1px'
+  };
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-      <h1 style={{ color: 'var(--accent-green)', marginBottom: '2rem' }}>Kreator Formularza Rekrutacyjnego</h1>
+    <div style={{ width: '100%' }}>
+      <div style={{ 
+        maxWidth: '1000px', 
+        marginBottom: '4rem',
+        paddingTop: '2rem'
+      }}>
+        <h1 style={{ 
+          fontSize: 'clamp(3rem, 5vw, 4.5rem)', 
+          lineHeight: '1.1',
+          fontWeight: 800,
+          margin: 0,
+          color: '#fff',
+          letterSpacing: '-2px'
+        }}>
+          Recruitment Matrix
+        </h1>
+        <p style={{ 
+          fontSize: '1.2rem', 
+          color: '#8ebf9e', 
+          marginTop: '1.5rem',
+          maxWidth: '600px',
+          lineHeight: '1.7'
+        }}>
+          Design the psychological and analytical pathways required for new candidate evaluation.
+        </p>
+      </div>
       
       {message && (
-        <div style={{ padding: '1rem', marginBottom: '1rem', backgroundColor: message.includes("pomyślnie") ? 'rgba(0,255,0,0.1)' : 'rgba(255,0,0,0.1)', color: message.includes("pomyślnie") ? 'var(--accent-green)' : 'red', borderRadius: '4px' }}>
+        <div style={{ 
+          padding: '1.25rem 2rem', 
+          marginBottom: '2rem',
+          background: message.includes("success") ? 'rgba(46, 204, 113, 0.1)' : 'rgba(255, 60, 60, 0.1)', 
+          color: message.includes("success") ? '#2ecc71' : '#ff3c3c', 
+          borderRadius: '16px', 
+          border: `1px solid ${message.includes("success") ? 'rgba(46, 204, 113, 0.3)' : 'rgba(255, 60, 60, 0.3)'}`,
+          fontWeight: 600
+        }}>
           {message}
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {fields.map((field, idx) => (
-          <div key={field.id} style={{ padding: '1.5rem', backgroundColor: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: '8px', position: 'relative' }}>
+          <div key={field.id} className="bento-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button onClick={() => handleMove(idx, -1)} disabled={idx === 0} style={{ padding: '0.2rem 0.5rem', cursor: 'pointer', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}>↑</button>
-                <button onClick={() => handleMove(idx, 1)} disabled={idx === fields.length - 1} style={{ padding: '0.2rem 0.5rem', cursor: 'pointer', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}>↓</button>
+            {/* Header Controls */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, fontSize: '1.5rem', marginRight: '1rem' }}>
+                  {String(idx + 1).padStart(2, '0')}
+                </span>
+                <button 
+                  onClick={() => handleMove(idx, -1)} 
+                  disabled={idx === 0} 
+                  style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '8px', padding: '0.5rem', cursor: idx === 0 ? 'not-allowed' : 'pointer', color: idx === 0 ? 'rgba(255,255,255,0.2)' : '#fff', transition: 'all 0.2s' }}
+                >
+                  <ArrowUp2 size="20" />
+                </button>
+                <button 
+                  onClick={() => handleMove(idx, 1)} 
+                  disabled={idx === fields.length - 1} 
+                  style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '8px', padding: '0.5rem', cursor: idx === fields.length - 1 ? 'not-allowed' : 'pointer', color: idx === fields.length - 1 ? 'rgba(255,255,255,0.2)' : '#fff', transition: 'all 0.2s' }}
+                >
+                  <ArrowDown2 size="20" />
+                </button>
               </div>
-              <button onClick={() => handleRemoveField(field.id)} style={{ padding: '0.2rem 0.5rem', cursor: 'pointer', background: 'rgba(255,0,0,0.2)', border: '1px solid red', color: 'red', borderRadius: '4px' }}>Usuń Pytanie</button>
+              <button 
+                onClick={() => handleRemoveField(field.id)} 
+                style={{ background: 'rgba(255, 60, 60, 0.1)', border: '1px solid rgba(255, 60, 60, 0.3)', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer', color: '#ff3c3c', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, transition: 'all 0.2s' }}
+              >
+                <Trash size="18" variant="Bulk" /> Delete
+              </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <label>
-                Treść Pytania (Etykieta):
+            {/* Inputs */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+              <label style={labelStyle}>
+                Query Designation (Label)
                 <input 
                   type="text" 
                   value={field.label} 
                   onChange={(e) => handleChange(field.id, "label", e.target.value)} 
-                  className="form-input"
+                  className="glass-input"
+                  style={{ fontSize: '1.1rem' }}
                 />
               </label>
 
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <label style={{ flex: 1 }}>
-                  Typ Odpowiedzi:
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', alignItems: 'end' }}>
+                <label style={labelStyle}>
+                  Input Architecture (Type)
                   <select 
                     value={field.type} 
                     onChange={(e) => handleChange(field.id, "type", e.target.value)}
-                    className="form-input"
+                    className="glass-input"
                   >
-                    <option value="short">Krótka odpowiedź (Tekst)</option>
-                    <option value="long">Długa odpowiedź (Textarea)</option>
-                    <option value="number">Liczba (Wiek, Godziny)</option>
-                    <option value="select">Wybór z listy (Select)</option>
+                    <option value="short">Text String (Short)</option>
+                    <option value="long">Text Block (Long)</option>
+                    <option value="number">Numeric Value</option>
+                    <option value="select">Dropdown Matrix (Select)</option>
                   </select>
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.8rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer', background: 'rgba(0,0,0,0.3)', padding: '1rem 1.25rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
                   <input 
                     type="checkbox" 
                     checked={field.required} 
                     onChange={(e) => handleChange(field.id, "required", e.target.checked)}
-                  /> Wymagane?
+                  /> 
+                  <span style={{ color: '#fff', fontWeight: 600 }}>Mandatory</span>
                 </label>
               </div>
 
               {field.type === "select" && (
-                <label>
-                  Opcje wyboru (rozdzielone przecinkami):
+                <label style={labelStyle}>
+                  Matrix Options (Comma Separated)
                   <input 
                     type="text" 
                     value={field.options || ""} 
                     onChange={(e) => handleChange(field.id, "options", e.target.value)} 
-                    className="form-input"
-                    placeholder="np. PvP, Budowanie, Zbieranie"
+                    className="glass-input"
+                    placeholder="e.g. Assault, Support, Recon"
                   />
                 </label>
               )}
@@ -148,12 +222,36 @@ export default function FormBuilderPage() {
           </div>
         ))}
 
-        <button onClick={handleAddField} className="btn-outline" style={{ padding: '1rem', borderStyle: 'dashed', borderRadius: '8px', cursor: 'pointer', width: '100%', marginTop: '1rem' }}>
-          + Dodaj nowe pytanie
+        <button 
+          onClick={handleAddField} 
+          style={{ 
+            padding: '2rem', 
+            background: 'transparent', 
+            border: '2px dashed rgba(46, 204, 113, 0.3)', 
+            borderRadius: '24px', 
+            cursor: 'pointer', 
+            width: '100%', 
+            marginTop: '1rem',
+            color: '#2ecc71',
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '1rem',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(46, 204, 113, 0.05)'; e.currentTarget.style.borderColor = '#2ecc71'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(46, 204, 113, 0.3)'; }}
+        >
+          <Add size="24" /> Inject New Query Block
         </button>
+      </div>
 
-        <button onClick={handleSave} disabled={saving} className="btn" style={{ padding: '1rem', width: '100%', marginTop: '2rem' }}>
-          {saving ? "Zapisywanie..." : "Zapisz Formularz"}
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4rem', paddingBottom: '2rem' }}>
+        <button onClick={handleSave} disabled={saving} className="btn-cinematic">
+          <Save2 size="24" color={saving ? 'rgba(255,255,255,0.3)' : '#050c08'} variant="Bulk" />
+          {saving ? "Processing..." : "Commit Matrix Architecture"}
         </button>
       </div>
     </div>
