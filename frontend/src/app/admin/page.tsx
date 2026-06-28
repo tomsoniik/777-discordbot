@@ -2,7 +2,6 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { PrismaClient } from "@prisma/client";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import AdminConfigForm from "./AdminConfigForm";
 
 const prisma = new PrismaClient();
@@ -12,7 +11,6 @@ export default async function AdminPage() {
   
   // @ts-ignore
   if (!session || session.user?.role !== "ADMIN") {
-    // Redirect to home if not admin
     redirect("/");
   }
 
@@ -27,11 +25,32 @@ export default async function AdminPage() {
   }
 
   return (
-    <div style={{ width: '100%', backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-      <h1 style={{ color: 'var(--accent-green)', marginTop: 0 }}>Konfiguracja Bota</h1>
-      <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
-        Zarządzaj ustawieniami integracji, kanałami na Discordzie i powiadomieniami.
-      </p>
+    <div style={{ width: '100%' }}>
+      <div style={{ 
+        maxWidth: '1000px', 
+        marginBottom: '4rem',
+        paddingTop: '2rem'
+      }}>
+        <h1 style={{ 
+          fontSize: 'clamp(3rem, 5vw, 4.5rem)', 
+          lineHeight: '1.1',
+          fontWeight: 800,
+          margin: 0,
+          color: '#fff',
+          letterSpacing: '-2px'
+        }}>
+          Global Architecture
+        </h1>
+        <p style={{ 
+          fontSize: '1.2rem', 
+          color: '#8ebf9e', 
+          marginTop: '1.5rem',
+          maxWidth: '600px',
+          lineHeight: '1.7'
+        }}>
+          Configure integrations, automate server pipelines, and manage security protocols across the entire network ecosystem.
+        </p>
+      </div>
 
       <AdminConfigForm initialConfig={config} clientId={process.env.DISCORD_CLIENT_ID || ""} />
     </div>
