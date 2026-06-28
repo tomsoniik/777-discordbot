@@ -191,34 +191,41 @@ export default function AdminConfigForm({ initialConfig, clientId }: { initialCo
                 </select>
               </label>
 
-              <label style={labelStyle}>
+              <div style={labelStyle}>
                 Administrative Roles
                 <div style={{ 
-                  display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem', 
+                  display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem', 
                   maxHeight: '220px', overflowY: 'auto', padding: '1rem', 
                   backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px' 
                 }}>
                   {discordData.roles.map((r) => {
                     if (r.id === formData.guildId) return null;
                     const isSelected = formData.adminRoleIds.includes(r.id);
+                    const roleColor = r.color ? `#${r.color.toString(16).padStart(6, '0')}` : '#8ebf9e';
+                    
                     return (
-                      <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer', margin: 0, fontSize: '0.95rem', color: '#fff' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={isSelected} 
-                          onChange={() => handleRoleToggle(r.id)} 
-                        />
-                        <span style={{ 
-                          color: r.color ? `#${r.color.toString(16).padStart(6, '0')}` : 'inherit',
-                          fontWeight: isSelected ? 600 : 400
-                        }}>
+                      <div 
+                        key={r.id} 
+                        onClick={() => handleRoleToggle(r.id)}
+                        style={{ 
+                          display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', 
+                          padding: '0.5rem 1rem', borderRadius: '20px',
+                          backgroundColor: isSelected ? 'rgba(46, 204, 113, 0.15)' : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${isSelected ? '#2ecc71' : 'rgba(255,255,255,0.1)'}`,
+                          transition: 'all 0.2s ease',
+                          color: isSelected ? '#fff' : '#8ebf9e'
+                        }}
+                        className="role-pill"
+                      >
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: roleColor, boxShadow: `0 0 5px ${roleColor}` }}></div>
+                        <span style={{ fontSize: '0.85rem', fontWeight: isSelected ? 600 : 400 }}>
                           {r.name}
                         </span>
-                      </label>
+                      </div>
                     );
                   })}
                 </div>
-              </label>
+              </div>
             </div>
 
             {/* Welcome System */}
