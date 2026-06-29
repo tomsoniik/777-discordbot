@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import GlassSelect from "@/components/GlassSelect";
 
 export default function ApplyForm() {
   const { t } = useLanguage();
@@ -92,28 +93,29 @@ export default function ApplyForm() {
           {field.label} {field.required && <span style={{ color: 'red' }}>*</span>}
           
           {field.type === "short" && (
-            <input type="text" name={field.id} value={formData[field.id] || ""} onChange={handleChange} className="form-input" required={field.required} />
+            <input type="text" name={field.id} value={formData[field.id] || ""} onChange={handleChange} className="glass-input" required={field.required} />
           )}
 
           {field.type === "number" && (
-            <input type="number" name={field.id} value={formData[field.id] || ""} onChange={handleChange} className="form-input" required={field.required} />
+            <input type="number" name={field.id} value={formData[field.id] || ""} onChange={handleChange} className="glass-input" required={field.required} />
           )}
 
           {field.type === "long" && (
-            <textarea rows={4} name={field.id} value={formData[field.id] || ""} onChange={handleChange} className="form-input" required={field.required} />
+            <textarea rows={4} name={field.id} value={formData[field.id] || ""} onChange={handleChange} className="glass-input" required={field.required} />
           )}
 
           {field.type === "select" && (
-            <select name={field.id} value={formData[field.id] || ""} onChange={handleChange} className="form-input" required={field.required}>
-              {field.options?.split(",").map((opt: string, i: number) => (
-                <option key={i} value={opt.trim()}>{opt.trim()}</option>
-              ))}
-            </select>
+            <GlassSelect 
+              options={field.options?.split(",").map((opt: string) => ({ id: opt.trim(), name: opt.trim() })) || []}
+              value={formData[field.id] || ""}
+              onChange={(val) => setFormData({ ...formData, [field.id]: val })}
+              placeholder={t("selectOption") || "Wybierz"}
+            />
           )}
         </label>
       ))}
 
-      <button type="submit" className="btn" disabled={loading} style={{ marginTop: '1rem' }}>
+      <button type="submit" className="btn-cinematic" disabled={loading} style={{ marginTop: '1rem', width: '100%' }}>
         {loading ? t("submitting") : t("submitApp")}
       </button>
     </form>

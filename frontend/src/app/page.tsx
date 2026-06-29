@@ -17,31 +17,31 @@ export default function Home() {
             {t("heroSubtitle")}
           </p>
           <div className="hero-actions">
-            <Link href="/apply" className="btn btn-pulse">
+            <Link href="/apply" className="btn-cinematic" style={{ textDecoration: 'none', padding: '1rem 2.5rem', fontSize: '1rem' }}>
               {t("startApp")}
             </Link>
-            <Link href="/about" className="btn btn-outline" style={{marginLeft: '1rem'}}>
+            <Link href="/about" className="btn-cinematic" style={{ marginLeft: '1rem', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', boxShadow: 'none', padding: '1rem 2.5rem', fontSize: '1rem', textDecoration: 'none' }}>
               {t("learnMore")}
             </Link>
           </div>
         </div>
       </section>
 
-      <section className="features categories animate-fade-in-up delay-300">
-        <div className="category-card">
-          <div className="card-icon"><Crown size="42" color="var(--accent-green)" variant="Bulk" /></div>
-          <h3>{t("feat1Title")}</h3>
-          <p>{t("feat1Desc")}</p>
+      <section className="categories animate-fade-in-up delay-300">
+        <div className="bento-card" style={{ alignItems: 'center', textAlign: 'center', padding: '3rem 2rem' }}>
+          <div className="card-icon" style={{ background: 'rgba(46, 204, 113, 0.05)', border: '1px solid rgba(46, 204, 113, 0.2)' }}><Crown size="42" color="#2ecc71" variant="Bulk" /></div>
+          <h3 style={{ fontSize: '1.5rem', color: '#fff', margin: '0 0 1rem 0' }}>{t("feat1Title")}</h3>
+          <p style={{ color: '#8ebf9e', margin: 0 }}>{t("feat1Desc")}</p>
         </div>
-        <div className="category-card">
-          <div className="card-icon"><ShieldTick size="42" color="var(--accent-green)" variant="Bulk" /></div>
-          <h3>{t("feat2Title")}</h3>
-          <p>{t("feat2Desc")}</p>
+        <div className="bento-card" style={{ alignItems: 'center', textAlign: 'center', padding: '3rem 2rem' }}>
+          <div className="card-icon" style={{ background: 'rgba(46, 204, 113, 0.05)', border: '1px solid rgba(46, 204, 113, 0.2)' }}><ShieldTick size="42" color="#2ecc71" variant="Bulk" /></div>
+          <h3 style={{ fontSize: '1.5rem', color: '#fff', margin: '0 0 1rem 0' }}>{t("feat2Title")}</h3>
+          <p style={{ color: '#8ebf9e', margin: 0 }}>{t("feat2Desc")}</p>
         </div>
-        <div className="category-card">
-          <div className="card-icon"><Radar size="42" color="var(--accent-green)" variant="Bulk" /></div>
-          <h3>{t("feat3Title")}</h3>
-          <p>{t("feat3Desc")}</p>
+        <div className="bento-card" style={{ alignItems: 'center', textAlign: 'center', padding: '3rem 2rem' }}>
+          <div className="card-icon" style={{ background: 'rgba(46, 204, 113, 0.05)', border: '1px solid rgba(46, 204, 113, 0.2)' }}><Radar size="42" color="#2ecc71" variant="Bulk" /></div>
+          <h3 style={{ fontSize: '1.5rem', color: '#fff', margin: '0 0 1rem 0' }}>{t("feat3Title")}</h3>
+          <p style={{ color: '#8ebf9e', margin: 0 }}>{t("feat3Desc")}</p>
         </div>
       </section>
       

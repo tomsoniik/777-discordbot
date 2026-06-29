@@ -13,12 +13,12 @@ export default function ApplyPageContent({ isLoggedIn, userName }: Props) {
   const { t } = useLanguage();
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-      <h1 style={{ textAlign: 'center', color: 'var(--accent-green)', marginTop: 0 }}>{t("applyTitle")}</h1>
+    <div className="bento-card" style={{ maxWidth: '600px', margin: '0 auto', padding: '3rem' }}>
+      <h1 style={{ textAlign: 'center', color: '#2ecc71', marginTop: 0, fontSize: '2rem', fontWeight: 800 }}>{t("applyTitle")}</h1>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '2rem' }}>
         
-        <div style={{ padding: '1.5rem', border: '1px dashed var(--accent-green)', borderRadius: '4px', textAlign: 'center' }}>
+        <div style={{ padding: '2rem', border: '1px dashed rgba(46, 204, 113, 0.3)', borderRadius: '16px', textAlign: 'center', background: 'rgba(0,0,0,0.2)' }}>
           {isLoggedIn ? (
             <>
               <p style={{ marginBottom: '1rem', color: 'var(--accent-green)', fontWeight: 'bold' }}>

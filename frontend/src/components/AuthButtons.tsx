@@ -7,8 +7,8 @@ export function DiscordLoginButton() {
   return (
     <button 
       onClick={(e) => { e.preventDefault(); signIn("discord"); }} 
-      className="btn" 
-      style={{ width: '100%', marginBottom: '1rem', backgroundColor: '#5865F2', color: 'white' }}>
+      className="btn-cinematic" 
+      style={{ width: '100%', marginBottom: '1rem', background: 'rgba(88, 101, 242, 0.15)', border: '1px solid rgba(88, 101, 242, 0.5)', color: '#fff', boxShadow: 'none', padding: '1rem' }}>
       {t("connectDiscord")}
     </button>
   );
@@ -19,8 +19,8 @@ export function SteamLoginButton() {
   return (
     <button 
       onClick={(e) => { e.preventDefault(); signIn("steam"); }} 
-      className="btn" 
-      style={{ width: '100%', backgroundColor: '#171a21', color: 'white' }}>
+      className="btn-cinematic" 
+      style={{ width: '100%', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.2)', color: '#fff', boxShadow: 'none', padding: '1rem' }}>
       {t("connectSteam")}
     </button>
   );
@@ -29,7 +29,7 @@ export function SteamLoginButton() {
 export function LogoutButton() {
   const { t } = useLanguage();
   return (
-    <button onClick={() => signOut()} className="btn btn-outline" style={{ width: '100%', marginTop: '1rem' }}>
+    <button onClick={() => signOut()} className="btn-cinematic" style={{ width: '100%', marginTop: '1rem', background: 'rgba(255,0,0,0.1)', color: '#ff6b6b', border: '1px solid rgba(255,0,0,0.3)', boxShadow: 'none', padding: '1rem' }}>
       {t("logOut")}
     </button>
   );
