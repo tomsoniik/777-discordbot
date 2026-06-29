@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ArrowUp2, ArrowDown2, Trash, Add, Save2, Setting4 } from "iconsax-react";
+import GlassSelect from "@/components/GlassSelect";
 
 type FieldType = "short" | "long" | "number" | "select";
 
@@ -182,19 +183,19 @@ export default function FormBuilderPage() {
               </label>
 
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', alignItems: 'end' }}>
-                <label style={labelStyle}>
+                <div style={labelStyle}>
                   Input Architecture (Type)
-                  <select 
-                    value={field.type} 
-                    onChange={(e) => handleChange(field.id, "type", e.target.value)}
-                    className="glass-input"
-                  >
-                    <option value="short">Text String (Short)</option>
-                    <option value="long">Text Block (Long)</option>
-                    <option value="number">Numeric Value</option>
-                    <option value="select">Dropdown Matrix (Select)</option>
-                  </select>
-                </label>
+                  <GlassSelect 
+                    value={field.type}
+                    onChange={(val) => handleChange(field.id, "type", val as FieldType)}
+                    options={[
+                      { value: "short", label: "Text String (Short)" },
+                      { value: "long", label: "Text Block (Long)" },
+                      { value: "number", label: "Numeric Value" },
+                      { value: "select", label: "Dropdown Matrix (Select)" }
+                    ]}
+                  />
+                </div>
 
                 <label style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer', background: 'rgba(0,0,0,0.3)', padding: '1rem 1.25rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
                   <input 

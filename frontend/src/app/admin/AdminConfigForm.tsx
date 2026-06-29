@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Link21, DocumentText, MessageAdd, MessageRemove, SecuritySafe, Save2, Warning2 } from "iconsax-react";
+import GlassSelect from "@/components/GlassSelect";
 
 export default function AdminConfigForm({ initialConfig, clientId }: { initialConfig: any, clientId: string }) {
   const [loading, setLoading] = useState(false);
@@ -42,7 +43,7 @@ export default function AdminConfigForm({ initialConfig, clientId }: { initialCo
     }
   }, [formData.guildId]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -171,25 +172,31 @@ export default function AdminConfigForm({ initialConfig, clientId }: { initialCo
             <div className="bento-card col-span-2 row-span-2">
               <h4 style={headerStyle}><DocumentText size="24" color="#2ecc71" variant="Bulk" /> Recruitment Pipelines</h4>
               
-              <label style={{ ...labelStyle, marginTop: 0 }}>
+              <div style={{ ...labelStyle, marginTop: 0 }}>
                 Applications Channel
-                <select name="applyChannelId" value={formData.applyChannelId} onChange={handleChange} className="glass-input">
-                  <option value="">Select a text channel</option>
-                  {discordData.textChannels.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </label>
+                <GlassSelect 
+                  value={formData.applyChannelId}
+                  onChange={(val) => setFormData({...formData, applyChannelId: val})}
+                  placeholder="Disabled / Not selected"
+                  options={[
+                    { value: "", label: "Disabled" },
+                    ...discordData.textChannels.map(c => ({ value: c.id, label: `# ${c.name}` }))
+                  ]}
+                />
+              </div>
 
-              <label style={labelStyle}>
+              <div style={labelStyle}>
                 Ticket Category
-                <select name="ticketCategoryId" value={formData.ticketCategoryId} onChange={handleChange} className="glass-input">
-                  <option value="">Select a category</option>
-                  {discordData.categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </label>
+                <GlassSelect 
+                  value={formData.ticketCategoryId}
+                  onChange={(val) => setFormData({...formData, ticketCategoryId: val})}
+                  placeholder="Disabled / Not selected"
+                  options={[
+                    { value: "", label: "Disabled" },
+                    ...discordData.categories.map(c => ({ value: c.id, label: c.name }))
+                  ]}
+                />
+              </div>
 
               <div style={labelStyle}>
                 Administrative Roles
@@ -233,28 +240,31 @@ export default function AdminConfigForm({ initialConfig, clientId }: { initialCo
               <h4 style={headerStyle}><MessageAdd size="24" color="#2ecc71" variant="Bulk" /> Inbound Architecture</h4>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                <label style={{ ...labelStyle, marginTop: 0 }}>
+                <div style={{ ...labelStyle, marginTop: 0 }}>
                   Auto Role Designation
-                  <select name="autoRoleId" value={formData.autoRoleId} onChange={handleChange} className="glass-input">
-                    <option value="">Disabled</option>
-                    {discordData.roles.map((r) => {
-                      if (r.id === formData.guildId) return null;
-                      return (
-                        <option key={r.id} value={r.id}>{r.name}</option>
-                      );
-                    })}
-                  </select>
-                </label>
+                  <GlassSelect 
+                    value={formData.autoRoleId}
+                    onChange={(val) => setFormData({...formData, autoRoleId: val})}
+                    placeholder="Disabled"
+                    options={[
+                      { value: "", label: "Disabled" },
+                      ...discordData.roles.filter(r => r.id !== formData.guildId).map(r => ({ value: r.id, label: r.name }))
+                    ]}
+                  />
+                </div>
 
-                <label style={{ ...labelStyle, marginTop: 0 }}>
+                <div style={{ ...labelStyle, marginTop: 0 }}>
                   Welcome Channel
-                  <select name="welcomeChannelId" value={formData.welcomeChannelId} onChange={handleChange} className="glass-input">
-                    <option value="">Disabled</option>
-                    {discordData.textChannels.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </label>
+                  <GlassSelect 
+                    value={formData.welcomeChannelId}
+                    onChange={(val) => setFormData({...formData, welcomeChannelId: val})}
+                    placeholder="Disabled"
+                    options={[
+                      { value: "", label: "Disabled" },
+                      ...discordData.textChannels.map(c => ({ value: c.id, label: `# ${c.name}` }))
+                    ]}
+                  />
+                </div>
               </div>
 
               <label style={labelStyle}>
@@ -274,15 +284,18 @@ export default function AdminConfigForm({ initialConfig, clientId }: { initialCo
             <div className="bento-card col-span-2 row-span-1">
               <h4 style={headerStyle}><MessageRemove size="24" color="#2ecc71" variant="Bulk" /> Outbound Architecture</h4>
               
-              <label style={{ ...labelStyle, marginTop: 0 }}>
+              <div style={{ ...labelStyle, marginTop: 0 }}>
                 Departure Channel
-                <select name="leaveChannelId" value={formData.leaveChannelId} onChange={handleChange} className="glass-input">
-                  <option value="">Disabled</option>
-                  {discordData.textChannels.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </label>
+                <GlassSelect 
+                  value={formData.leaveChannelId}
+                  onChange={(val) => setFormData({...formData, leaveChannelId: val})}
+                  placeholder="Disabled"
+                  options={[
+                    { value: "", label: "Disabled" },
+                    ...discordData.textChannels.map(c => ({ value: c.id, label: `# ${c.name}` }))
+                  ]}
+                />
+              </div>
 
               <label style={labelStyle}>
                 Departure Template
@@ -300,16 +313,19 @@ export default function AdminConfigForm({ initialConfig, clientId }: { initialCo
             {/* Advanced & Logging */}
             <div className="bento-card col-span-4" style={{ padding: '2rem 2.5rem' }}>
               <h4 style={headerStyle}><SecuritySafe size="24" color="#2ecc71" variant="Bulk" /> Security & Logging</h4>
-              <label style={{ ...labelStyle, marginTop: 0 }}>
+              <div style={{ ...labelStyle, marginTop: 0 }}>
                 Audit Log Channel
-                <select name="logChannelId" value={formData.logChannelId} onChange={handleChange} className="glass-input">
-                  <option value="">Disabled</option>
-                  {discordData.textChannels.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', display: 'block', marginTop: '0.5rem' }}>Requires advanced bot permissions to stream security logs.</span>
-              </label>
+                <GlassSelect 
+                  value={formData.logChannelId}
+                  onChange={(val) => setFormData({...formData, logChannelId: val})}
+                  placeholder="Disabled"
+                  options={[
+                    { value: "", label: "Disabled" },
+                    ...discordData.textChannels.map(c => ({ value: c.id, label: `# ${c.name}` }))
+                  ]}
+                />
+                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', display: 'block', marginTop: '0.5rem', textTransform: 'none', letterSpacing: 'normal' }}>Requires advanced bot permissions to stream security logs.</span>
+              </div>
             </div>
           </>
         ) : (
