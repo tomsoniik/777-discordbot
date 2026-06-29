@@ -23,8 +23,6 @@ export default async function AdminLayout({
     <div className={outfit.className} style={{ 
       display: 'flex', 
       minHeight: '100vh', 
-      backgroundColor: '#050c08', // Darker background for depth
-      backgroundImage: 'radial-gradient(circle at 15% 50%, rgba(46, 204, 113, 0.05), transparent 25%), radial-gradient(circle at 85% 30%, rgba(46, 204, 113, 0.08), transparent 25%)',
       color: '#e2f5e9',
       overflowX: 'hidden'
     }}>
