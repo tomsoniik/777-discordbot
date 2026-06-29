@@ -135,7 +135,6 @@ export default async function AdminLayout({
           display: flex;
           flex-direction: column;
           position: relative;
-          overflow: hidden;
         }
         
         .bento-card::before {
@@ -147,11 +146,12 @@ export default async function AdminLayout({
           transition: opacity 0.6s ease;
         }
         
-        .bento-card:hover {
+        .bento-card:hover, .bento-card:focus-within {
           transform: translateY(-4px) scale(1.01);
           border-color: rgba(46, 204, 113, 0.2);
           background: rgba(10, 31, 18, 0.6);
           box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6), 0 0 40px rgba(46, 204, 113, 0.05);
+          z-index: 50;
         }
         .bento-card:hover::before {
           opacity: 1;

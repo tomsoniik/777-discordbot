@@ -27,7 +27,7 @@ export default function GlassSelect({ value, onChange, options, placeholder = "S
   const selectedOption = options.find(opt => opt.value === value);
 
   return (
-    <div ref={selectRef} style={{ position: 'relative', width: '100%', marginTop: '0.5rem' }}>
+    <div ref={selectRef} tabIndex={0} style={{ position: 'relative', width: '100%', marginTop: '0.5rem', outline: 'none' }}>
       <div 
         onClick={() => setIsOpen(!isOpen)}
         style={{
