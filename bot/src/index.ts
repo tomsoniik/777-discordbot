@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, B
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { handleMusicInteraction, musicCommands } from './music';
+import { handleMusicInteraction, musicCommands, handleMusicButtonInteraction } from './music';
 
 dotenv.config();
 
@@ -70,10 +70,14 @@ client.on('messageCreate', async (message) => {
 });
 
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-
-    if (['play', 'skip', 'stop', 'queue'].includes(interaction.commandName)) {
-        await handleMusicInteraction(interaction);
+    if (interaction.isChatInputCommand()) {
+        if (['play', 'skip', 'stop', 'queue'].includes(interaction.commandName)) {
+            await handleMusicInteraction(interaction);
+        }
+    } else if (interaction.isButton()) {
+        if (interaction.customId.startsWith('music_')) {
+            await handleMusicButtonInteraction(interaction as any);
+        }
     }
 });
 

@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, GuildMember, SlashCommandBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, GuildMember, SlashCommandBuilder, ButtonInteraction, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import {
     joinVoiceChannel,
     createAudioPlayer,
@@ -17,6 +17,7 @@ interface ServerQueue {
     player: AudioPlayer;
     songs: Song[];
     playing: boolean;
+    dashboardMessage?: any;
 }
 
 interface Song {
@@ -212,7 +213,7 @@ async function playSong(guildId: string, song: Song | undefined) {
             inputType: stream.type
         });
         serverQueue.player.play(resource);
-        (serverQueue.textChannel as any)?.send(`Teraz odtwarzane: **${song.title}**`);
+        await sendMusicDashboard(guildId, song, serverQueue.textChannel);
     } catch (error) {
         console.error(error);
         (serverQueue.textChannel as any)?.send(`Błąd podczas odtwarzania **${song.title}**`);
@@ -261,4 +262,76 @@ async function showQueue(interaction: ChatInputCommandInteraction) {
     }
     const queueString = serverQueue.songs.map((song, index) => `${index === 0 ? '**Teraz gram:**' : `**${index}.**`} ${song.title}`).join('\n');
     await interaction.reply(`**Kolejka:**\n${queueString}`);
+}
+
+async function sendMusicDashboard(guildId: string, song: Song, textChannel: any) {
+    const serverQueue = queue.get(guildId);
+    if (!serverQueue) return;
+
+    const embed = new EmbedBuilder()
+        .setColor('#FF5500') // SoundCloud Orange
+        .setTitle('🎶 Teraz odtwarzane')
+        .setDescription(`**${song.title}**\n\n[Link do utworu](${song.url})`)
+        .addFields(
+            { name: 'Utworów w kolejce', value: `${serverQueue.songs.length - 1}`, inline: true },
+            { name: 'Status', value: serverQueue.player.state.status === AudioPlayerStatus.Playing ? '▶️ Odtwarzanie' : '⏸️ Wstrzymano', inline: true }
+        )
+        .setFooter({ text: 'Zarządzaj muzyką używając przycisków poniżej' });
+
+    const row = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+            new ButtonBuilder().setCustomId('music_pause_resume').setLabel('Pause / Resume').setStyle(ButtonStyle.Primary).setEmoji('⏯️'),
+            new ButtonBuilder().setCustomId('music_skip').setLabel('Skip').setStyle(ButtonStyle.Secondary).setEmoji('⏭️'),
+            new ButtonBuilder().setCustomId('music_stop').setLabel('Stop').setStyle(ButtonStyle.Danger).setEmoji('⏹️'),
+            new ButtonBuilder().setCustomId('music_queue').setLabel('Queue').setStyle(ButtonStyle.Secondary).setEmoji('📜')
+        );
+
+    if (serverQueue.dashboardMessage) {
+        try { await serverQueue.dashboardMessage.delete(); } catch(e) {}
+    }
+
+    const msg = await textChannel.send({ embeds: [embed], components: [row] });
+    serverQueue.dashboardMessage = msg;
+}
+
+export async function handleMusicButtonInteraction(interaction: ButtonInteraction) {
+    const guildId = interaction.guildId;
+    if (!guildId) return;
+    const serverQueue = queue.get(guildId);
+
+    if (!serverQueue) {
+        await interaction.reply({ content: 'Obecnie nie jest odtwarzana żadna muzyka!', ephemeral: true });
+        return;
+    }
+
+    const voiceChannel = (interaction.member as GuildMember)?.voice.channel;
+    if (!voiceChannel || voiceChannel.id !== serverQueue.voiceChannel.id) {
+        await interaction.reply({ content: 'Musisz być na tym samym kanale głosowym co bot, aby sterować muzyką!', ephemeral: true });
+        return;
+    }
+
+    if (interaction.customId === 'music_pause_resume') {
+        if (serverQueue.player.state.status === AudioPlayerStatus.Playing) {
+            serverQueue.player.pause();
+            await interaction.reply({ content: '⏸️ Wstrzymano odtwarzanie.', ephemeral: true });
+        } else {
+            serverQueue.player.unpause();
+            await interaction.reply({ content: '▶️ Wznowiono odtwarzanie.', ephemeral: true });
+        }
+        // Opcjonalnie można zaktualizować embed z nowym statusem
+    } else if (interaction.customId === 'music_skip') {
+        serverQueue.player.stop(); // Triggers Idle and plays next song
+        await interaction.reply({ content: '⏭️ Pominięto utwór.', ephemeral: true });
+    } else if (interaction.customId === 'music_stop') {
+        serverQueue.songs = [];
+        serverQueue.player.stop();
+        await interaction.reply({ content: '⏹️ Zatrzymano odtwarzanie i wyczyszczono kolejkę.', ephemeral: true });
+    } else if (interaction.customId === 'music_queue') {
+        if (serverQueue.songs.length === 0) {
+            await interaction.reply({ content: 'Kolejka jest pusta!', ephemeral: true });
+            return;
+        }
+        const queueString = serverQueue.songs.map((song, index) => `${index === 0 ? '**Teraz gram:**' : `**${index}.**`} ${song.title}`).join('\n');
+        await interaction.reply({ content: `**Kolejka:**\n${queueString.substring(0, 1900)}`, ephemeral: true });
+    }
 }
