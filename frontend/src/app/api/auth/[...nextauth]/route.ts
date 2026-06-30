@@ -1,17 +1,12 @@
 import NextAuth, { NextAuthOptions } from "next-auth"
 import DiscordProvider from "next-auth/providers/discord"
-import SteamProvider from "next-auth-steam"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { PrismaClient } from "@prisma/client"
 import { NextRequest } from "next/server"
 
 const prisma = new PrismaClient()
 
-const dummyReq = {
-  headers: {
-    'x-forwarded-host': process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL).host : 'localhost:3000'
-  }
-} as any;
+
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -38,10 +33,6 @@ export const authOptions: NextAuthOptions = {
           discordId: profile.id,
         }
       },
-    }),
-    SteamProvider(dummyReq, {
-      clientSecret: process.env.STEAM_SECRET || "missing_steam_secret_change_me",
-      callbackUrl: process.env.NEXTAUTH_URL ? `${process.env.NEXTAUTH_URL}/api/auth/callback/steam` : 'http://localhost:3000/api/auth/callback/steam'
     })
   ],
   callbacks: {
