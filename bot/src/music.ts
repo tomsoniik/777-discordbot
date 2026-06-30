@@ -6,7 +6,8 @@ import {
     AudioPlayerStatus,
     VoiceConnection,
     AudioPlayer,
-    NoSubscriberBehavior
+    NoSubscriberBehavior,
+    AudioResource
 } from '@discordjs/voice';
 import play from 'play-dl';
 
@@ -18,6 +19,9 @@ interface ServerQueue {
     songs: Song[];
     playing: boolean;
     dashboardMessage?: any;
+    volume: number;
+    loop: boolean;
+    resource?: AudioResource;
 }
 
 interface Song {
@@ -156,6 +160,8 @@ async function execute(interaction: ChatInputCommandInteraction) {
             player: player,
             songs: [],
             playing: false,
+            volume: 100,
+            loop: false,
         };
 
         queue.set(interaction.guild.id, queueConstruct);
@@ -171,14 +177,16 @@ async function execute(interaction: ChatInputCommandInteraction) {
             connection.subscribe(player);
 
             player.on(AudioPlayerStatus.Idle, () => {
-                queueConstruct.songs.shift();
+                if (!queueConstruct.loop) {
+                    queueConstruct.songs.shift();
+                }
                 playSong(interaction.guild!.id, queueConstruct.songs[0]);
             });
 
             player.on('error', error => {
                 console.error('Audio Player Error:', error);
                 (queueConstruct.textChannel as any)?.send(`Błąd odtwarzania.`);
-                queueConstruct.songs.shift();
+                if (!queueConstruct.loop) queueConstruct.songs.shift();
                 playSong(interaction.guild!.id, queueConstruct.songs[0]);
             });
 
@@ -210,8 +218,11 @@ async function playSong(guildId: string, song: Song | undefined) {
     try {
         const stream = await play.stream(song.url);
         const resource = createAudioResource(stream.stream, {
-            inputType: stream.type
+            inputType: stream.type,
+            inlineVolume: true
         });
+        resource.volume?.setVolume(serverQueue.volume / 100);
+        serverQueue.resource = resource;
         serverQueue.player.play(resource);
         await sendMusicDashboard(guildId, song, serverQueue.textChannel);
     } catch (error) {
@@ -264,7 +275,7 @@ async function showQueue(interaction: ChatInputCommandInteraction) {
     await interaction.reply(`**Kolejka:**\n${queueString}`);
 }
 
-async function sendMusicDashboard(guildId: string, song: Song, textChannel: any) {
+async function sendMusicDashboard(guildId: string, song: Song, textChannel: any, interactionToUpdate?: ButtonInteraction) {
     const serverQueue = queue.get(guildId);
     if (!serverQueue) return;
 
@@ -274,11 +285,13 @@ async function sendMusicDashboard(guildId: string, song: Song, textChannel: any)
         .setDescription(`**${song.title}**\n\n[Link do utworu](${song.url})`)
         .addFields(
             { name: 'Utworów w kolejce', value: `${serverQueue.songs.length - 1}`, inline: true },
-            { name: 'Status', value: serverQueue.player.state.status === AudioPlayerStatus.Playing ? '▶️ Odtwarzanie' : '⏸️ Wstrzymano', inline: true }
+            { name: 'Status', value: serverQueue.player.state.status === AudioPlayerStatus.Playing ? '▶️ Odtwarzanie' : '⏸️ Wstrzymano', inline: true },
+            { name: 'Głośność', value: `${serverQueue.volume}%`, inline: true },
+            { name: 'Pętla (Loop)', value: serverQueue.loop ? '✅ Włączona' : '❌ Wyłączona', inline: true }
         )
         .setFooter({ text: 'Zarządzaj muzyką używając przycisków poniżej' });
 
-    const row = new ActionRowBuilder<ButtonBuilder>()
+    const row1 = new ActionRowBuilder<ButtonBuilder>()
         .addComponents(
             new ButtonBuilder().setCustomId('music_pause_resume').setLabel('Pause / Resume').setStyle(ButtonStyle.Primary).setEmoji('⏯️'),
             new ButtonBuilder().setCustomId('music_skip').setLabel('Skip').setStyle(ButtonStyle.Secondary).setEmoji('⏭️'),
@@ -286,12 +299,22 @@ async function sendMusicDashboard(guildId: string, song: Song, textChannel: any)
             new ButtonBuilder().setCustomId('music_queue').setLabel('Queue').setStyle(ButtonStyle.Secondary).setEmoji('📜')
         );
 
-    if (serverQueue.dashboardMessage) {
-        try { await serverQueue.dashboardMessage.delete(); } catch(e) {}
-    }
+    const row2 = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+            new ButtonBuilder().setCustomId('music_vol_down').setLabel('Vol -').setStyle(ButtonStyle.Secondary).setEmoji('🔉'),
+            new ButtonBuilder().setCustomId('music_vol_up').setLabel('Vol +').setStyle(ButtonStyle.Secondary).setEmoji('🔊'),
+            new ButtonBuilder().setCustomId('music_loop').setLabel('Loop').setStyle(serverQueue.loop ? ButtonStyle.Success : ButtonStyle.Secondary).setEmoji('🔄')
+        );
 
-    const msg = await textChannel.send({ embeds: [embed], components: [row] });
-    serverQueue.dashboardMessage = msg;
+    if (interactionToUpdate) {
+        await interactionToUpdate.update({ embeds: [embed], components: [row1, row2] });
+    } else {
+        if (serverQueue.dashboardMessage) {
+            try { await serverQueue.dashboardMessage.delete(); } catch(e) {}
+        }
+        const msg = await textChannel.send({ embeds: [embed], components: [row1, row2] });
+        serverQueue.dashboardMessage = msg;
+    }
 }
 
 export async function handleMusicButtonInteraction(interaction: ButtonInteraction) {
@@ -313,12 +336,10 @@ export async function handleMusicButtonInteraction(interaction: ButtonInteractio
     if (interaction.customId === 'music_pause_resume') {
         if (serverQueue.player.state.status === AudioPlayerStatus.Playing) {
             serverQueue.player.pause();
-            await interaction.reply({ content: '⏸️ Wstrzymano odtwarzanie.', ephemeral: true });
         } else {
             serverQueue.player.unpause();
-            await interaction.reply({ content: '▶️ Wznowiono odtwarzanie.', ephemeral: true });
         }
-        // Opcjonalnie można zaktualizować embed z nowym statusem
+        await sendMusicDashboard(guildId, serverQueue.songs[0], serverQueue.textChannel, interaction);
     } else if (interaction.customId === 'music_skip') {
         serverQueue.player.stop(); // Triggers Idle and plays next song
         await interaction.reply({ content: '⏭️ Pominięto utwór.', ephemeral: true });
@@ -333,5 +354,24 @@ export async function handleMusicButtonInteraction(interaction: ButtonInteractio
         }
         const queueString = serverQueue.songs.map((song, index) => `${index === 0 ? '**Teraz gram:**' : `**${index}.**`} ${song.title}`).join('\n');
         await interaction.reply({ content: `**Kolejka:**\n${queueString.substring(0, 1900)}`, ephemeral: true });
+    } else if (interaction.customId === 'music_loop') {
+        serverQueue.loop = !serverQueue.loop;
+        await sendMusicDashboard(guildId, serverQueue.songs[0], serverQueue.textChannel, interaction);
+    } else if (interaction.customId === 'music_vol_up') {
+        if (serverQueue.volume >= 200) {
+            await interaction.reply({ content: 'Głośność jest już na maksymalnym poziomie (200%)!', ephemeral: true });
+            return;
+        }
+        serverQueue.volume += 10;
+        serverQueue.resource?.volume?.setVolume(serverQueue.volume / 100);
+        await sendMusicDashboard(guildId, serverQueue.songs[0], serverQueue.textChannel, interaction);
+    } else if (interaction.customId === 'music_vol_down') {
+        if (serverQueue.volume <= 10) {
+            await interaction.reply({ content: 'Głośność jest na minimalnym poziomie (10%)!', ephemeral: true });
+            return;
+        }
+        serverQueue.volume -= 10;
+        serverQueue.resource?.volume?.setVolume(serverQueue.volume / 100);
+        await sendMusicDashboard(guildId, serverQueue.songs[0], serverQueue.textChannel, interaction);
     }
 }
