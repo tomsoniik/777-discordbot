@@ -86,38 +86,53 @@ async function execute(interaction: ChatInputCommandInteraction) {
 
     try {
         let query = interaction.options.getString('query', true).trim();
-        const ytType = play.yt_validate(query);
+        let songTitle = '';
+        let songUrl = '';
 
-        if (query.startsWith('http')) {
-            if (ytType === 'video') {
-                const videoInfo = await play.video_info(query);
-                song = {
-                    title: videoInfo.video_details.title || 'Nieznany tytuł',
-                    url: videoInfo.video_details.url,
-                };
-            } else if (ytType === 'playlist') {
-                await interaction.editReply('🎶 Linki do całych playlist nie są na ten moment obsługiwane. Podaj link do pojedynczego filmu/utworu!');
-                return;
-            } else {
-                await interaction.editReply('❌ To nie wygląda na obsługiwany link do filmu na YouTube. Upewnij się, że link jest poprawny.');
+        if (query.includes('youtube.com') || query.includes('youtu.be')) {
+            try {
+                const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(query)}&format=json`);
+                if (res.ok) {
+                    const data = await res.json() as any;
+                    query = data.title; // Przepisujemy link YT na tytuł piosenki, by wyszukać go w SC
+                } else {
+                    await interaction.editReply('❌ Nie udało się odczytać filmu z podanego linku YouTube. Prawdopodobnie jest to playlista, stream lub prywatny film.');
+                    return;
+                }
+            } catch (err) {
+                await interaction.editReply('❌ Wystąpił błąd podczas pobierania tytułu z YouTube.');
                 return;
             }
+        }
+
+        if (query.startsWith('http') && query.includes('soundcloud.com')) {
+            const soInfo = await play.soundcloud(query) as any;
+            if (!soInfo || !soInfo.name) {
+                await interaction.editReply('❌ Nie udało się odczytać utworu z podanego linku SoundCloud.');
+                return;
+            }
+            songTitle = soInfo.name;
+            songUrl = soInfo.url;
         } else {
             const searchResults = await play.search(query, {
                 limit: 1,
-                source: { youtube: 'video' }
+                source: { soundcloud: 'tracks' }
             });
 
             if (searchResults.length === 0) {
-                await interaction.editReply(`❌ Nie znaleziono wyników dla: \`${query}\` (Możliwe, że YouTube zablokował zapytanie z serwera).`);
+                await interaction.editReply(`❌ Nie znaleziono utworu dla zapytania: \`${query}\` na SoundCloud.`);
                 return;
             }
 
-            song = {
-                title: searchResults[0].title || 'Nieznany tytuł',
-                url: searchResults[0].url,
-            };
+            songTitle = searchResults[0].name || 'Nieznany tytuł';
+            songUrl = searchResults[0].url;
         }
+
+        song = {
+            title: songTitle,
+            url: songUrl,
+        };
+
     } catch (error: any) {
         console.error('Błąd podczas wyszukiwania:', error);
         await interaction.editReply(`❌ Wystąpił błąd podczas wyszukiwania utworu: \`${error.message || 'Nieznany błąd'}\``);

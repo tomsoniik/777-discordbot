@@ -165,6 +165,16 @@ app.post('/api/notify', async (req, res) => {
     }
 });
 
+import play from 'play-dl';
+
+play.getFreeClientID().then((clientID) => {
+    play.setToken({
+        soundcloud : {
+            client_id : clientID
+        }
+    })
+}).catch(console.error);
+
 client.login(process.env.DISCORD_TOKEN);
 
 app.listen(PORT, () => {
