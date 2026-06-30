@@ -61,76 +61,102 @@ export default function MusicPage() {
   };
 
   return (
-    <main className="container animate-fade-in-up" style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="admin-card" style={{ maxWidth: '600px', width: '100%', textAlign: 'center', padding: '2rem' }}>
-        <h1 style={{ color: 'var(--accent-green)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '2rem' }}>🎶</span> {language === 'pl' ? 'Panel Muzyczny' : 'Music Panel'}
+    <main className="container animate-fade-in-up" style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+      <div className="bento-card" style={{ maxWidth: '700px', width: '100%', textAlign: 'center' }}>
+        <h1 style={{ color: 'var(--accent-green)', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.8rem', fontSize: '2.5rem', fontWeight: 800 }}>
+          <span>🎶</span> {language === 'pl' ? 'Panel Muzyczny' : 'Music Panel'}
         </h1>
         
         {loading ? (
-          <p>{language === 'pl' ? 'Ładowanie stanu odtwarzacza...' : 'Loading player state...'}</p>
+          <div style={{ padding: '3rem 0', color: 'var(--text-muted)' }}>
+            <div className="btn-pulse" style={{ width: '40px', height: '40px', background: 'var(--accent-green)', borderRadius: '50%', margin: '0 auto 1rem' }}></div>
+            <p>{language === 'pl' ? 'Ładowanie stanu odtwarzacza...' : 'Loading player state...'}</p>
+          </div>
         ) : error ? (
-          <div style={{ background: 'rgba(255,0,0,0.1)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,0,0,0.3)', color: '#ff6b6b' }}>
-            <p>{error}</p>
+          <div style={{ background: 'rgba(255,60,60,0.1)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,60,60,0.3)', color: '#ff6b6b' }}>
+            <p style={{ fontSize: '1.1rem', margin: 0 }}>{error}</p>
           </div>
         ) : !status || status.songs.length === 0 ? (
-          <div style={{ padding: '2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
-            <p style={{ color: 'var(--text-muted)' }}>
+          <div style={{ padding: '3rem', background: 'rgba(0,0,0,0.3)', borderRadius: '16px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', margin: 0 }}>
               {language === 'pl' ? 'Kolejka jest pusta. Użyj komendy /play na Discordzie, aby coś zagrać!' : 'Queue is empty. Use /play on Discord to play something!'}
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Now Playing */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            {/* Now Playing - Cinematic Hero style */}
             <div style={{ 
-              background: 'linear-gradient(135deg, rgba(46, 204, 113, 0.1) 0%, rgba(0, 0, 0, 0.4) 100%)', 
-              padding: '1.5rem', 
-              borderRadius: '12px',
-              border: '1px solid rgba(46, 204, 113, 0.3)',
-              boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+              background: 'linear-gradient(135deg, rgba(46, 204, 113, 0.15) 0%, rgba(10, 31, 18, 0.8) 100%)', 
+              padding: '2rem', 
+              borderRadius: '20px',
+              border: '1px solid rgba(46, 204, 113, 0.4)',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.4), inset 0 0 20px rgba(46, 204, 113, 0.05)',
+              position: 'relative',
+              overflow: 'hidden'
             }}>
-              <p style={{ fontSize: '0.9rem', color: 'var(--accent-green)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+              <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '150px', height: '150px', background: 'var(--accent-green)', filter: 'blur(80px)', opacity: 0.15 }}></div>
+              
+              <p style={{ fontSize: '0.85rem', color: 'var(--accent-green)', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 1rem 0' }}>
                 {language === 'pl' ? 'Teraz Odtwarzane' : 'Now Playing'}
               </p>
-              <h2 style={{ fontSize: '1.4rem', margin: '0 0 1rem 0' }}>{status.songs[0].title}</h2>
-              <a href={status.songs[0].url} target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', textDecoration: 'underline', fontSize: '0.9rem' }}>
+              <h2 className="text-gradient" style={{ fontSize: '1.8rem', margin: '0 0 1.5rem 0', lineHeight: 1.3, wordBreak: 'break-word' }}>
+                {status.songs[0].title}
+              </h2>
+              <a href={status.songs[0].url} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '0.6rem 1.5rem', fontSize: '0.9rem', borderRadius: '50px' }}>
                 {language === 'pl' ? 'Otwórz na SoundCloud' : 'Open on SoundCloud'}
               </a>
             </div>
 
-            {/* Controls */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
-              <button onClick={() => controlMusic(status.playing ? 'pause' : 'resume')} className="btn-primary" style={{ padding: '0.5rem 1rem' }}>
+            {/* Main Controls */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: '16px' }}>
+              <button onClick={() => controlMusic(status.playing ? 'pause' : 'resume')} className="btn" style={{ minWidth: '120px', borderRadius: '12px' }}>
                 {status.playing ? '⏸ Pause' : '▶️ Play'}
               </button>
-              <button onClick={() => controlMusic('skip')} className="btn-secondary" style={{ padding: '0.5rem 1rem' }}>
+              <button onClick={() => controlMusic('skip')} className="btn btn-outline" style={{ minWidth: '100px', borderRadius: '12px' }}>
                 ⏭ Skip
               </button>
-              <button onClick={() => controlMusic('stop')} className="btn-secondary" style={{ padding: '0.5rem 1rem', background: 'rgba(255, 60, 60, 0.2)', borderColor: 'rgba(255,60,60,0.5)' }}>
+              <button onClick={() => controlMusic('stop')} className="btn btn-outline" style={{ minWidth: '100px', borderRadius: '12px', borderColor: 'rgba(255,60,60,0.5)', color: '#ff6b6b' }}>
                 ⏹ Stop
               </button>
-              <button onClick={() => controlMusic('loop')} className={status.loop ? "btn-primary" : "btn-secondary"} style={{ padding: '0.5rem 1rem' }}>
+              <button onClick={() => controlMusic('loop')} className={status.loop ? "btn" : "btn btn-outline"} style={{ minWidth: '120px', borderRadius: '12px' }}>
                 🔄 Loop: {status.loop ? 'ON' : 'OFF'}
               </button>
             </div>
 
-            {/* Volume */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px' }}>
-              <button onClick={() => controlMusic('volume', status.volume - 10)} className="btn-secondary" style={{ padding: '0.4rem 0.8rem' }}>🔉 -10%</button>
-              <span style={{ fontWeight: 'bold', fontSize: '1.2rem', minWidth: '60px', textAlign: 'center' }}>{status.volume}%</span>
-              <button onClick={() => controlMusic('volume', status.volume + 10)} className="btn-secondary" style={{ padding: '0.4rem 0.8rem' }}>🔊 +10%</button>
+            {/* Volume Control */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', background: 'rgba(0,0,0,0.2)', padding: '1.2rem', borderRadius: '16px' }}>
+              <button onClick={() => controlMusic('volume', status.volume - 10)} className="btn btn-outline" style={{ padding: '0.5rem 1rem', borderRadius: '8px' }}>🔉 -10%</button>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '80px' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.2rem' }}>Volume</span>
+                <span style={{ fontWeight: 800, fontSize: '1.4rem', color: 'var(--accent-green)' }}>{status.volume}%</span>
+              </div>
+              <button onClick={() => controlMusic('volume', status.volume + 10)} className="btn btn-outline" style={{ padding: '0.5rem 1rem', borderRadius: '8px' }}>🔊 +10%</button>
             </div>
 
             {/* Queue List */}
             {status.songs.length > 1 && (
-              <div style={{ marginTop: '1rem', textAlign: 'left', background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px' }}>
-                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.8rem', color: 'var(--text-muted)', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
-                  {language === 'pl' ? 'Następne w kolejce' : 'Next in Queue'}
+              <div style={{ marginTop: '0.5rem', textAlign: 'left', background: 'rgba(10, 31, 18, 0.4)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 style={{ fontSize: '1.1rem', margin: '0 0 1rem 0', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span>📋</span> {language === 'pl' ? 'Następne w kolejce' : 'Next in Queue'}
                 </h3>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                   {status.songs.slice(1).map((s, i) => (
-                    <li key={i} style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', fontSize: '0.9rem' }}>
-                      <span style={{ color: 'var(--accent-green)', marginRight: '0.5rem' }}>{i + 1}.</span> {s.title}
+                    <li key={i} style={{ 
+                      padding: '0.8rem 1rem', 
+                      background: 'rgba(255,255,255,0.02)', 
+                      borderRadius: '8px', 
+                      fontSize: '0.95rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.8rem',
+                      transition: 'background 0.2s',
+                      cursor: 'default'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                    >
+                      <span style={{ color: 'var(--accent-green)', fontWeight: 'bold', minWidth: '24px' }}>{i + 1}.</span> 
+                      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title}</span>
                     </li>
                   ))}
                 </ul>
