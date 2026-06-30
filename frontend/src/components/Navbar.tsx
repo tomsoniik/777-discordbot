@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
+import { useSession, signOut } from 'next-auth/react';
 
 export default function Navbar() {
   const pathname = usePathname();
   const { t, language, setLanguage } = useLanguage();
+  const { data: session } = useSession();
 
   if (pathname?.startsWith('/admin')) {
     return null;
@@ -27,9 +29,20 @@ export default function Navbar() {
         </div>
         <div className="navbar-nav" style={{ alignItems: 'center' }}>
           <Link href="/" className="nav-link">{t("home")}</Link>
-          <Link href="/apply" className="nav-link">{t("recruitment")}</Link>
           <Link href="/about" className="nav-link">{t("about")}</Link>
-          <Link href="/music" className="nav-link" style={{ color: 'var(--accent-green)' }}>🎶 Playlist</Link>
+          {session && (
+            <>
+              <Link href="/apply" className="nav-link">{t("recruitment")}</Link>
+              <Link href="/music" className="nav-link" style={{ color: 'var(--accent-green)' }}>🎶 Playlist</Link>
+              <button 
+                onClick={() => signOut()} 
+                className="nav-link" 
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ff6b6b' }}
+              >
+                Logout
+              </button>
+            </>
+          )}
           <div style={{ marginLeft: '1rem', display: 'flex', alignItems: 'center' }}>
             <button 
               onClick={toggleLanguage}

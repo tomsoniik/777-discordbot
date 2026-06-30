@@ -19,6 +19,7 @@ export const authOptions: NextAuthOptions = {
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID || "missing_discord_client_id",
       clientSecret: process.env.DISCORD_CLIENT_SECRET || "missing_discord_client_secret",
+      allowDangerousEmailAccountLinking: true,
       authorization: { params: { scope: 'identify email' } },
       profile(profile) {
         if (profile.avatar === null) {

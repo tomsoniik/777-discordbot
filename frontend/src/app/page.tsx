@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
+import { useSession, signIn } from 'next-auth/react';
 import { Crown, ShieldTick, Radar } from 'iconsax-react';
 
 export default function Home() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { data: session, status } = useSession();
 
   return (
     <main className="container" style={{ paddingTop: 0 }}>
@@ -17,12 +19,37 @@ export default function Home() {
             {t("heroSubtitle")}
           </p>
           <div className="hero-actions">
-            <Link href="/apply" className="btn-cinematic" style={{ textDecoration: 'none', padding: '1rem 2.5rem', fontSize: '1rem' }}>
-              {t("startApp")}
-            </Link>
-            <Link href="/about" className="btn-cinematic" style={{ marginLeft: '1rem', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', boxShadow: 'none', padding: '1rem 2.5rem', fontSize: '1rem', textDecoration: 'none' }}>
-              {t("learnMore")}
-            </Link>
+            {status === "loading" ? (
+              <div className="btn-cinematic" style={{ opacity: 0.5 }}>Loading...</div>
+            ) : session ? (
+              <>
+                <Link href="/apply" className="btn-cinematic" style={{ textDecoration: 'none', padding: '1rem 2.5rem', fontSize: '1rem' }}>
+                  {t("startApp")}
+                </Link>
+                <Link href="/music" className="btn-cinematic" style={{ marginLeft: '1rem', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', boxShadow: 'none', padding: '1rem 2.5rem', fontSize: '1rem', textDecoration: 'none' }}>
+                  🎶 {language === 'pl' ? 'Zarządzaj Playlistą' : 'Manage Playlist'}
+                </Link>
+              </>
+            ) : (
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <button 
+                  onClick={() => signIn('discord')} 
+                  className="btn-cinematic" 
+                  style={{ background: '#5865F2', padding: '1rem 2rem', fontSize: '1.1rem', border: 'none' }}
+                >
+                  <img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6918e57475a843f59f_icon_clyde_blurple_RGB.svg" alt="Discord" style={{ width: '24px', marginRight: '10px', verticalAlign: 'middle', filter: 'brightness(0) invert(1)' }} />
+                  Zaloguj przez Discord
+                </button>
+                <button 
+                  onClick={() => signIn('steam')} 
+                  className="btn-cinematic" 
+                  style={{ background: '#171a21', color: '#fff', border: '1px solid #66c0f4', padding: '1rem 2rem', fontSize: '1.1rem' }}
+                >
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg" alt="Steam" style={{ width: '24px', marginRight: '10px', verticalAlign: 'middle' }} />
+                  Zaloguj przez Steam
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </section>
