@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 
 interface Song {
@@ -17,7 +17,8 @@ interface MusicStatus {
   error?: string;
 }
 
-export default function MusicPage({ params }: { params: { guildId: string } }) {
+export default function MusicPage({ params }: { params: Promise<{ guildId: string }> }) {
+  const { guildId } = use(params);
   const { t, language } = useLanguage();
   const [status, setStatus] = useState<MusicStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,7 +26,7 @@ export default function MusicPage({ params }: { params: { guildId: string } }) {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch(`/api/music/proxy?guildId=${params.guildId}`);
+      const res = await fetch(`/api/music/proxy?guildId=${guildId}`);
       if (!res.ok) throw new Error("API error");
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -50,7 +51,7 @@ export default function MusicPage({ params }: { params: { guildId: string } }) {
       await fetch(`/api/music/proxy`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, value, guildId: params.guildId }),
+        body: JSON.stringify({ action, value, guildId }),
       });
       fetchStatus();
     } catch (err) {

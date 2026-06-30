@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
-export default function GroupManagePage({ params }: { params: { guildId: string } }) {
+export default function GroupManagePage({ params }: { params: Promise<{ guildId: string }> }) {
+  const { guildId } = use(params);
   const { language } = useLanguage();
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function GroupManagePage({ params }: { params: { guildId: string 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      const target = data.find((g: any) => g.guildId === params.guildId);
+      const target = data.find((g: any) => g.guildId === guildId);
       if (!target) throw new Error("Nie znaleziono grupy lub brak dostępu");
 
       // Fetch specific group details
@@ -42,7 +43,7 @@ export default function GroupManagePage({ params }: { params: { guildId: string 
 
   useEffect(() => {
     if (status === 'authenticated') fetchGroup();
-  }, [status, params.guildId]);
+  }, [status, guildId]);
 
   const addMember = async (e: React.FormEvent) => {
     e.preventDefault();
