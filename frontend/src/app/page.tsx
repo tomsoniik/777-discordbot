@@ -37,7 +37,7 @@ export default function Home() {
                   className="btn-cinematic" 
                   style={{ background: '#5865F2', padding: '1rem 2.5rem', fontSize: '1.1rem', border: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}
                 >
-                  <img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6918e57475a843f59f_icon_clyde_blurple_RGB.svg" alt="Discord" style={{ width: '24px', filter: 'brightness(0) invert(1)' }} />
+                  <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/discord.svg" alt="Discord" style={{ width: '24px', filter: 'invert(1)' }} />
                   {language === 'pl' ? 'Zaloguj przez Discord' : 'Sign in with Discord'}
                 </button>
               </div>
