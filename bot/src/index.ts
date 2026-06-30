@@ -1,7 +1,8 @@
-import { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, REST, Routes } from 'discord.js';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { handleMusicInteraction, musicCommands } from './music';
 
 dotenv.config();
 
@@ -11,6 +12,7 @@ const client = new Client({
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates,
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.GuildMember],
 });
@@ -22,11 +24,35 @@ app.use(express.json());
 const PORT = process.env.PORT || 3001;
 const WEB_URL = process.env.WEB_URL || 'http://localhost:3000';
 
-client.once('ready', () => {
+client.once('ready', async () => {
     console.log(`Bot logged in as ${client.user?.tag}`);
+
+    try {
+        const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
+        console.log('Rozpoczęto rejestrację (/) commands.');
+
+        const guildId = process.env.GUILD_ID;
+        if (guildId) {
+            await rest.put(
+                Routes.applicationGuildCommands(client.user!.id, guildId),
+                { body: musicCommands },
+            );
+            console.log('Pomyślnie zarejestrowano (/) commands dla gildii.');
+        } else {
+            await rest.put(
+                Routes.applicationCommands(client.user!.id),
+                { body: musicCommands },
+            );
+            console.log('Pomyślnie zarejestrowano globalne (/) commands.');
+        }
+    } catch (error) {
+        console.error(error);
+    }
 });
 
 client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
+
     if (message.content === '!ticketsetup' && message.member?.permissions.has('Administrator')) {
         const row = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
@@ -40,6 +66,14 @@ client.on('messageCreate', async (message) => {
             content: 'Kliknij poniższy przycisk, aby przejść do panelu rekrutacji i wypełnić formularz logując się przez Steam:',
             components: [row]
         });
+    }
+});
+
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isChatInputCommand()) return;
+
+    if (['play', 'skip', 'stop', 'queue'].includes(interaction.commandName)) {
+        await handleMusicInteraction(interaction);
     }
 });
 
