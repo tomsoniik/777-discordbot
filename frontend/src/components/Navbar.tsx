@@ -29,6 +29,7 @@ export default function Navbar() {
           <Link href="/" className="nav-link">{t("home")}</Link>
           <Link href="/apply" className="nav-link">{t("recruitment")}</Link>
           <Link href="/about" className="nav-link">{t("about")}</Link>
+          <Link href="/music" className="nav-link" style={{ color: 'var(--accent-green)' }}>🎶 Playlist</Link>
           <div style={{ marginLeft: '1rem', display: 'flex', alignItems: 'center' }}>
             <button 
               onClick={toggleLanguage}

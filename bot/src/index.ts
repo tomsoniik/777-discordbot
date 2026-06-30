@@ -1,8 +1,9 @@
 import { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, REST, Routes } from 'discord.js';
+import { AudioPlayerStatus } from '@discordjs/voice';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { handleMusicInteraction, musicCommands, handleMusicButtonInteraction } from './music';
+import { handleMusicInteraction, musicCommands, handleMusicButtonInteraction, queue } from './music';
 
 dotenv.config();
 
@@ -166,6 +167,49 @@ app.post('/api/notify', async (req, res) => {
     } catch (error) {
         console.error('Error assigning role or notifying admins:', error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.get('/api/music/status', (req, res) => {
+    const guildId = process.env.GUILD_ID;
+    if (!guildId) return res.json({ error: 'No guild id' });
+    const serverQueue = queue.get(guildId);
+    if (!serverQueue) {
+        return res.json({ playing: false, songs: [], volume: 100, loop: false });
+    }
+    res.json({
+        playing: serverQueue.player.state.status === AudioPlayerStatus.Playing,
+        songs: serverQueue.songs,
+        volume: serverQueue.volume,
+        loop: serverQueue.loop,
+        channelId: serverQueue.voiceChannel?.id
+    });
+});
+
+app.post('/api/music/control', async (req, res) => {
+    const { action, value } = req.body;
+    const guildId = process.env.GUILD_ID;
+    if (!guildId) return res.json({ error: 'No guild id' });
+    const serverQueue = queue.get(guildId);
+    
+    if (!serverQueue) return res.json({ success: false, error: 'Brak aktywnej kolejki' });
+
+    try {
+        if (action === 'pause') serverQueue.player.pause();
+        else if (action === 'resume') serverQueue.player.unpause();
+        else if (action === 'skip') serverQueue.player.stop();
+        else if (action === 'stop') {
+            serverQueue.songs = [];
+            serverQueue.player.stop();
+        } else if (action === 'loop') serverQueue.loop = !serverQueue.loop;
+        else if (action === 'volume' && typeof value === 'number') {
+            let vol = Math.max(10, Math.min(200, value));
+            serverQueue.volume = vol;
+            serverQueue.resource?.volume?.setVolume(vol / 100);
+        }
+        res.json({ success: true });
+    } catch (e) {
+        res.json({ success: false, error: String(e) });
     }
 });
 
