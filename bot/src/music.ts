@@ -76,8 +76,8 @@ async function execute(interaction: ChatInputCommandInteraction) {
         return;
     }
 
-    const query = interaction.options.get('query')?.value as string;
-    if (!query) {
+    const queryStr = interaction.options.get('query')?.value as string;
+    if (!queryStr) {
         await interaction.editReply('Podaj link do YouTube lub nazwę utworu!');
         return;
     }
@@ -85,29 +85,42 @@ async function execute(interaction: ChatInputCommandInteraction) {
     let song: Song;
 
     try {
-        if (query.startsWith('http') && play.yt_validate(query) === 'video') {
-            const videoInfo = await play.video_info(query);
-            song = {
-                title: videoInfo.video_details.title || 'Nieznany tytuł',
-                url: videoInfo.video_details.url,
-            };
+        let query = interaction.options.getString('query', true).trim();
+        const ytType = play.yt_validate(query);
+
+        if (query.startsWith('http')) {
+            if (ytType === 'video') {
+                const videoInfo = await play.video_info(query);
+                song = {
+                    title: videoInfo.video_details.title || 'Nieznany tytuł',
+                    url: videoInfo.video_details.url,
+                };
+            } else if (ytType === 'playlist') {
+                await interaction.editReply('🎶 Linki do całych playlist nie są na ten moment obsługiwane. Podaj link do pojedynczego filmu/utworu!');
+                return;
+            } else {
+                await interaction.editReply('❌ To nie wygląda na obsługiwany link do filmu na YouTube. Upewnij się, że link jest poprawny.');
+                return;
+            }
         } else {
             const searchResults = await play.search(query, {
                 limit: 1,
                 source: { youtube: 'video' }
             });
+
             if (searchResults.length === 0) {
-                await interaction.editReply('Nie znaleziono wyników!');
+                await interaction.editReply(`❌ Nie znaleziono wyników dla: \`${query}\` (Możliwe, że YouTube zablokował zapytanie z serwera).`);
                 return;
             }
+
             song = {
                 title: searchResults[0].title || 'Nieznany tytuł',
                 url: searchResults[0].url,
             };
         }
-    } catch (error) {
-        console.error(error);
-        await interaction.editReply('Wystąpił błąd podczas wyszukiwania utworu.');
+    } catch (error: any) {
+        console.error('Błąd podczas wyszukiwania:', error);
+        await interaction.editReply(`❌ Wystąpił błąd podczas wyszukiwania utworu: \`${error.message || 'Nieznany błąd'}\``);
         return;
     }
 
