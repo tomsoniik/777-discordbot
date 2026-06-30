@@ -171,8 +171,8 @@ app.post('/api/notify', async (req, res) => {
 });
 
 app.get('/api/music/status', (req, res) => {
-    const guildId = process.env.GUILD_ID;
-    if (!guildId) return res.json({ error: 'No guild id' });
+    const guildId = req.query.guildId as string || process.env.GUILD_ID;
+    if (!guildId) return res.json({ error: 'No guild id provided' });
     const serverQueue = queue.get(guildId);
     if (!serverQueue) {
         return res.json({ playing: false, songs: [], volume: 100, loop: false });
@@ -187,10 +187,10 @@ app.get('/api/music/status', (req, res) => {
 });
 
 app.post('/api/music/control', async (req, res) => {
-    const { action, value } = req.body;
-    const guildId = process.env.GUILD_ID;
-    if (!guildId) return res.json({ error: 'No guild id' });
-    const serverQueue = queue.get(guildId);
+    const { action, value, guildId } = req.body;
+    const targetGuildId = guildId || process.env.GUILD_ID;
+    if (!targetGuildId) return res.json({ error: 'No guild id provided' });
+    const serverQueue = queue.get(targetGuildId);
     
     if (!serverQueue) return res.json({ success: false, error: 'Brak aktywnej kolejki' });
 

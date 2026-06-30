@@ -48,6 +48,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   submissions   Submission[]
+  ownedGroups   MusicGroup[] @relation("GroupOwner")
 }
 
 model VerificationToken {
@@ -94,3 +95,25 @@ model BotConfig {
   logChannelId     String?
   updatedAt        DateTime @updatedAt
 }
+
+model MusicGroup {
+  id        String   @id @default(cuid())
+  name      String
+  guildId   String   @unique
+  ownerId   String
+  createdAt DateTime @default(now())
+
+  owner   User               @relation("GroupOwner", fields: [ownerId], references: [id])
+  members MusicGroupMember[]
+}
+
+model MusicGroupMember {
+  id        String   @id @default(cuid())
+  groupId   String
+  discordId String?
+  steamId   String?
+  addedAt   DateTime @default(now())
+
+  group MusicGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
