@@ -1,5 +1,26 @@
 import { Client, ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, EmbedBuilder } from 'discord.js';
 import { GameDig } from 'gamedig';
+import fs from 'fs';
+import path from 'path';
+
+const configPath = path.join(__dirname, '..', 'unturnedConfig.json');
+
+function loadConfig() {
+    try {
+        if (fs.existsSync(configPath)) {
+            return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        }
+    } catch (e) {
+        console.error('Blad ladowania unturnedConfig.json', e);
+    }
+    return { defaultChannelId: null };
+}
+
+function saveConfig(config: any) {
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
+
+let unturnedConfig = loadConfig();
 
 async function fetchSteamProfile(steamId: string) {
     try {
@@ -70,7 +91,14 @@ export const unturnedCommands = [
                 .setRequired(true)),
     new SlashCommandBuilder()
         .setName('tracked_list')
-        .setDescription('Pokaż listę obecnie śledzonych graczy')
+        .setDescription('Pokaż listę obecnie śledzonych graczy'),
+    new SlashCommandBuilder()
+        .setName('trackconfig')
+        .setDescription('Ustaw domyślny kanał dla powiadomień')
+        .addChannelOption(option => 
+            option.setName('channel')
+                .setDescription('Domyślny kanał')
+                .setRequired(true))
 ];
 
 export async function handleUnturnedInteraction(interaction: ChatInputCommandInteraction) {
@@ -83,7 +111,9 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
         const serverChoice = interaction.options.getString('server');
         const customIp = interaction.options.getString('ip');
         const customPort = interaction.options.getInteger('port') || 27015;
-        const channel = interaction.options.getChannel('channel') || interaction.channel;
+        
+        let channelId = interaction.options.getChannel('channel')?.id || unturnedConfig.defaultChannelId || interaction.channelId;
+        const channel = interaction.client.channels.cache.get(channelId);
 
         let targets: { ip: string, port: number }[] = [];
 
@@ -214,5 +244,12 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
         }
 
         await interaction.editReply({ embeds });
+    }
+    else if (interaction.commandName === 'trackconfig') {
+        const channel = interaction.options.getChannel('channel', true);
+        unturnedConfig.defaultChannelId = channel.id;
+        saveConfig(unturnedConfig);
+
+        await interaction.reply({ content: `Domyślny kanał powiadomień dla śledzenia został ustawiony na <#${channel.id}>. Odtąd powiadomienia będą trafiać tam, jeśli nie podasz kanału ręcznie.`, ephemeral: true });
     }
 }
