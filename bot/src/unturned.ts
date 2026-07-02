@@ -132,7 +132,13 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
             return interaction.editReply('Nie udało się rozwiązać SteamID z podanego wejścia. Podaj poprawny SteamID64 lub link do profilu publicznego.');
         }
 
-        let channelId = unturnedConfig.defaultChannelId || interaction.channelId;
+        let channelId = unturnedConfig.defaultChannelId;
+        if (!channelId) {
+            unturnedConfig.defaultChannelId = interaction.channelId;
+            saveConfig(unturnedConfig);
+            channelId = interaction.channelId;
+        }
+
         const channel = interaction.client.channels.cache.get(channelId);
         if (!channel || !(channel instanceof TextChannel)) {
             return interaction.editReply('Nieprawidłowy kanał do wysyłania powiadomień.');
