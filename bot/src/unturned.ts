@@ -28,16 +28,23 @@ async function fetchSteamProfile(steamId: string) {
         const html = await res.text();
         const nameMatch = html.match(/<title>Steam Community :: (.+?)<\/title>/);
         const imgMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
+        
+        let serverIpAndPort = null;
+        const connectMatch = html.match(/steam:\/\/connect\/([0-9\.]+):([0-9]+)/);
+        if (connectMatch) {
+            serverIpAndPort = `${connectMatch[1]}:${connectMatch[2]}`;
+        }
+
         return {
             name: nameMatch ? nameMatch[1] : steamId,
-            avatarUrl: imgMatch ? imgMatch[1] : 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png'
+            avatarUrl: imgMatch ? imgMatch[1] : 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png',
+            currentServerIp: serverIpAndPort
         };
     } catch (e) {
-        return { name: steamId, avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png' };
+        return { name: steamId, avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png', currentServerIp: null };
     }
 }
 
-// Maps a player name to the interval ID so we can stop tracking later if needed
 const activeTrackers: Map<string, NodeJS.Timeout> = new Map();
 
 const PREDEFINED_SERVERS: Record<string, { ip: string, port: number }> = {
@@ -142,50 +149,90 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
         const scopeMsg = targets.length > 1 ? 'wszystkich zapisanych serwerach' : `serwerze ${targets[0].ip}:${targets[0].port}`;
         await interaction.reply({ content: `Rozpoczęto śledzenie SteamID **${steamId}** na ${scopeMsg}. Powiadomienie zostanie wysłane na kanał <#${channel.id}>.`, ephemeral: true });
 
-        const intervalId = setInterval(async () => {
+        // Funkcja sprawdzająca pojedynczego gracza
+        const checkPlayer = async () => {
+            let found = false;
+            let foundServerName = 'Nieznany Serwer';
+            let foundIpPort = '';
+            let foundMaxPlayers = 0;
+            let foundCurrentPlayers = 0;
+
+            // Sprawdzamy profil Steam jako ominięcie zabezpieczeń (Fallback dla zablokowanego A2S)
+            const profile = await fetchSteamProfile(steamId);
+            
+            // 1. Sprawdzamy gamedig (tradycyjnie)
             for (const target of targets) {
                 try {
                     const state = await GameDig.query({
                         type: 'unturned',
                         host: target.ip,
-                        port: target.port
+                        port: target.port,
+                        maxRetries: 1,
+                        socketTimeout: 2000
                     });
 
-                    const isOnline = state.players.some((p: any) => 
+                    // Unturned zwraca czesto nazwe gracza
+                    const isOnlineInGamedig = state.players.some((p: any) => 
                         p.name?.includes(steamId) || 
                         (p.raw && p.raw.steamid === steamId)
                     );
 
-                    if (isOnline) {
-                        const profile = await fetchSteamProfile(steamId);
-                        const embed = new EmbedBuilder()
-                            .setTitle('🚨 ALARM ŚLEDZENIA 🚨')
-                            .setDescription(`Gracz **[${profile.name}](https://steamcommunity.com/profiles/${steamId})** został wykryty na serwerze!`)
-                            .setThumbnail(profile.avatarUrl)
-                            .setColor('#ff0000')
-                            .addFields(
-                                { name: 'Serwer', value: `\`${state.name}\``, inline: false },
-                                { name: 'Adres (IP:Port)', value: `\`${target.ip}:${target.port}\``, inline: true },
-                                { name: 'Graczy', value: `\`${state.players.length} / ${state.maxplayers}\``, inline: true }
-                            )
-                            .setTimestamp();
+                    // 2. Jeśli gamedig zawiódł, sprawdzamy czy IP na profilu Steam zgadza się z targetem
+                    const isOnlineOnSteam = profile.currentServerIp === `${target.ip}:${target.port}`;
 
-                        await channel.send({ 
-                            content: '@everyone', 
-                            embeds: [embed] 
-                        });
-                        
-                        clearInterval(intervalId);
-                        activeTrackers.delete(trackingKey);
-                        break; // Stop checking other servers since found
+                    if (isOnlineInGamedig || isOnlineOnSteam) {
+                        found = true;
+                        foundServerName = state.name || 'Unturned Server';
+                        foundIpPort = `${target.ip}:${target.port}`;
+                        foundMaxPlayers = state.maxplayers;
+                        foundCurrentPlayers = state.players.length;
+                        break;
                     }
                 } catch (error) {
-                    console.error(`Błąd odpytywania serwera ${target.ip}:${target.port} dla SteamID ${steamId}:`, error);
+                    // Ignorujemy timeouty
                 }
             }
-        }, 60000); // Sprawdzanie co 60 sekund
 
+            // Jeśli profil Steam mówi, że gra gdzie indziej (a nie było tego w targets, ale to nasza siec lub po prostu go znalezlismy)
+            if (!found && profile.currentServerIp) {
+                 found = true;
+                 foundServerName = 'Serwer (Wykryty z Profilu Steam)';
+                 foundIpPort = profile.currentServerIp;
+                 foundMaxPlayers = 0;
+                 foundCurrentPlayers = 0;
+            }
+
+            if (found) {
+                const embed = new EmbedBuilder()
+                    .setTitle('🚨 ALARM ŚLEDZENIA 🚨')
+                    .setDescription(`Gracz **[${profile.name}](https://steamcommunity.com/profiles/${steamId})** został wykryty w grze!`)
+                    .setThumbnail(profile.avatarUrl)
+                    .setColor('#ff0000')
+                    .addFields(
+                        { name: 'Serwer', value: `\`${foundServerName}\``, inline: false },
+                        { name: 'Adres (IP:Port)', value: `\`${foundIpPort}\``, inline: true }
+                    )
+                    .setTimestamp();
+                    
+                if (foundMaxPlayers > 0) {
+                     embed.addFields({ name: 'Graczy', value: `\`${foundCurrentPlayers} / ${foundMaxPlayers}\``, inline: true });
+                }
+
+                await channel.send({ 
+                    content: '@everyone', 
+                    embeds: [embed] 
+                });
+                
+                clearInterval(intervalId);
+                activeTrackers.delete(trackingKey);
+            }
+        };
+
+        const intervalId = setInterval(checkPlayer, 60000); // Sprawdzanie co 60 sekund
         activeTrackers.set(trackingKey, intervalId);
+        
+        // Zróbmy pierwsze sprawdzenie od razu by nie czekac 60 sekund
+        checkPlayer();
     } 
     else if (interaction.commandName === 'untrack') {
         const rawInput = interaction.options.getString('steamid', true);
