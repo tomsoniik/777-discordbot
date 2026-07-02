@@ -352,7 +352,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
         const embeds: EmbedBuilder[] = [];
         let totalPlayers = 0;
 
-        for (const [serverName, target] of Object.entries(PREDEFINED_SERVERS)) {
+        const serverChecks = Object.entries(PREDEFINED_SERVERS).map(async ([serverName, target]) => {
             let playersText = '';
             let serverTitle = `${serverName.toUpperCase()} (${target.ip}:${target.port})`;
             let players: string[] = [];
@@ -386,15 +386,22 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                 if (playersText.length > 1024) {
                     playersText = playersText.substring(0, 1020) + '...';
                 }
-                totalPlayers += players.length;
+                
             } else {
                 playersText = 'Brak widocznych graczy lub serwer offline.';
             }
 
+            return { serverTitle, playersText, count: players.length };
+        });
+
+        const results = await Promise.all(serverChecks);
+
+        for (const result of results) {
+            totalPlayers += result.count;
             const embed = new EmbedBuilder()
                 .setColor('#2b2d31')
-                .setTitle(serverTitle)
-                .setDescription(playersText);
+                .setTitle(result.serverTitle)
+                .setDescription(result.playersText);
             embeds.push(embed);
         }
 
