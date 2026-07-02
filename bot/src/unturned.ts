@@ -380,7 +380,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
             return interaction.editReply('Nie znalazłem w bazie BattleMetrics żadnych serwerów mających w nazwie "unbeaten".');
         }
 
-        const serverChecks = serversToTrack.map(async (target) => {
+        const serverChecks = serversToTrack.map(async (target: { ip: string, port: number, name?: string, bmId?: string }) => {
             let playersText = '';
             let serverTitle = `${target.name} (${target.ip}:${target.port})`;
             let players: string[] = [];
