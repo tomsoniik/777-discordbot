@@ -66,7 +66,7 @@ client.on('interactionCreate', async (interaction) => {
         if (['play', 'skip', 'stop', 'queue'].includes(interaction.commandName)) {
             await (0, music_1.handleMusicInteraction)(interaction);
         }
-        else if (['track', 'untrack', 'tracked_list', 'trackconfig'].includes(interaction.commandName)) {
+        else if (['track', 'untrack', 'tracked_list', 'trackconfig', 'trackp'].includes(interaction.commandName)) {
             await (0, unturned_1.handleUnturnedInteraction)(interaction);
         }
     }
