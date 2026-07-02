@@ -48,16 +48,20 @@ async function fetchSteamProfile(steamId) {
 }
 async function fetchBattlemetricsPlayers(ip, port) {
     try {
-        const res = await fetch(`https://api.battlemetrics.com/servers?filter[search]=${ip}:${port}&filter[game]=unturned`);
+        const res = await fetch(`https://api.battlemetrics.com/servers?filter[search]=${ip}&filter[game]=unturned`);
         const json = await res.json();
         if (json.data && json.data.length > 0) {
-            const serverId = json.data[0].id;
-            const detailsRes = await fetch(`https://api.battlemetrics.com/servers/${serverId}?include=player`);
-            const detailsJson = await detailsRes.json();
-            if (detailsJson.included) {
-                return detailsJson.included
-                    .filter((inc) => inc.type === 'player')
-                    .map((p) => ({ name: p.attributes.name, id: p.id }));
+            // BattleMetrics zwraca wyniki wyszukiwania rozmytego. Musimy upewnić się, że to DOKŁADNIE ten serwer!
+            const server = json.data.find((s) => s.attributes.ip === ip && (s.attributes.port === port || s.attributes.portQuery === port));
+            if (server) {
+                const serverId = server.id;
+                const detailsRes = await fetch(`https://api.battlemetrics.com/servers/${serverId}?include=player`);
+                const detailsJson = await detailsRes.json();
+                if (detailsJson.included) {
+                    return detailsJson.included
+                        .filter((inc) => inc.type === 'player')
+                        .map((p) => ({ name: p.attributes.name, id: p.id }));
+                }
             }
         }
     }
@@ -345,7 +349,7 @@ async function handleUnturnedInteraction(interaction) {
             embeds.push(embed);
         }
         const mainEmbed = new discord_js_1.EmbedBuilder()
-            .setTitle('📡 Aktywni Gracze na serwerach')
+            .setTitle('📡 Aktywni Gracze na serwerach Unbeaten')
             .setColor('#7289da')
             .setDescription(`Łącznie widocznych graczy: **${totalPlayers}**`);
         await interaction.editReply({ embeds: [mainEmbed, ...embeds.slice(0, 9)] });

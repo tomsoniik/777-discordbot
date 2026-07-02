@@ -47,16 +47,21 @@ async function fetchSteamProfile(steamId: string) {
 
 async function fetchBattlemetricsPlayers(ip: string, port: number) {
     try {
-        const res = await fetch(`https://api.battlemetrics.com/servers?filter[search]=${ip}:${port}&filter[game]=unturned`);
+        const res = await fetch(`https://api.battlemetrics.com/servers?filter[search]=${ip}&filter[game]=unturned`);
         const json = await res.json();
         if (json.data && json.data.length > 0) {
-            const serverId = json.data[0].id;
-            const detailsRes = await fetch(`https://api.battlemetrics.com/servers/${serverId}?include=player`);
-            const detailsJson = await detailsRes.json();
-            if (detailsJson.included) {
-                return detailsJson.included
-                    .filter((inc: any) => inc.type === 'player')
-                    .map((p: any) => ({ name: p.attributes.name, id: p.id }));
+            // BattleMetrics zwraca wyniki wyszukiwania rozmytego. Musimy upewnić się, że to DOKŁADNIE ten serwer!
+            const server = json.data.find((s: any) => s.attributes.ip === ip && (s.attributes.port === port || s.attributes.portQuery === port));
+            
+            if (server) {
+                const serverId = server.id;
+                const detailsRes = await fetch(`https://api.battlemetrics.com/servers/${serverId}?include=player`);
+                const detailsJson = await detailsRes.json();
+                if (detailsJson.included) {
+                    return detailsJson.included
+                        .filter((inc: any) => inc.type === 'player')
+                        .map((p: any) => ({ name: p.attributes.name, id: p.id }));
+                }
             }
         }
     } catch (e) {
@@ -406,7 +411,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
         }
 
         const mainEmbed = new EmbedBuilder()
-            .setTitle('📡 Aktywni Gracze na serwerach')
+            .setTitle('📡 Aktywni Gracze na serwerach Unbeaten')
             .setColor('#7289da')
             .setDescription(`Łącznie widocznych graczy: **${totalPlayers}**`);
 
