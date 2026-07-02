@@ -19,7 +19,7 @@ export const unturnedCommands = [
         .setDescription('Rozpocznij śledzenie gracza na serwerze Unturned')
         .addStringOption(option => 
             option.setName('steamid')
-                .setDescription('SteamID gracza do śledzenia')
+                .setDescription('Link do profilu Steam lub SteamID gracza')
                 .setRequired(true))
         .addStringOption(option => 
             option.setName('server')
@@ -50,13 +50,17 @@ export const unturnedCommands = [
         .setDescription('Zatrzymaj śledzenie gracza')
         .addStringOption(option => 
             option.setName('steamid')
-                .setDescription('SteamID gracza')
+                .setDescription('Link do profilu Steam lub SteamID')
                 .setRequired(true))
 ];
 
 export async function handleUnturnedInteraction(interaction: ChatInputCommandInteraction) {
     if (interaction.commandName === 'track') {
-        const steamId = interaction.options.getString('steamid', true);
+        const rawInput = interaction.options.getString('steamid', true);
+        // Automatyczne wyciąganie SteamID64 z linku lub zostawienie jak jest
+        const match = rawInput.match(/(7656119[0-9]{10})/);
+        const steamId = match ? match[0] : rawInput.trim();
+
         const serverChoice = interaction.options.getString('server');
         const customIp = interaction.options.getString('ip');
         const customPort = interaction.options.getInteger('port') || 27015;
@@ -115,7 +119,9 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
         activeTrackers.set(trackingKey, intervalId);
     } 
     else if (interaction.commandName === 'untrack') {
-        const steamId = interaction.options.getString('steamid', true);
+        const rawInput = interaction.options.getString('steamid', true);
+        const match = rawInput.match(/(7656119[0-9]{10})/);
+        const steamId = match ? match[0] : rawInput.trim();
         
         let found = false;
         for (const [key, intervalId] of activeTrackers.entries()) {
