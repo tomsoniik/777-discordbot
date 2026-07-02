@@ -1,5 +1,20 @@
-import { Client, ChatInputCommandInteraction, SlashCommandBuilder, TextChannel } from 'discord.js';
+import { Client, ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, EmbedBuilder } from 'discord.js';
 import { GameDig } from 'gamedig';
+
+async function fetchSteamProfile(steamId: string) {
+    try {
+        const res = await fetch(`https://steamcommunity.com/profiles/${steamId}`);
+        const html = await res.text();
+        const nameMatch = html.match(/<title>Steam Community :: (.+?)<\/title>/);
+        const imgMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
+        return {
+            name: nameMatch ? nameMatch[1] : steamId,
+            avatarUrl: imgMatch ? imgMatch[1] : 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png'
+        };
+    } catch (e) {
+        return { name: steamId, avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png' };
+    }
+}
 
 // Maps a player name to the interval ID so we can stop tracking later if needed
 const activeTrackers: Map<string, NodeJS.Timeout> = new Map();
@@ -112,7 +127,23 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                     );
 
                     if (isOnline) {
-                        await channel.send(`🚨 **Alarm Śledzenia** 🚨\nGracz o SteamID **${steamId}** został wykryty na serwerze **${state.name}** (${target.ip}:${target.port})!`);
+                        const profile = await fetchSteamProfile(steamId);
+                        const embed = new EmbedBuilder()
+                            .setTitle('🚨 ALARM ŚLEDZENIA 🚨')
+                            .setDescription(`Gracz **[${profile.name}](https://steamcommunity.com/profiles/${steamId})** został wykryty na serwerze!`)
+                            .setThumbnail(profile.avatarUrl)
+                            .setColor('#ff0000')
+                            .addFields(
+                                { name: 'Serwer', value: `\`${state.name}\``, inline: false },
+                                { name: 'Adres (IP:Port)', value: `\`${target.ip}:${target.port}\``, inline: true },
+                                { name: 'Graczy', value: `\`${state.players.length} / ${state.maxplayers}\``, inline: true }
+                            )
+                            .setTimestamp();
+
+                        await channel.send({ 
+                            content: '@everyone', 
+                            embeds: [embed] 
+                        });
                         
                         clearInterval(intervalId);
                         activeTrackers.delete(trackingKey);
@@ -151,12 +182,23 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
             return interaction.reply({ content: 'Obecnie nie śledzę żadnych graczy.', ephemeral: true });
         }
 
+        await interaction.deferReply({ ephemeral: true });
+
+        const embed = new EmbedBuilder()
+            .setTitle('📡 Lista Śledzonych Graczy')
+            .setColor('#7289da')
+            .setDescription(`Obecnie sprawdzam serwery w poszukiwaniu **${activeTrackers.size}** graczy.`);
+
         const trackedIds = Array.from(activeTrackers.keys());
-        const listText = trackedIds.map(id => `• SteamID: **${id}**`).join('\n');
+        for (const id of trackedIds) {
+            const profile = await fetchSteamProfile(id);
+            embed.addFields({ 
+                name: profile.name, 
+                value: `[Otwórz Profil](https://steamcommunity.com/profiles/${id})\nSteamID: \`${id}\``, 
+                inline: true 
+            });
+        }
         
-        await interaction.reply({ 
-            content: `**Obecnie śledzeni gracze (${activeTrackers.size}):**\n${listText}`, 
-            ephemeral: true 
-        });
+        await interaction.editReply({ embeds: [embed] });
     }
 }
