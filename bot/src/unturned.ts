@@ -277,7 +277,7 @@ export function startTrackingLoop(client: Client) {
                                 if (channel && channel.isTextBased() && 'send' in channel) {
                                     const embed = new EmbedBuilder()
                                         .setTitle('👋 GRACZ OPUŚCIŁ SERWER')
-                                        .setDescription(`Gracz **[${player.personaname || player.steamid}](${player.profileurl})** opuścił serwer \`${tracker.lastServer || 'Nieznany'}\`.`)
+                                        .setDescription(`Gracz **[${player.personaname || player.steamid}](${player.profileurl})** opuścił serwer.`)
                                         .setColor('#aaaaaa')
                                         .setTimestamp();
                                     await channel.send({ embeds: [embed] });
@@ -323,8 +323,8 @@ export function startTrackingLoop(client: Client) {
                     }
 
                     if (found) {
-                        // Jeśli wciąż na tym samym serwerze, to po prostu kontynuujemy bez spamu
-                        if (tracker.isOnline && tracker.lastServer === foundServerName) continue;
+                        // Jeśli wciąż na tym samym serwerze (po IP/LobbyID), to kontynuujemy bez spamu!
+                        if (tracker.isOnline && tracker.lastServer === foundIpPort) continue;
 
                         let mapName = 'Nieznana';
                         let playersInfo = 'Brak danych';
@@ -365,7 +365,7 @@ export function startTrackingLoop(client: Client) {
                         // Aktualizacja statusu na ONLINE (Tryb Radarowy - NIE WYŁĄCZAMY śledzenia)
                         await prisma.trackedPlayer.update({
                             where: { steamId: player.steamid },
-                            data: { isOnline: true, lastServer: foundServerName }
+                            data: { isOnline: true, lastServer: foundIpPort }
                         });
 
                         // Alert Discord
