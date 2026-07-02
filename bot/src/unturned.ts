@@ -217,6 +217,18 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
             
             // 1. Sprawdzamy gamedig (tradycyjnie)
             for (const target of targets) {
+                // 1. Sprawdzamy czy IP na profilu Steam zgadza się z targetem lub ID Serwera (fallback SDR)
+                const isOnlineOnSteam = profile.currentServerIp === `${target.ip}:${target.port}` || (target.serverId && profile.currentServerIp === target.serverId);
+
+                if (isOnlineOnSteam) {
+                    found = true;
+                    foundServerName = target.displayName || 'Unturned Server';
+                    foundIpPort = profile.currentServerIp || target.serverId || `${target.ip}:${target.port}`;
+                    foundMaxPlayers = 0;
+                    foundCurrentPlayers = 0;
+                    break;
+                }
+
                 try {
                     const state = await GameDig.query({
                         type: 'unturned',
@@ -233,10 +245,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                         (p.raw && p.raw.steamid === steamId)
                     );
 
-                    // 2. Jeśli gamedig zawiódł, sprawdzamy czy IP na profilu Steam zgadza się z targetem lub ID Serwera (fallback SDR)
-                    const isOnlineOnSteam = profile.currentServerIp === `${target.ip}:${target.port}` || (target.serverId && profile.currentServerIp === target.serverId);
-
-                    if (isOnlineInGamedig || isOnlineOnSteam) {
+                    if (isOnlineInGamedig) {
                         found = true;
                         foundServerName = target.displayName || state.name || 'Unturned Server';
                         foundIpPort = profile.currentServerIp || target.serverId || `${target.ip}:${target.port}`;
