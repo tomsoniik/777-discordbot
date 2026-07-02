@@ -209,8 +209,8 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                     .setThumbnail(profile.avatarUrl)
                     .setColor('#ff0000')
                     .addFields(
-                        { name: 'Serwer', value: `\`${foundServerName}\``, inline: false },
-                        { name: 'Adres (IP:Port)', value: `\`${foundIpPort}\``, inline: true }
+                        { name: 'Serwer', value: `\`${foundServerName}\``, inline: true },
+                        { name: 'Szybkie Dołączenie', value: `Wklej w przeglądarkę (lub użyj Win+R):\n\`steam://connect/${foundIpPort}\``, inline: false }
                     )
                     .setTimestamp();
                     
