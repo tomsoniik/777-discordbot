@@ -76,7 +76,7 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         if (['play', 'skip', 'stop', 'queue'].includes(interaction.commandName)) {
             await handleMusicInteraction(interaction);
-        } else if (['track', 'untrack'].includes(interaction.commandName)) {
+        } else if (['track', 'untrack', 'tracked_list'].includes(interaction.commandName)) {
             await handleUnturnedInteraction(interaction);
         }
     } else if (interaction.isButton()) {

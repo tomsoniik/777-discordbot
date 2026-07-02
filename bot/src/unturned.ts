@@ -52,7 +52,10 @@ export const unturnedCommands = [
         .addStringOption(option => 
             option.setName('steamid')
                 .setDescription('Link do profilu Steam lub SteamID')
-                .setRequired(true))
+                .setRequired(true)),
+    new SlashCommandBuilder()
+        .setName('tracked_list')
+        .setDescription('Pokaż listę obecnie śledzonych graczy')
 ];
 
 export async function handleUnturnedInteraction(interaction: ChatInputCommandInteraction) {
@@ -142,5 +145,18 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
         } else {
             await interaction.reply({ content: `SteamID **${steamId}** nie jest obecnie śledzony.`, ephemeral: true });
         }
+    }
+    else if (interaction.commandName === 'tracked_list') {
+        if (activeTrackers.size === 0) {
+            return interaction.reply({ content: 'Obecnie nie śledzę żadnych graczy.', ephemeral: true });
+        }
+
+        const trackedIds = Array.from(activeTrackers.keys());
+        const listText = trackedIds.map(id => `• SteamID: **${id}**`).join('\n');
+        
+        await interaction.reply({ 
+            content: `**Obecnie śledzeni gracze (${activeTrackers.size}):**\n${listText}`, 
+            ephemeral: true 
+        });
     }
 }
