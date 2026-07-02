@@ -44,11 +44,11 @@ export async function GET(request: Request) {
             <div class="loader"></div>
             <h2>Uruchamianie Unturned...</h2>
             <p>Jeśli gra nie otworzyła się automatycznie, kliknij poniższy przycisk:</p>
-            <a href="steam://connect/${ip}">Ręczne Dołączenie (Otwórz Steam)</a>
+            <a href="steam://run/304930//+connect%20${ip}">Ręczne Dołączenie (Otwórz Steam)</a>
 
             <script>
                 // Próba automatycznego przekierowania
-                window.location.href = "steam://connect/${ip}";
+                window.location.href = "steam://run/304930//+connect%20${ip}";
                 
                 // Po kilku sekundach można zamknąć okno, jeśli użytkownik kliknie zezwól
                 setTimeout(() => {

@@ -210,7 +210,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                     .setColor('#ff0000')
                     .addFields(
                         { name: 'Serwer', value: `\`${foundServerName}\``, inline: true },
-                        { name: 'Szybkie Dołączenie', value: `Ręczny IP: \`steam://connect/${foundIpPort}\``, inline: false }
+                        { name: 'Szybkie Dołączenie', value: `Ręczny IP: \`steam://run/304930//+connect ${foundIpPort}\``, inline: false }
                     )
                     .setTimestamp();
                     
