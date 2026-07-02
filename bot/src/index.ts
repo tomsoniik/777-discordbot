@@ -76,10 +76,19 @@ client.on('messageCreate', async (message) => {
 
 client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
-        if (['play', 'skip', 'stop', 'queue'].includes(interaction.commandName)) {
-            await handleMusicInteraction(interaction);
-        } else if (['track', 'untrack', 'tracked_list', 'trackconfig', 'trackp'].includes(interaction.commandName)) {
-            await handleUnturnedInteraction(interaction);
+        try {
+            if (['play', 'skip', 'stop', 'queue'].includes(interaction.commandName)) {
+                await handleMusicInteraction(interaction);
+            } else if (['track', 'untrack', 'tracked_list', 'trackconfig', 'trackp'].includes(interaction.commandName)) {
+                await handleUnturnedInteraction(interaction);
+            }
+        } catch (e) {
+            console.error('Błąd podczas obsługi komendy:', e);
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply('Wystąpił nieoczekiwany błąd podczas wykonywania tej komendy.');
+            } else {
+                await interaction.reply({ content: 'Wystąpił nieoczekiwany błąd podczas wykonywania tej komendy.', flags: 64 });
+            }
         }
     } else if (interaction.isButton()) {
         if (interaction.customId.startsWith('music_')) {
