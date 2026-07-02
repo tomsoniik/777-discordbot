@@ -9,6 +9,7 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const music_1 = require("./music");
+const unturned_1 = require("./unturned");
 dotenv_1.default.config();
 const client = new discord_js_1.Client({
     intents: [
@@ -31,12 +32,13 @@ client.once('ready', async () => {
         const rest = new discord_js_1.REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
         console.log('Rozpoczęto rejestrację (/) commands.');
         const guildId = process.env.GUILD_ID;
+        const allCommands = [...music_1.musicCommands, ...unturned_1.unturnedCommands];
         if (guildId) {
-            await rest.put(discord_js_1.Routes.applicationGuildCommands(client.user.id, guildId), { body: music_1.musicCommands });
+            await rest.put(discord_js_1.Routes.applicationGuildCommands(client.user.id, guildId), { body: allCommands });
             console.log('Pomyślnie zarejestrowano (/) commands dla gildii.');
         }
         else {
-            await rest.put(discord_js_1.Routes.applicationCommands(client.user.id), { body: music_1.musicCommands });
+            await rest.put(discord_js_1.Routes.applicationCommands(client.user.id), { body: allCommands });
             console.log('Pomyślnie zarejestrowano globalne (/) commands.');
         }
     }
@@ -63,6 +65,9 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isChatInputCommand()) {
         if (['play', 'skip', 'stop', 'queue'].includes(interaction.commandName)) {
             await (0, music_1.handleMusicInteraction)(interaction);
+        }
+        else if (['track', 'untrack'].includes(interaction.commandName)) {
+            await (0, unturned_1.handleUnturnedInteraction)(interaction);
         }
     }
     else if (interaction.isButton()) {

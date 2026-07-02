@@ -4,6 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { handleMusicInteraction, musicCommands, handleMusicButtonInteraction, queue } from './music';
+import { unturnedCommands, handleUnturnedInteraction } from './unturned';
 
 dotenv.config();
 
@@ -33,16 +34,17 @@ client.once('ready', async () => {
         console.log('Rozpoczęto rejestrację (/) commands.');
 
         const guildId = process.env.GUILD_ID;
+        const allCommands = [...musicCommands, ...unturnedCommands];
         if (guildId) {
             await rest.put(
                 Routes.applicationGuildCommands(client.user!.id, guildId),
-                { body: musicCommands },
+                { body: allCommands },
             );
             console.log('Pomyślnie zarejestrowano (/) commands dla gildii.');
         } else {
             await rest.put(
                 Routes.applicationCommands(client.user!.id),
-                { body: musicCommands },
+                { body: allCommands },
             );
             console.log('Pomyślnie zarejestrowano globalne (/) commands.');
         }
@@ -74,6 +76,8 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         if (['play', 'skip', 'stop', 'queue'].includes(interaction.commandName)) {
             await handleMusicInteraction(interaction);
+        } else if (['track', 'untrack'].includes(interaction.commandName)) {
+            await handleUnturnedInteraction(interaction);
         }
     } else if (interaction.isButton()) {
         if (interaction.customId.startsWith('music_')) {
