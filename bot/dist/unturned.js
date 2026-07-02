@@ -46,6 +46,26 @@ async function fetchSteamProfile(steamId) {
         return { name: steamId, avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png', currentServerIp: null };
     }
 }
+async function fetchBattlemetricsPlayers(ip, port) {
+    try {
+        const res = await fetch(`https://api.battlemetrics.com/servers?filter[search]=${ip}:${port}&filter[game]=unturned`);
+        const json = await res.json();
+        if (json.data && json.data.length > 0) {
+            const serverId = json.data[0].id;
+            const detailsRes = await fetch(`https://api.battlemetrics.com/servers/${serverId}?include=player`);
+            const detailsJson = await detailsRes.json();
+            if (detailsJson.included) {
+                return detailsJson.included
+                    .filter((inc) => inc.type === 'player')
+                    .map((p) => ({ name: p.attributes.name, id: p.id }));
+            }
+        }
+    }
+    catch (e) {
+        console.error('BattleMetrics API error:', e);
+    }
+    return [];
+}
 const activeTrackers = new Map();
 const PREDEFINED_SERVERS = {
     'washington': { ip: '94.130.219.164', port: 27116 },
@@ -84,6 +104,9 @@ exports.unturnedCommands = [
     new discord_js_1.SlashCommandBuilder()
         .setName('tracked_list')
         .setDescription('Pokaż listę obecnie śledzonych graczy'),
+    new discord_js_1.SlashCommandBuilder()
+        .setName('trackp')
+        .setDescription('Pokaż wszystkich graczy online zgrupowanych po serwerach (używa Gamedig & API)'),
     new discord_js_1.SlashCommandBuilder()
         .setName('trackconfig')
         .setDescription('Ustaw domyślny kanał dla powiadomień')
@@ -161,6 +184,19 @@ async function handleUnturnedInteraction(interaction) {
                 catch (error) {
                     // Ignorujemy timeouty
                 }
+                // 3. Fallback do BattleMetrics API jeśli GameDig zawiódł lub gracz jest ukryty
+                if (!found) {
+                    const bmPlayers = await fetchBattlemetricsPlayers(target.ip, target.port);
+                    const isOnlineInBM = bmPlayers.some((p) => p.name.includes(profile.name) || p.name.includes(steamId));
+                    if (isOnlineInBM) {
+                        found = true;
+                        foundServerName = 'Serwer (Wykryty z BattleMetrics API)';
+                        foundIpPort = `${target.ip}:${target.port}`;
+                        foundMaxPlayers = 0;
+                        foundCurrentPlayers = bmPlayers.length;
+                        break;
+                    }
+                }
             }
             // Jeśli profil Steam mówi, że gra gdzie indziej (a nie było tego w targets, ale to nasza siec lub po prostu go znalezlismy)
             if (!found && profile.currentServerIp) {
@@ -176,17 +212,18 @@ async function handleUnturnedInteraction(interaction) {
                     .setDescription(`Gracz **[${profile.name}](https://steamcommunity.com/profiles/${steamId})** został wykryty w grze!`)
                     .setThumbnail(profile.avatarUrl)
                     .setColor('#ff0000')
-                    .addFields({ name: 'Serwer', value: `\`${foundServerName}\``, inline: true }, { name: 'Szybkie Dołączenie', value: `Ręczny IP: \`steam://connect/${foundIpPort}\``, inline: false })
+                    .addFields({ name: 'Serwer', value: `\`${foundServerName}\``, inline: true }, { name: 'Szybkie Dołączenie', value: `Wklej w przeglądarkę (lub Win+R):\n\`steam://run/304930//+connect%20${foundIpPort}\``, inline: false })
                     .setTimestamp();
                 if (foundMaxPlayers > 0) {
                     embed.addFields({ name: 'Graczy', value: `\`${foundCurrentPlayers} / ${foundMaxPlayers}\``, inline: true });
                 }
-                // Dodajemy przycisk łączący przez nasz portal webowy (który robi redirect do steam://)
+                // Discord całkowicie blokuje klikalne linki steam:// (zarówno w Markdown jak i przyciskach)
+                // Używamy naszej produkcyjnej domeny Vercel jako przekierowania!
                 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
                 const row = new ActionRowBuilder().addComponents(new ButtonBuilder()
                     .setLabel('🚀 Dołącz do gry')
                     .setStyle(ButtonStyle.Link)
-                    .setURL(`https://777-clan.vercel.app/api/join?ip=${foundIpPort}`));
+                    .setURL(`https://777-discordbot-tomsoncs.vercel.app/api/join?ip=${foundIpPort}`));
                 await channel.send({
                     content: '@everyone',
                     embeds: [embed],
@@ -255,5 +292,58 @@ async function handleUnturnedInteraction(interaction) {
         unturnedConfig.defaultChannelId = channel.id;
         saveConfig(unturnedConfig);
         await interaction.reply({ content: `Domyślny kanał powiadomień dla śledzenia został ustawiony na <#${channel.id}>. Odtąd powiadomienia będą trafiać tam, jeśli nie podasz kanału ręcznie.`, ephemeral: true });
+    }
+    else if (interaction.commandName === 'trackp') {
+        await interaction.deferReply();
+        const embeds = [];
+        let totalPlayers = 0;
+        for (const [serverName, target] of Object.entries(PREDEFINED_SERVERS)) {
+            let playersText = '';
+            let serverTitle = `${serverName.toUpperCase()} (${target.ip}:${target.port})`;
+            let players = [];
+            try {
+                // Najpierw zapytanie A2S przez GameDig
+                const state = await gamedig_1.GameDig.query({
+                    type: 'unturned',
+                    host: target.ip,
+                    port: target.port,
+                    maxRetries: 1,
+                    socketTimeout: 2000
+                });
+                serverTitle = `${state.name || serverName.toUpperCase()} (${state.players.length}/${state.maxplayers})`;
+                players = state.players.map((p) => p.name || 'Nieznany').filter(n => n.trim() !== '');
+            }
+            catch (e) {
+                // Ignorujemy błędy i polegamy na BattleMetrics API
+            }
+            // Fallback do API, jesli A2S nie zwrocilo graczy (np. ukryci)
+            if (players.length === 0) {
+                const bmPlayers = await fetchBattlemetricsPlayers(target.ip, target.port);
+                if (bmPlayers.length > 0) {
+                    players = bmPlayers.map((p) => p.name);
+                    serverTitle += ` [z BattleMetrics API]`;
+                }
+            }
+            if (players.length > 0) {
+                playersText = players.join(', ');
+                if (playersText.length > 1024) {
+                    playersText = playersText.substring(0, 1020) + '...';
+                }
+                totalPlayers += players.length;
+            }
+            else {
+                playersText = 'Brak widocznych graczy lub serwer offline.';
+            }
+            const embed = new discord_js_1.EmbedBuilder()
+                .setColor('#2b2d31')
+                .setTitle(serverTitle)
+                .setDescription(playersText);
+            embeds.push(embed);
+        }
+        const mainEmbed = new discord_js_1.EmbedBuilder()
+            .setTitle('📡 Aktywni Gracze na serwerach')
+            .setColor('#7289da')
+            .setDescription(`Łącznie widocznych graczy: **${totalPlayers}**`);
+        await interaction.editReply({ embeds: [mainEmbed, ...embeds.slice(0, 9)] });
     }
 }

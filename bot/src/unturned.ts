@@ -45,6 +45,26 @@ async function fetchSteamProfile(steamId: string) {
     }
 }
 
+async function fetchBattlemetricsPlayers(ip: string, port: number) {
+    try {
+        const res = await fetch(`https://api.battlemetrics.com/servers?filter[search]=${ip}:${port}&filter[game]=unturned`);
+        const json = await res.json();
+        if (json.data && json.data.length > 0) {
+            const serverId = json.data[0].id;
+            const detailsRes = await fetch(`https://api.battlemetrics.com/servers/${serverId}?include=player`);
+            const detailsJson = await detailsRes.json();
+            if (detailsJson.included) {
+                return detailsJson.included
+                    .filter((inc: any) => inc.type === 'player')
+                    .map((p: any) => ({ name: p.attributes.name, id: p.id }));
+            }
+        }
+    } catch (e) {
+        console.error('BattleMetrics API error:', e);
+    }
+    return [];
+}
+
 const activeTrackers: Map<string, NodeJS.Timeout> = new Map();
 
 const PREDEFINED_SERVERS: Record<string, { ip: string, port: number }> = {
@@ -99,6 +119,9 @@ export const unturnedCommands = [
     new SlashCommandBuilder()
         .setName('tracked_list')
         .setDescription('Pokaż listę obecnie śledzonych graczy'),
+    new SlashCommandBuilder()
+        .setName('trackp')
+        .setDescription('Pokaż wszystkich graczy online zgrupowanych po serwerach (używa Gamedig & API)'),
     new SlashCommandBuilder()
         .setName('trackconfig')
         .setDescription('Ustaw domyślny kanał dla powiadomień')
@@ -190,6 +213,20 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                     }
                 } catch (error) {
                     // Ignorujemy timeouty
+                }
+
+                // 3. Fallback do BattleMetrics API jeśli GameDig zawiódł lub gracz jest ukryty
+                if (!found) {
+                    const bmPlayers = await fetchBattlemetricsPlayers(target.ip, target.port);
+                    const isOnlineInBM = bmPlayers.some((p: any) => p.name.includes(profile.name) || p.name.includes(steamId));
+                    if (isOnlineInBM) {
+                        found = true;
+                        foundServerName = 'Serwer (Wykryty z BattleMetrics API)';
+                        foundIpPort = `${target.ip}:${target.port}`;
+                        foundMaxPlayers = 0;
+                        foundCurrentPlayers = bmPlayers.length;
+                        break;
+                    }
                 }
             }
 
@@ -309,5 +346,63 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
         saveConfig(unturnedConfig);
 
         await interaction.reply({ content: `Domyślny kanał powiadomień dla śledzenia został ustawiony na <#${channel.id}>. Odtąd powiadomienia będą trafiać tam, jeśli nie podasz kanału ręcznie.`, ephemeral: true });
+    }
+    else if (interaction.commandName === 'trackp') {
+        await interaction.deferReply();
+        const embeds: EmbedBuilder[] = [];
+        let totalPlayers = 0;
+
+        for (const [serverName, target] of Object.entries(PREDEFINED_SERVERS)) {
+            let playersText = '';
+            let serverTitle = `${serverName.toUpperCase()} (${target.ip}:${target.port})`;
+            let players: string[] = [];
+
+            try {
+                // Najpierw zapytanie A2S przez GameDig
+                const state = await GameDig.query({
+                    type: 'unturned',
+                    host: target.ip,
+                    port: target.port,
+                    maxRetries: 1,
+                    socketTimeout: 2000
+                });
+                serverTitle = `${state.name || serverName.toUpperCase()} (${state.players.length}/${state.maxplayers})`;
+                players = state.players.map((p: any) => p.name || 'Nieznany').filter(n => n.trim() !== '');
+            } catch (e) {
+                // Ignorujemy błędy i polegamy na BattleMetrics API
+            }
+
+            // Fallback do API, jesli A2S nie zwrocilo graczy (np. ukryci)
+            if (players.length === 0) {
+                const bmPlayers = await fetchBattlemetricsPlayers(target.ip, target.port);
+                if (bmPlayers.length > 0) {
+                    players = bmPlayers.map((p: any) => p.name);
+                    serverTitle += ` [z BattleMetrics API]`;
+                }
+            }
+
+            if (players.length > 0) {
+                playersText = players.join(', ');
+                if (playersText.length > 1024) {
+                    playersText = playersText.substring(0, 1020) + '...';
+                }
+                totalPlayers += players.length;
+            } else {
+                playersText = 'Brak widocznych graczy lub serwer offline.';
+            }
+
+            const embed = new EmbedBuilder()
+                .setColor('#2b2d31')
+                .setTitle(serverTitle)
+                .setDescription(playersText);
+            embeds.push(embed);
+        }
+
+        const mainEmbed = new EmbedBuilder()
+            .setTitle('📡 Aktywni Gracze na serwerach')
+            .setColor('#7289da')
+            .setDescription(`Łącznie widocznych graczy: **${totalPlayers}**`);
+
+        await interaction.editReply({ embeds: [mainEmbed, ...embeds.slice(0, 9)] });
     }
 }
