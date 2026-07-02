@@ -139,24 +139,32 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
             channelId = interaction.channelId;
         }
 
-        const channel = interaction.client.channels.cache.get(channelId);
-        if (!channel || !(channel instanceof TextChannel)) {
-            return interaction.editReply('Nieprawidłowy kanał do wysyłania powiadomień.');
-        }
-
         const existing = await prisma.trackedPlayer.findUnique({ where: { steamId } });
+        let privacyWarning = '';
+        try {
+            const apiKey = process.env.STEAM_API_KEY;
+            const res = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${apiKey}&steamids=${steamId}`);
+            const data: any = await res.json();
+            const player = data.response?.players?.[0];
+            if (player && player.communityvisibilitystate !== 3) {
+                privacyWarning = '\n\n⚠️ **OSTRZEŻENIE:** Ten profil Steam jest **Prywatny** (lub ma ukryte szczegóły gry). System nie będzie w stanie go śledzić przez Steam API.';
+            }
+        } catch (e) {}
+
+        const targetName = serverChoice === 'all' ? 'wszystkich zapisanych serwerach' : `serwerze ${PREDEFINED_SERVERS[serverChoice]?.displayName}`;
+        
         if (existing && existing.isActive) {
-            return interaction.editReply(`Już śledzę to SteamID (**${steamId}**). Wpisz /untrack by przerwać.`);
+            await prisma.trackedPlayer.update({ where: { steamId }, data: { targetServer: serverChoice, addedBy: interaction.user.id } });
+            return interaction.editReply(`Zaktualizowano śledzenie gracza \`${steamId}\` na **${targetName}**!${privacyWarning}`);
         }
 
         await prisma.trackedPlayer.upsert({
             where: { steamId },
-            update: { isActive: true, targetServer: serverChoice, addedBy: interaction.user.id },
-            create: { steamId, targetServer: serverChoice, addedBy: interaction.user.id }
+            update: { isActive: true, targetServer: serverChoice, addedBy: interaction.user.id, isOnline: false, lastServer: null },
+            create: { steamId, targetServer: serverChoice, addedBy: interaction.user.id, isOnline: false, lastServer: null }
         });
 
-        const targetName = serverChoice === 'all' ? 'wszystkich zapisanych serwerach' : `serwerze ${PREDEFINED_SERVERS[serverChoice]?.displayName}`;
-        return interaction.editReply(`Rozpoczęto śledzenie SteamID **${steamId}** na ${targetName}. Baza danych została zaktualizowana.`);
+        await interaction.editReply(`Rozpoczęto śledzenie SteamID: \`${steamId}\` na **${targetName}**!${privacyWarning}`);
     } 
     
     else if (interaction.commandName === 'untrack') {
@@ -260,8 +268,29 @@ export function startTrackingLoop(client: Client) {
                     const currentIp = player.gameserverip;
                     const currentLobby = player.lobbysteamid;
                     
+                    const handleOffline = async () => {
+                        if (tracker.isOnline) {
+                            await prisma.trackedPlayer.update({ where: { steamId: player.steamid }, data: { isOnline: false, lastServer: null } });
+                            const channelId = unturnedConfig.defaultChannelId;
+                            if (channelId) {
+                                const channel = client.channels.cache.get(channelId);
+                                if (channel && channel.isTextBased() && 'send' in channel) {
+                                    const embed = new EmbedBuilder()
+                                        .setTitle('👋 GRACZ OPUŚCIŁ SERWER')
+                                        .setDescription(`Gracz **[${player.personaname || player.steamid}](${player.profileurl})** opuścił serwer \`${tracker.lastServer || 'Nieznany'}\`.`)
+                                        .setColor('#aaaaaa')
+                                        .setTimestamp();
+                                    await channel.send({ embeds: [embed] });
+                                }
+                            }
+                        }
+                    };
+
                     // Jeśli w ogóle nie jest w grze z widocznym lobby lub IP, ignorujemy
-                    if (!isPlayingUnturned && !currentIp && !currentLobby) continue;
+                    if (!isPlayingUnturned && !currentIp && !currentLobby) {
+                        await handleOffline();
+                        continue;
+                    }
 
                     let found = false;
                     let foundServerName = 'Nieznany Serwer';
@@ -294,6 +323,9 @@ export function startTrackingLoop(client: Client) {
                     }
 
                     if (found) {
+                        // Jeśli wciąż na tym samym serwerze, to po prostu kontynuujemy bez spamu
+                        if (tracker.isOnline && tracker.lastServer === foundServerName) continue;
+
                         let mapName = 'Nieznana';
                         let playersInfo = 'Brak danych';
                         
@@ -330,10 +362,10 @@ export function startTrackingLoop(client: Client) {
                             }
                         });
 
-                        // Wyłączenie śledzenia
+                        // Aktualizacja statusu na ONLINE (Tryb Radarowy - NIE WYŁĄCZAMY śledzenia)
                         await prisma.trackedPlayer.update({
                             where: { steamId: player.steamid },
-                            data: { isActive: false }
+                            data: { isOnline: true, lastServer: foundServerName }
                         });
 
                         // Alert Discord
@@ -342,7 +374,7 @@ export function startTrackingLoop(client: Client) {
                             const channel = client.channels.cache.get(channelId);
                             if (channel && channel.isTextBased() && 'send' in channel) {
                                 const embed = new EmbedBuilder()
-                                    .setTitle('🚨 ALARM ŚLEDZENIA 🚨')
+                                    .setTitle('🚨 ALARM ŚLEDZENIA (DOŁĄCZYŁ) 🚨')
                                     .setDescription(`Gracz **[${player.personaname || player.steamid}](${player.profileurl})** został wykryty w grze!`)
                                     .setThumbnail(player.avatarfull)
                                     .setColor('#ff0000')
@@ -368,6 +400,9 @@ export function startTrackingLoop(client: Client) {
                                 });
                             }
                         }
+                    } else {
+                        // Jeśli nie ma go na naszym serwerze
+                        await handleOffline();
                     }
                 }
             }

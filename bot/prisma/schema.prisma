@@ -19,6 +19,8 @@ model TrackedPlayer {
   addedAt      DateTime @default(now())
   targetServer String?  // Optional specific server, or null for all
   isActive     Boolean  @default(true)
+  isOnline     Boolean  @default(false)
+  lastServer   String?
 }
 
 model PlayerHistory {
