@@ -210,7 +210,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                     .setColor('#ff0000')
                     .addFields(
                         { name: 'Serwer', value: `\`${foundServerName}\``, inline: true },
-                        { name: 'Szybkie Dołączenie', value: `Wklej w przeglądarkę (lub Win+R):\n\`steam://run/304930//+connect%20${foundIpPort}\``, inline: false }
+                        { name: 'Szybkie Dołączenie', value: `[🚀 KLIKNIJ TUTAJ ABY DOŁĄCZYĆ (Otworzy Steam)](steam://run/304930//+connect%20${foundIpPort})\n\n*(Jeśli link nie działa, skopiuj:)*\n\`steam://run/304930//+connect%20${foundIpPort}\``, inline: false }
                     )
                     .setTimestamp();
                     
