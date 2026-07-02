@@ -184,21 +184,35 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
 
         await interaction.deferReply({ ephemeral: true });
 
-        const embed = new EmbedBuilder()
+        const embeds: EmbedBuilder[] = [];
+        
+        const mainEmbed = new EmbedBuilder()
             .setTitle('📡 Lista Śledzonych Graczy')
             .setColor('#7289da')
             .setDescription(`Obecnie sprawdzam serwery w poszukiwaniu **${activeTrackers.size}** graczy.`);
+        embeds.push(mainEmbed);
 
-        const trackedIds = Array.from(activeTrackers.keys());
+        // Discord pozwala na maksymalnie 10 embedów w jednej wiadomości
+        const trackedIds = Array.from(activeTrackers.keys()).slice(0, 9); 
+        
         for (const id of trackedIds) {
             const profile = await fetchSteamProfile(id);
-            embed.addFields({ 
-                name: profile.name, 
-                value: `[Otwórz Profil](https://steamcommunity.com/profiles/${id})\nSteamID: \`${id}\``, 
-                inline: true 
-            });
+            const playerEmbed = new EmbedBuilder()
+                .setColor('#2b2d31')
+                .setAuthor({ 
+                    name: profile.name, 
+                    iconURL: profile.avatarUrl, 
+                    url: `https://steamcommunity.com/profiles/${id}` 
+                })
+                .setDescription(`SteamID: \`${id}\``);
+            
+            embeds.push(playerEmbed);
         }
         
-        await interaction.editReply({ embeds: [embed] });
+        if (activeTrackers.size > 9) {
+            embeds.push(new EmbedBuilder().setColor('#2b2d31').setDescription(`*...i ${activeTrackers.size - 9} innych (limit wyświetlania)*`));
+        }
+
+        await interaction.editReply({ embeds });
     }
 }
