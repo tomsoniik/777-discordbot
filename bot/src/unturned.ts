@@ -24,24 +24,31 @@ let unturnedConfig = loadConfig();
 
 async function fetchSteamProfile(steamId: string) {
     try {
-        const res = await fetch(`https://steamcommunity.com/profiles/${steamId}`);
+        let url = `https://steamcommunity.com/profiles/${steamId}`;
+        if (steamId.match(/^[a-zA-Z0-9_-]+$/) && !steamId.match(/^\d+$/)) {
+             // To prawdopodobnie custom URL (vanity)
+             url = `https://steamcommunity.com/id/${steamId}`;
+        }
+        
+        const res = await fetch(url);
         const html = await res.text();
         const nameMatch = html.match(/<title>Steam Community :: (.+?)<\/title>/);
         const imgMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
         
         let serverIpAndPort = null;
-        const connectMatch = html.match(/steam:\/\/connect\/([0-9\.]+):([0-9]+)/);
+        const connectMatch = html.match(/steam:\/\/(?:connect|joinlobby\/\d+)\/([0-9\.:]+)/);
         if (connectMatch) {
-            serverIpAndPort = `${connectMatch[1]}:${connectMatch[2]}`;
+            serverIpAndPort = connectMatch[1];
         }
 
         return {
-            name: nameMatch ? nameMatch[1] : steamId,
+            name: (nameMatch && nameMatch[1] !== 'Error') ? nameMatch[1] : steamId,
             avatarUrl: imgMatch ? imgMatch[1] : 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png',
-            currentServerIp: serverIpAndPort
+            currentServerIp: serverIpAndPort,
+            profileUrl: url
         };
     } catch (e) {
-        return { name: steamId, avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png', currentServerIp: null };
+        return { name: steamId, avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png', currentServerIp: null, profileUrl: `https://steamcommunity.com/profiles/${steamId}` };
     }
 }
 
@@ -72,13 +79,15 @@ async function fetchBattlemetricsPlayers(ip: string, port: number) {
 
 const activeTrackers: Map<string, NodeJS.Timeout> = new Map();
 
-const PREDEFINED_SERVERS: Record<string, { ip: string, port: number }> = {
-    'washington': { ip: '94.130.219.164', port: 27116 },
-    'arena': { ip: '83.143.81.182', port: 2484 },
-    'california': { ip: '39.96.7.81', port: 27015 },
-    'germany': { ip: '176.57.173.170', port: 28100 },
-    'pei': { ip: '193.169.209.214', port: 20004 },
-    'russia': { ip: '43.167.189.221', port: 27015 }
+const PREDEFINED_SERVERS: Record<string, { ip: string, port: number, serverId?: string, displayName?: string }> = {
+    'washington': { ip: '94.130.219.164', port: 27116, serverId: '85568392925775084', displayName: 'Washington x100' },
+    'arena': { ip: '83.143.81.182', port: 2484, serverId: '85568392926801330', displayName: 'Arena' },
+    'california': { ip: '39.96.7.81', port: 27015, serverId: '85568392935729730', displayName: 'California x100' },
+    'germany': { ip: '176.57.173.170', port: 28100, serverId: '85568392925775498', displayName: 'Germany x100' },
+    'pei': { ip: '193.169.209.214', port: 20004, serverId: '85568392925775497', displayName: 'PEI x100' },
+    'russia': { ip: '43.167.189.221', port: 27015, serverId: '85568392925719569', displayName: 'Russia x100' },
+    'arid': { ip: '0.0.0.0', port: 0, serverId: '85568392932897412', displayName: 'Arid' },
+    'polaris': { ip: '0.0.0.0', port: 0, serverId: '85568392930289951', displayName: 'A6 Polaris' }
 };
 
 export const unturnedCommands = [
@@ -99,7 +108,9 @@ export const unturnedCommands = [
                     { name: 'California x100', value: 'california' },
                     { name: 'Germany x100', value: 'germany' },
                     { name: 'PEI x100', value: 'pei' },
-                    { name: 'Russia x100', value: 'russia' }
+                    { name: 'Russia x100', value: 'russia' },
+                    { name: 'Arid', value: 'arid' },
+                    { name: 'A6 Polaris', value: 'polaris' }
                 )
                 .setRequired(false))
         .addStringOption(option => 
@@ -139,9 +150,25 @@ export const unturnedCommands = [
 export async function handleUnturnedInteraction(interaction: ChatInputCommandInteraction) {
     if (interaction.commandName === 'track') {
         const rawInput = interaction.options.getString('steamid', true);
-        // Automatyczne wyciąganie SteamID64 z linku lub zostawienie jak jest
-        const match = rawInput.match(/(7656119[0-9]{10})/);
-        const steamId = match ? match[0] : rawInput.trim();
+        
+        let steamId = rawInput.trim();
+        const match64 = rawInput.match(/(7656119[0-9]{10})/);
+        if (match64) {
+            steamId = match64[0];
+        } else {
+            const matchId = rawInput.match(/\/id\/([^\/\?]+)/);
+            if (matchId) {
+                steamId = matchId[1];
+            } else {
+                const matchProf = rawInput.match(/\/profiles\/([^\/\?]+)/);
+                if (matchProf) {
+                    steamId = matchProf[1];
+                } else if (rawInput.startsWith('http')) {
+                    const parts = rawInput.split('/').filter(p => p.length > 0);
+                    steamId = parts[parts.length - 1];
+                }
+            }
+        }
 
         const serverChoice = interaction.options.getString('server');
         const customIp = interaction.options.getString('ip');
@@ -150,7 +177,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
         let channelId = interaction.options.getChannel('channel')?.id || unturnedConfig.defaultChannelId || interaction.channelId;
         const channel = interaction.client.channels.cache.get(channelId);
 
-        let targets: { ip: string, port: number }[] = [];
+        let targets: { ip: string, port: number, serverId?: string, displayName?: string }[] = [];
 
         if (customIp) {
             targets.push({ ip: customIp, port: customPort });
@@ -174,7 +201,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
             return interaction.reply({ content: `Już śledzę to SteamID (**${steamId}**). Wpisz /untrack by przerwać.`, ephemeral: true });
         }
 
-        const scopeMsg = targets.length > 1 ? 'wszystkich zapisanych serwerach' : `serwerze ${targets[0].ip}:${targets[0].port}`;
+        const scopeMsg = targets.length > 1 ? 'wszystkich zapisanych serwerach' : `serwerze ${targets[0].displayName || targets[0].ip + ':' + targets[0].port}`;
         await interaction.reply({ content: `Rozpoczęto śledzenie SteamID **${steamId}** na ${scopeMsg}. Powiadomienie zostanie wysłane na kanał <#${channel.id}>.`, ephemeral: true });
 
         // Funkcja sprawdzająca pojedynczego gracza
@@ -202,16 +229,17 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                     // Unturned zwraca czesto nazwe gracza
                     const isOnlineInGamedig = state.players.some((p: any) => 
                         p.name?.includes(steamId) || 
+                        (profile.name && profile.name !== steamId && p.name?.includes(profile.name)) ||
                         (p.raw && p.raw.steamid === steamId)
                     );
 
-                    // 2. Jeśli gamedig zawiódł, sprawdzamy czy IP na profilu Steam zgadza się z targetem
-                    const isOnlineOnSteam = profile.currentServerIp === `${target.ip}:${target.port}`;
+                    // 2. Jeśli gamedig zawiódł, sprawdzamy czy IP na profilu Steam zgadza się z targetem lub ID Serwera (fallback SDR)
+                    const isOnlineOnSteam = profile.currentServerIp === `${target.ip}:${target.port}` || (target.serverId && profile.currentServerIp === target.serverId);
 
                     if (isOnlineInGamedig || isOnlineOnSteam) {
                         found = true;
-                        foundServerName = state.name || 'Unturned Server';
-                        foundIpPort = `${target.ip}:${target.port}`;
+                        foundServerName = target.displayName || state.name || 'Unturned Server';
+                        foundIpPort = profile.currentServerIp || target.serverId || `${target.ip}:${target.port}`;
                         foundMaxPlayers = state.maxplayers;
                         foundCurrentPlayers = state.players.length;
                         break;
@@ -220,14 +248,14 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                     // Ignorujemy timeouty
                 }
 
-                // 3. Fallback do BattleMetrics API jeśli GameDig zawiódł lub gracz jest ukryty
-                if (!found) {
+                    // 3. Fallback do BattleMetrics API jeśli GameDig zawiódł lub gracz jest ukryty
+                if (!found && target.ip !== '0.0.0.0') {
                     const bmPlayers = await fetchBattlemetricsPlayers(target.ip, target.port);
                     const isOnlineInBM = bmPlayers.some((p: any) => p.name.includes(profile.name) || p.name.includes(steamId));
                     if (isOnlineInBM) {
                         found = true;
-                        foundServerName = 'Serwer (Wykryty z BattleMetrics API)';
-                        foundIpPort = `${target.ip}:${target.port}`;
+                        foundServerName = target.displayName || 'Serwer (Wykryty z BattleMetrics API)';
+                        foundIpPort = target.serverId || `${target.ip}:${target.port}`;
                         foundMaxPlayers = 0;
                         foundCurrentPlayers = bmPlayers.length;
                         break;
@@ -247,12 +275,12 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
             if (found) {
                 const embed = new EmbedBuilder()
                     .setTitle('🚨 ALARM ŚLEDZENIA 🚨')
-                    .setDescription(`Gracz **[${profile.name}](https://steamcommunity.com/profiles/${steamId})** został wykryty w grze!`)
+                    .setDescription(`Gracz **[${profile.name}](${profile.profileUrl})** został wykryty w grze!`)
                     .setThumbnail(profile.avatarUrl)
                     .setColor('#ff0000')
                     .addFields(
                         { name: 'Serwer', value: `\`${foundServerName}\``, inline: true },
-                        { name: 'Szybkie Dołączenie', value: `Wklej w przeglądarkę (lub Win+R):\n\`steam://run/304930//+connect%20${foundIpPort}\``, inline: false }
+                        { name: 'Szybkie Dołączenie', value: foundIpPort.match(/^\d+$/) ? `Kliknij w link:\nhttps://join.unbeaten.gg/${foundIpPort}` : `Wklej w przeglądarkę (lub Win+R):\n\`steam://run/304930//+connect%20${foundIpPort}\``, inline: false }
                     )
                     .setTimestamp();
                     
@@ -267,7 +295,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                     new ButtonBuilder()
                         .setLabel('🚀 Dołącz do gry')
                         .setStyle(ButtonStyle.Link)
-                        .setURL(`https://777-discordbot-tomsoncs.vercel.app/api/join?ip=${foundIpPort}`)
+                        .setURL(foundIpPort.match(/^\d+$/) ? `https://join.unbeaten.gg/${foundIpPort}` : `https://777-discordbot-tomsoncs.vercel.app/api/join?ip=${foundIpPort}`)
                 );
 
                 await channel.send({ 
@@ -289,8 +317,24 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
     } 
     else if (interaction.commandName === 'untrack') {
         const rawInput = interaction.options.getString('steamid', true);
-        const match = rawInput.match(/(7656119[0-9]{10})/);
-        const steamId = match ? match[0] : rawInput.trim();
+        let steamId = rawInput.trim();
+        const match64 = rawInput.match(/(7656119[0-9]{10})/);
+        if (match64) {
+            steamId = match64[0];
+        } else {
+            const matchId = rawInput.match(/\/id\/([^\/\?]+)/);
+            if (matchId) {
+                steamId = matchId[1];
+            } else {
+                const matchProf = rawInput.match(/\/profiles\/([^\/\?]+)/);
+                if (matchProf) {
+                    steamId = matchProf[1];
+                } else if (rawInput.startsWith('http')) {
+                    const parts = rawInput.split('/').filter(p => p.length > 0);
+                    steamId = parts[parts.length - 1];
+                }
+            }
+        }
         
         let found = false;
         for (const [key, intervalId] of activeTrackers.entries()) {
@@ -332,9 +376,9 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                 .setAuthor({ 
                     name: profile.name, 
                     iconURL: profile.avatarUrl, 
-                    url: `https://steamcommunity.com/profiles/${id}` 
+                    url: profile.profileUrl 
                 })
-                .setDescription(`SteamID: \`${id}\``);
+                .setDescription(`Identyfikator: \`${id}\``);
             
             embeds.push(playerEmbed);
         }
