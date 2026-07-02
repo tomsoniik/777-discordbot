@@ -224,7 +224,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                     new ButtonBuilder()
                         .setLabel('🚀 Dołącz do gry')
                         .setStyle(ButtonStyle.Link)
-                        .setURL(`https://777-discordbot.vercel.app/api/join?ip=${foundIpPort}`)
+                        .setURL(`https://777-discordbot-tomsoncs.vercel.app/api/join?ip=${foundIpPort}`)
                 );
 
                 await channel.send({ 
