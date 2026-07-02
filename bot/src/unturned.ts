@@ -25,6 +25,7 @@ export const unturnedCommands = [
             option.setName('server')
                 .setDescription('Wybierz gotowy serwer Unbeaten')
                 .addChoices(
+                    { name: 'Wszystkie serwery (All)', value: 'all' },
                     { name: 'Washington x100', value: 'washington' },
                     { name: 'Arena', value: 'arena' },
                     { name: 'California x100', value: 'california' },
@@ -66,53 +67,57 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
         const customPort = interaction.options.getInteger('port') || 27015;
         const channel = interaction.options.getChannel('channel') || interaction.channel;
 
-        let ip = customIp;
-        let port = customPort;
+        let targets: { ip: string, port: number }[] = [];
 
-        if (serverChoice && PREDEFINED_SERVERS[serverChoice]) {
-            ip = PREDEFINED_SERVERS[serverChoice].ip;
-            port = PREDEFINED_SERVERS[serverChoice].port;
+        if (customIp) {
+            targets.push({ ip: customIp, port: customPort });
+        } else if (serverChoice && serverChoice !== 'all' && PREDEFINED_SERVERS[serverChoice]) {
+            targets.push(PREDEFINED_SERVERS[serverChoice]);
+        } else {
+            // 'all' or empty means check all predefined servers
+            targets = Object.values(PREDEFINED_SERVERS);
         }
 
-        if (!ip) {
-            return interaction.reply({ content: 'Musisz wybrać serwer z listy lub podać własne IP!', ephemeral: true });
+        if (targets.length === 0) {
+            return interaction.reply({ content: 'Nie udało się ustalić serwerów do sprawdzenia.', ephemeral: true });
         }
 
         if (!channel || !(channel instanceof TextChannel)) {
             return interaction.reply({ content: 'Nieprawidłowy kanał.', ephemeral: true });
         }
 
-        const trackingKey = `${steamId}-${ip}:${port}`;
+        const trackingKey = steamId;
         if (activeTrackers.has(trackingKey)) {
-            return interaction.reply({ content: `Już śledzę gracza o SteamID **${steamId}** na serwerze ${ip}:${port}.`, ephemeral: true });
+            return interaction.reply({ content: `Już śledzę to SteamID (**${steamId}**). Wpisz /untrack by przerwać.`, ephemeral: true });
         }
 
-        await interaction.reply({ content: `Rozpoczęto śledzenie SteamID **${steamId}** na serwerze ${ip}:${port}. Powiadomienie zostanie wysłane na kanał <#${channel.id}>.`, ephemeral: true });
+        const scopeMsg = targets.length > 1 ? 'wszystkich zapisanych serwerach' : `serwerze ${targets[0].ip}:${targets[0].port}`;
+        await interaction.reply({ content: `Rozpoczęto śledzenie SteamID **${steamId}** na ${scopeMsg}. Powiadomienie zostanie wysłane na kanał <#${channel.id}>.`, ephemeral: true });
 
         const intervalId = setInterval(async () => {
-            try {
-                const state = await GameDig.query({
-                    type: 'unturned',
-                    host: ip,
-                    port: port
-                });
+            for (const target of targets) {
+                try {
+                    const state = await GameDig.query({
+                        type: 'unturned',
+                        host: target.ip,
+                        port: target.port
+                    });
 
-                // Note: Standard A2S queries (GameDig) usually do not return SteamID.
-                // We check p.name as fallback, or p.raw.steamid if available in future
-                const isOnline = state.players.some((p: any) => 
-                    p.name?.includes(steamId) || 
-                    (p.raw && p.raw.steamid === steamId)
-                );
+                    const isOnline = state.players.some((p: any) => 
+                        p.name?.includes(steamId) || 
+                        (p.raw && p.raw.steamid === steamId)
+                    );
 
-                if (isOnline) {
-                    await channel.send(`🚨 **Alarm Śledzenia** 🚨\nGracz o SteamID **${steamId}** został wykryty na serwerze **${state.name}** (${ip}:${port})!`);
-                    
-                    // Stop tracking once found
-                    clearInterval(intervalId);
-                    activeTrackers.delete(trackingKey);
+                    if (isOnline) {
+                        await channel.send(`🚨 **Alarm Śledzenia** 🚨\nGracz o SteamID **${steamId}** został wykryty na serwerze **${state.name}** (${target.ip}:${target.port})!`);
+                        
+                        clearInterval(intervalId);
+                        activeTrackers.delete(trackingKey);
+                        break; // Stop checking other servers since found
+                    }
+                } catch (error) {
+                    console.error(`Błąd odpytywania serwera ${target.ip}:${target.port} dla SteamID ${steamId}:`, error);
                 }
-            } catch (error) {
-                console.error(`Błąd podczas odpytywania serwera ${ip}:${port} dla SteamID ${steamId}:`, error);
             }
         }, 60000); // Sprawdzanie co 60 sekund
 
@@ -125,7 +130,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
         
         let found = false;
         for (const [key, intervalId] of activeTrackers.entries()) {
-            if (key.startsWith(`${steamId}-`)) {
+            if (key === steamId) {
                 clearInterval(intervalId);
                 activeTrackers.delete(key);
                 found = true;
