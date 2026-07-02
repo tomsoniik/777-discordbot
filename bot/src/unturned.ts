@@ -195,7 +195,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
         embeds.push(mainEmbed);
 
         // Fetch ich danych do wyświetlenia (bierzemy pierwsze 9)
-        const steamIds = activeTrackers.slice(0, 9).map(t => t.steamId);
+        const steamIds = activeTrackers.slice(0, 9).map((t: any) => t.steamId);
         
         if (steamIds.length > 0) {
             try {
@@ -239,7 +239,7 @@ export function startTrackingLoop(client: Client) {
             const trackers = await prisma.trackedPlayer.findMany({ where: { isActive: true } });
             if (trackers.length === 0) return;
             
-            const steamIds = trackers.map(t => t.steamId);
+            const steamIds = trackers.map((t: any) => t.steamId);
             
             // Dzielimy na paczki po 100 SteamID (limit API)
             const chunks = [];
@@ -253,7 +253,7 @@ export function startTrackingLoop(client: Client) {
                 const players = data.response?.players || [];
 
                 for (const player of players) {
-                    const tracker = trackers.find(t => t.steamId === player.steamid);
+                    const tracker = trackers.find((t: any) => t.steamId === player.steamid);
                     if (!tracker) continue;
 
                     const isPlayingUnturned = player.gameextrainfo === 'Unturned' || player.gameid === '304930';
