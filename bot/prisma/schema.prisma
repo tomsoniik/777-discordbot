@@ -1,0 +1,30 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model TrackedPlayer {
+  id           Int      @id @default(autoincrement())
+  steamId      String   @unique
+  addedBy      String   // Discord User ID
+  addedAt      DateTime @default(now())
+  targetServer String?  // Optional specific server, or null for all
+  isActive     Boolean  @default(true)
+}
+
+model PlayerHistory {
+  id           Int      @id @default(autoincrement())
+  steamId      String
+  nickname     String?
+  serverIp     String
+  serverName   String?
+  detectedAt   DateTime @default(now())
+}

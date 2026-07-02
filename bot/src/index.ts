@@ -4,7 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { handleMusicInteraction, musicCommands, handleMusicButtonInteraction, queue } from './music';
-import { unturnedCommands, handleUnturnedInteraction } from './unturned';
+import { unturnedCommands, handleUnturnedInteraction, startTrackingLoop } from './unturned';
 
 dotenv.config();
 
@@ -51,6 +51,8 @@ client.once('ready', async () => {
     } catch (error) {
         console.error(error);
     }
+
+    startTrackingLoop(client);
 });
 
 client.on('messageCreate', async (message) => {
