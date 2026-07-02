@@ -70,15 +70,27 @@ async function fetchBattlemetricsPlayers(ip, port) {
     }
     return [];
 }
+async function fetchDynamicServers(keyword) {
+    try {
+        const res = await fetch(`https://api.battlemetrics.com/servers?filter[search]=${encodeURIComponent(keyword)}&filter[game]=unturned`);
+        const json = await res.json();
+        if (json.data && json.data.length > 0) {
+            // Filtrujemy tylko te serwery, które faktycznie mają w nazwie podane słowo kluczowe
+            const filtered = json.data.filter((s) => s.attributes.name.toLowerCase().includes(keyword.toLowerCase()));
+            return filtered.map((s) => ({
+                name: s.attributes.name,
+                ip: s.attributes.ip,
+                port: s.attributes.portQuery || s.attributes.port,
+                bmId: s.id
+            }));
+        }
+    }
+    catch (e) {
+        console.error('fetchDynamicServers error:', e);
+    }
+    return [];
+}
 const activeTrackers = new Map();
-const PREDEFINED_SERVERS = {
-    'washington': { ip: '94.130.219.164', port: 27116 },
-    'arena': { ip: '83.143.81.182', port: 2484 },
-    'california': { ip: '39.96.7.81', port: 27015 },
-    'germany': { ip: '176.57.173.170', port: 28100 },
-    'pei': { ip: '193.169.209.214', port: 20004 },
-    'russia': { ip: '43.167.189.221', port: 27015 }
-};
 exports.unturnedCommands = [
     new discord_js_1.SlashCommandBuilder()
         .setName('track')
@@ -88,7 +100,7 @@ exports.unturnedCommands = [
         .setRequired(true))
         .addStringOption(option => option.setName('server')
         .setDescription('Wybierz gotowy serwer Unbeaten')
-        .addChoices({ name: 'Wszystkie serwery (All)', value: 'all' }, { name: 'Washington x100', value: 'washington' }, { name: 'Arena', value: 'arena' }, { name: 'California x100', value: 'california' }, { name: 'Germany x100', value: 'germany' }, { name: 'PEI x100', value: 'pei' }, { name: 'Russia x100', value: 'russia' })
+        .addChoices({ name: 'Wszystkie serwery Unbeaten', value: 'all' })
         .setRequired(false))
         .addStringOption(option => option.setName('ip')
         .setDescription('Lub podaj własny adres IP')
@@ -133,12 +145,15 @@ async function handleUnturnedInteraction(interaction) {
         if (customIp) {
             targets.push({ ip: customIp, port: customPort });
         }
-        else if (serverChoice && serverChoice !== 'all' && PREDEFINED_SERVERS[serverChoice]) {
-            targets.push(PREDEFINED_SERVERS[serverChoice]);
-        }
         else {
-            // 'all' or empty means check all predefined servers
-            targets = Object.values(PREDEFINED_SERVERS);
+            // Dynamiczne wyszukiwanie po nazwie
+            const dynamicServers = await fetchDynamicServers('unbeaten');
+            if (dynamicServers.length > 0) {
+                targets = dynamicServers;
+            }
+            else {
+                return interaction.reply({ content: 'Nie znaleziono w sieci żadnych aktywnych serwerów Unbeaten!', ephemeral: true });
+            }
         }
         if (targets.length === 0) {
             return interaction.reply({ content: 'Nie udało się ustalić serwerów do sprawdzenia.', ephemeral: true });
@@ -190,11 +205,20 @@ async function handleUnturnedInteraction(interaction) {
                 }
                 // 3. Fallback do BattleMetrics API jeśli GameDig zawiódł lub gracz jest ukryty
                 if (!found) {
-                    const bmPlayers = await fetchBattlemetricsPlayers(target.ip, target.port);
+                    let bmPlayers = [];
+                    if (target.bmId) {
+                        const res = await fetch(`https://api.battlemetrics.com/servers/${target.bmId}?include=player`);
+                        const json = await res.json();
+                        if (json.included)
+                            bmPlayers = json.included.filter((i) => i.type === 'player').map((p) => ({ name: p.attributes.name, id: p.id }));
+                    }
+                    else {
+                        bmPlayers = await fetchBattlemetricsPlayers(target.ip, target.port);
+                    }
                     const isOnlineInBM = bmPlayers.some((p) => p.name.includes(profile.name) || p.name.includes(steamId));
                     if (isOnlineInBM) {
                         found = true;
-                        foundServerName = 'Serwer (Wykryty z BattleMetrics API)';
+                        foundServerName = target.name || 'Serwer (Wykryty z BattleMetrics API)';
                         foundIpPort = `${target.ip}:${target.port}`;
                         foundMaxPlayers = 0;
                         foundCurrentPlayers = bmPlayers.length;
@@ -301,9 +325,13 @@ async function handleUnturnedInteraction(interaction) {
         await interaction.deferReply();
         const embeds = [];
         let totalPlayers = 0;
-        const serverChecks = Object.entries(PREDEFINED_SERVERS).map(async ([serverName, target]) => {
+        const serversToTrack = await fetchDynamicServers('unbeaten');
+        if (serversToTrack.length === 0) {
+            return interaction.editReply('Nie znalazłem w bazie BattleMetrics żadnych serwerów mających w nazwie "unbeaten".');
+        }
+        const serverChecks = serversToTrack.map(async (target) => {
             let playersText = '';
-            let serverTitle = `${serverName.toUpperCase()} (${target.ip}:${target.port})`;
+            let serverTitle = `${target.name} (${target.ip}:${target.port})`;
             let players = [];
             try {
                 // Najpierw zapytanie A2S przez GameDig
@@ -314,19 +342,26 @@ async function handleUnturnedInteraction(interaction) {
                     maxRetries: 1,
                     socketTimeout: 2000
                 });
-                serverTitle = `${state.name || serverName.toUpperCase()} (${state.players.length}/${state.maxplayers})`;
+                serverTitle = `${state.name || target.name} (${state.players.length}/${state.maxplayers})`;
                 players = state.players.map((p) => p.name || 'Nieznany').filter(n => n.trim() !== '');
             }
             catch (e) {
                 // Ignorujemy błędy i polegamy na BattleMetrics API
             }
             // Fallback do API, jesli A2S nie zwrocilo graczy (np. ukryci)
-            if (players.length === 0) {
-                const bmPlayers = await fetchBattlemetricsPlayers(target.ip, target.port);
-                if (bmPlayers.length > 0) {
-                    players = bmPlayers.map((p) => p.name);
-                    serverTitle += ` [z BattleMetrics API]`;
+            if (players.length === 0 && target.bmId) {
+                try {
+                    const res = await fetch(`https://api.battlemetrics.com/servers/${target.bmId}?include=player`);
+                    const json = await res.json();
+                    if (json.included) {
+                        const bmPlayers = json.included.filter((i) => i.type === 'player');
+                        if (bmPlayers.length > 0) {
+                            players = bmPlayers.map((p) => p.attributes.name);
+                            serverTitle += ` [z BattleMetrics]`;
+                        }
+                    }
                 }
+                catch (e) { }
             }
             if (players.length > 0) {
                 playersText = players.join(', ');
