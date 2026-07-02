@@ -82,12 +82,13 @@ client.on('interactionCreate', async interaction => {
             } else if (['track', 'untrack', 'tracked_list', 'trackconfig', 'trackp'].includes(interaction.commandName)) {
                 await handleUnturnedInteraction(interaction);
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error('Błąd podczas obsługi komendy:', e);
+            const errMsg = e instanceof Error ? e.message : String(e);
             if (interaction.deferred || interaction.replied) {
-                await interaction.editReply('Wystąpił nieoczekiwany błąd podczas wykonywania tej komendy.');
+                await interaction.editReply(`Wystąpił nieoczekiwany błąd podczas wykonywania tej komendy: \`${errMsg}\``);
             } else {
-                await interaction.reply({ content: 'Wystąpił nieoczekiwany błąd podczas wykonywania tej komendy.', flags: 64 });
+                await interaction.reply({ content: `Wystąpił nieoczekiwany błąd podczas wykonywania tej komendy: \`${errMsg}\``, flags: 64 });
             }
         }
     } else if (interaction.isButton()) {
