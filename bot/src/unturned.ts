@@ -1,4 +1,4 @@
-import { Client, ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { Client, ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
@@ -114,15 +114,15 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
         const channel = interaction.options.getChannel('channel', true);
         unturnedConfig.defaultChannelId = channel.id;
         saveConfig(unturnedConfig);
-        return interaction.reply({ content: `Domyślny kanał powiadomień ustawiony na <#${channel.id}>.`, ephemeral: true });
+        return interaction.reply({ content: `Domyślny kanał powiadomień ustawiony na <#${channel.id}>.`, flags: MessageFlags.Ephemeral });
     }
 
     if (!process.env.STEAM_API_KEY) {
-        return interaction.reply({ content: 'Brak STEAM_API_KEY w konfiguracji bota!', ephemeral: true });
+        return interaction.reply({ content: 'Brak STEAM_API_KEY w konfiguracji bota!', flags: MessageFlags.Ephemeral });
     }
 
     if (interaction.commandName === 'track') {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         
         const rawInput = interaction.options.getString('steamid', true);
         const serverChoice = interaction.options.getString('server') || 'all';
@@ -154,7 +154,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
     } 
     
     else if (interaction.commandName === 'untrack') {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         
         const rawInput = interaction.options.getString('steamid', true);
         const steamId = await resolveSteamId(rawInput) || rawInput; // fallback
@@ -172,7 +172,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
     }
     
     else if (interaction.commandName === 'tracked_list') {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         
         const activeTrackers = await prisma.trackedPlayer.findMany({ where: { isActive: true } });
         

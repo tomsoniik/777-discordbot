@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, REST, Routes } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, REST, Routes, Events } from 'discord.js';
 import { AudioPlayerStatus } from '@discordjs/voice';
 import express from 'express';
 import cors from 'cors';
@@ -26,7 +26,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 3001;
 const WEB_URL = process.env.WEB_URL || 'http://localhost:3000';
 
-client.once('ready', async () => {
+client.once(Events.ClientReady, async () => {
     console.log(`Bot logged in as ${client.user?.tag}`);
 
     try {
