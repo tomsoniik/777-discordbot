@@ -4,6 +4,15 @@ import { GameDig } from 'gamedig';
 // Maps a player name to the interval ID so we can stop tracking later if needed
 const activeTrackers: Map<string, NodeJS.Timeout> = new Map();
 
+const PREDEFINED_SERVERS: Record<string, { ip: string, port: number }> = {
+    'washington': { ip: '94.130.219.164', port: 27116 },
+    'arena': { ip: '83.143.81.182', port: 2484 },
+    'california': { ip: '39.96.7.81', port: 27015 },
+    'germany': { ip: '176.57.173.170', port: 28100 },
+    'pei': { ip: '193.169.209.214', port: 20004 },
+    'russia': { ip: '43.167.189.221', port: 27015 }
+};
+
 export const unturnedCommands = [
     new SlashCommandBuilder()
         .setName('track')
@@ -13,9 +22,21 @@ export const unturnedCommands = [
                 .setDescription('SteamID gracza do śledzenia')
                 .setRequired(true))
         .addStringOption(option => 
+            option.setName('server')
+                .setDescription('Wybierz gotowy serwer Unbeaten')
+                .addChoices(
+                    { name: 'Washington x100', value: 'washington' },
+                    { name: 'Arena', value: 'arena' },
+                    { name: 'California x100', value: 'california' },
+                    { name: 'Germany x100', value: 'germany' },
+                    { name: 'PEI x100', value: 'pei' },
+                    { name: 'Russia x100', value: 'russia' }
+                )
+                .setRequired(false))
+        .addStringOption(option => 
             option.setName('ip')
-                .setDescription('Adres IP serwera')
-                .setRequired(true))
+                .setDescription('Lub podaj własny adres IP')
+                .setRequired(false))
         .addIntegerOption(option => 
             option.setName('port')
                 .setDescription('Port serwera (domyślnie 27015)')
@@ -36,9 +57,22 @@ export const unturnedCommands = [
 export async function handleUnturnedInteraction(interaction: ChatInputCommandInteraction) {
     if (interaction.commandName === 'track') {
         const steamId = interaction.options.getString('steamid', true);
-        const ip = interaction.options.getString('ip', true);
-        const port = interaction.options.getInteger('port') || 27015;
+        const serverChoice = interaction.options.getString('server');
+        const customIp = interaction.options.getString('ip');
+        const customPort = interaction.options.getInteger('port') || 27015;
         const channel = interaction.options.getChannel('channel') || interaction.channel;
+
+        let ip = customIp;
+        let port = customPort;
+
+        if (serverChoice && PREDEFINED_SERVERS[serverChoice]) {
+            ip = PREDEFINED_SERVERS[serverChoice].ip;
+            port = PREDEFINED_SERVERS[serverChoice].port;
+        }
+
+        if (!ip) {
+            return interaction.reply({ content: 'Musisz wybrać serwer z listy lub podać własne IP!', ephemeral: true });
+        }
 
         if (!channel || !(channel instanceof TextChannel)) {
             return interaction.reply({ content: 'Nieprawidłowy kanał.', ephemeral: true });
