@@ -31,3 +31,8 @@ model PlayerHistory {
   serverName   String?
   detectedAt   DateTime @default(now())
 }
+
+model BotSettings {
+  id               Int     @id @default(1)
+  defaultChannelId String?
+}

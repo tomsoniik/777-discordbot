@@ -1,27 +1,7 @@
 import { Client, ChatInputCommandInteraction, SlashCommandBuilder, TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
-import fs from 'fs';
-import path from 'path';
 
 const prisma = new PrismaClient();
-const configPath = path.join(__dirname, '..', 'unturnedConfig.json');
-
-function loadConfig() {
-    try {
-        if (fs.existsSync(configPath)) {
-            return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-        }
-    } catch (e) {
-        console.error('Blad ladowania unturnedConfig.json', e);
-    }
-    return { defaultChannelId: null };
-}
-
-function saveConfig(config: any) {
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-}
-
-let unturnedConfig = loadConfig();
 
 const PREDEFINED_SERVERS: Record<string, { ip: string, port: number, serverId?: string, displayName?: string }> = {
     'washington': { ip: '94.130.219.164', port: 27116, serverId: '85568392925775084', displayName: 'Washington x100' },
@@ -112,8 +92,11 @@ async function resolveSteamId(rawInput: string): Promise<string | null> {
 export async function handleUnturnedInteraction(interaction: ChatInputCommandInteraction) {
     if (interaction.commandName === 'trackconfig') {
         const channel = interaction.options.getChannel('channel', true);
-        unturnedConfig.defaultChannelId = channel.id;
-        saveConfig(unturnedConfig);
+        await prisma.botSettings.upsert({
+            where: { id: 1 },
+            update: { defaultChannelId: channel.id },
+            create: { id: 1, defaultChannelId: channel.id }
+        });
         return interaction.reply({ content: `Domyślny kanał powiadomień ustawiony na <#${channel.id}>.`, flags: MessageFlags.Ephemeral });
     }
 
@@ -132,10 +115,15 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
             return interaction.editReply('Nie udało się rozwiązać SteamID z podanego wejścia. Podaj poprawny SteamID64 lub link do profilu publicznego.');
         }
 
-        let channelId = unturnedConfig.defaultChannelId;
+        let settings = await prisma.botSettings.findUnique({ where: { id: 1 } });
+        let channelId = settings?.defaultChannelId;
+        
         if (!channelId) {
-            unturnedConfig.defaultChannelId = interaction.channelId;
-            saveConfig(unturnedConfig);
+            await prisma.botSettings.upsert({
+                where: { id: 1 },
+                update: { defaultChannelId: interaction.channelId },
+                create: { id: 1, defaultChannelId: interaction.channelId }
+            });
             channelId = interaction.channelId;
         }
 
@@ -271,7 +259,8 @@ export function startTrackingLoop(client: Client) {
                     const handleOffline = async () => {
                         if (tracker.isOnline) {
                             await prisma.trackedPlayer.update({ where: { steamId: player.steamid }, data: { isOnline: false, lastServer: null } });
-                            const channelId = unturnedConfig.defaultChannelId;
+                            const settings = await prisma.botSettings.findUnique({ where: { id: 1 } });
+                            const channelId = settings?.defaultChannelId;
                             if (channelId) {
                                 const channel = client.channels.cache.get(channelId);
                                 if (channel && channel.isTextBased() && 'send' in channel) {
@@ -369,7 +358,8 @@ export function startTrackingLoop(client: Client) {
                         });
 
                         // Alert Discord
-                        const channelId = unturnedConfig.defaultChannelId;
+                        const settings = await prisma.botSettings.findUnique({ where: { id: 1 } });
+                        const channelId = settings?.defaultChannelId;
                         if (channelId) {
                             const channel = client.channels.cache.get(channelId);
                             if (channel && channel.isTextBased() && 'send' in channel) {
@@ -406,6 +396,15 @@ export function startTrackingLoop(client: Client) {
                     }
                 }
             }
+            // Ustawienie dynamicznego statusu bota
+            const activeCount = trackers.length;
+            const onlineCount = trackers.filter((t: any) => t.isOnline).length;
+            
+            client.user?.setActivity({
+                name: `Radar: ${activeCount} graczy | 🔴 Online: ${onlineCount}`,
+                type: 4, // 4 to Custom (wymaga nowszego d.js) lub 0 to Playing
+            });
+
         } catch (error) {
             console.error('Błąd pętli śledzenia graczy:', error);
         }
