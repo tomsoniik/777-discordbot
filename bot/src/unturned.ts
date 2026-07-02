@@ -210,7 +210,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                     .setColor('#ff0000')
                     .addFields(
                         { name: 'Serwer', value: `\`${foundServerName}\``, inline: true },
-                        { name: 'Szybkie Dołączenie', value: `[🚀 KLIKNIJ TUTAJ ABY DOŁĄCZYĆ (Otworzy Steam)](steam://run/304930//+connect%20${foundIpPort})\n\n*(Jeśli link nie działa, skopiuj:)*\n\`steam://run/304930//+connect%20${foundIpPort}\``, inline: false }
+                        { name: 'Szybkie Dołączenie', value: `Wklej w przeglądarkę (lub Win+R):\n\`steam://run/304930//+connect%20${foundIpPort}\``, inline: false }
                     )
                     .setTimestamp();
                     
@@ -218,9 +218,20 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                      embed.addFields({ name: 'Graczy', value: `\`${foundCurrentPlayers} / ${foundMaxPlayers}\``, inline: true });
                 }
 
+                // Discord całkowicie blokuje klikalne linki steam:// (zarówno w Markdown jak i przyciskach)
+                // Używamy naszej produkcyjnej domeny Vercel jako przekierowania!
+                const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setLabel('🚀 Dołącz do gry')
+                        .setStyle(ButtonStyle.Link)
+                        .setURL(`https://777-discordbot-tomsoncs.vercel.app/api/join?ip=${foundIpPort}`)
+                );
+
                 await channel.send({ 
                     content: '@everyone', 
-                    embeds: [embed]
+                    embeds: [embed],
+                    components: [row]
                 });
                 
                 clearInterval(intervalId);
