@@ -210,7 +210,7 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                     .setColor('#ff0000')
                     .addFields(
                         { name: 'Serwer', value: `\`${foundServerName}\``, inline: true },
-                        { name: 'Szybkie Dołączenie', value: `Ręczny IP: \`steam://run/304930//+connect ${foundIpPort}\``, inline: false }
+                        { name: 'Szybkie Dołączenie', value: `Wklej w przeglądarkę (lub Win+R):\n\`steam://run/304930//+connect%20${foundIpPort}\``, inline: false }
                     )
                     .setTimestamp();
                     
@@ -218,19 +218,9 @@ export async function handleUnturnedInteraction(interaction: ChatInputCommandInt
                      embed.addFields({ name: 'Graczy', value: `\`${foundCurrentPlayers} / ${foundMaxPlayers}\``, inline: true });
                 }
 
-                // Dodajemy przycisk łączący przez nasz portal webowy (który robi redirect do steam://)
-                const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-                const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setLabel('🚀 Dołącz do gry')
-                        .setStyle(ButtonStyle.Link)
-                        .setURL(`https://777-discordbot-tomsoncs.vercel.app/api/join?ip=${foundIpPort}`)
-                );
-
                 await channel.send({ 
                     content: '@everyone', 
-                    embeds: [embed],
-                    components: [row]
+                    embeds: [embed]
                 });
                 
                 clearInterval(intervalId);
