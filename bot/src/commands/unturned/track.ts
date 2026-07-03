@@ -28,6 +28,10 @@ export const trackCommand: Command = {
                     { name: 'Arid', value: 'arid' },
                     { name: 'A6 Polaris', value: 'polaris' }
                 )
+                .setRequired(false))
+        .addStringOption(option => 
+            option.setName('link_to')
+                .setDescription('Opcjonalnie podaj profil/SteamID by złączyć ich na grafie (nawet jak prywatny)')
                 .setRequired(false)),
     execute: async (interaction: ChatInputCommandInteraction) => {
         if (!ENV.STEAM_API_KEY) {
@@ -39,6 +43,7 @@ export const trackCommand: Command = {
         
         const rawInput = interaction.options.getString('steamid', true);
         const serverChoice = interaction.options.getString('server') || 'all';
+        const linkToRaw = interaction.options.getString('link_to');
         
         const steamId = await resolveSteamId(rawInput);
         if (!steamId) {
@@ -84,6 +89,23 @@ export const trackCommand: Command = {
 
         // ECHO-TRACKER: Asynchronously build friend network
         ShadowNetwork.scrapeFriends(steamId).catch(console.error);
+
+        if (linkToRaw) {
+            const linkToSteamId = await resolveSteamId(linkToRaw);
+            if (linkToSteamId && linkToSteamId !== steamId) {
+                const [a, b] = [steamId, linkToSteamId].sort();
+                await prisma.playerNode.upsert({ where: { steamId: a }, update: {}, create: { steamId: a } });
+                await prisma.playerNode.upsert({ where: { steamId: b }, update: {}, create: { steamId: b } });
+                await prisma.playerRelation.upsert({
+                    where: { steamIdA_steamIdB: { steamIdA: a, steamIdB: b } },
+                    update: { bondStrength: { increment: 5 } },
+                    create: { steamIdA: a, steamIdB: b, bondStrength: 10 }
+                });
+                privacyWarning += `\n🔗 **Połączono w Shadow Network z:** \`${linkToSteamId}\``;
+            } else {
+                privacyWarning += `\n⚠️ Nie udało się odczytać profilu powiązanego (\`link_to\`).`;
+            }
+        }
 
         await interaction.editReply(`Rozpoczęto śledzenie SteamID: \`${steamId}\` na **${targetName}**!${privacyWarning}`);
     }

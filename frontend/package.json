@@ -12,6 +12,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
     "@prisma/client": "^5.22.0",
+    "cytoscape": "^3.34.0",
     "d3-force": "^3.0.0",
     "discord-interactions": "^4.4.0",
     "iconsax-react": "^0.0.8",
@@ -19,13 +20,16 @@
     "next-auth": "^4.24.14",
     "next-auth-steam": "^0.4.0",
     "react": "19.2.4",
+    "react-cytoscapejs": "^2.0.0",
     "react-dom": "19.2.4",
     "react-force-graph-2d": "^1.29.1"
   },
   "devDependencies": {
     "@prisma/config": "^7.8.0",
+    "@types/cytoscape": "^3.21.9",
     "@types/node": "^20",
     "@types/react": "^19",
+    "@types/react-cytoscapejs": "^1.2.6",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
