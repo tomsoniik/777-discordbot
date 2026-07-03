@@ -102,7 +102,7 @@ export default function Navbar() {
                     onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
                     onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                   >
-                    🎶 Playlist
+                    Playlist
                   </Link>
 
                   { (session.user as any)?.role === 'ADMIN' && (
@@ -114,7 +114,7 @@ export default function Navbar() {
                         onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,71,87,0.1)'}
                         onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                       >
-                        👁️ Intelligence
+                        Intelligence
                       </Link>
                       <Link 
                         href="/admin" 
@@ -123,7 +123,7 @@ export default function Navbar() {
                         onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,71,87,0.1)'}
                         onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                       >
-                        ⚙️ Admin Panel
+                        Admin Panel
                       </Link>
                     </>
                   )}
