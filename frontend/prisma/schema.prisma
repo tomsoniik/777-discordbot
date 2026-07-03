@@ -117,3 +117,32 @@ model MusicGroupMember {
   group MusicGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
+// ==========================================
+// ECHO-TRACKER: Shadow Network Models (Read-Only sync from Bot)
+// ==========================================
+
+model PlayerNode {
+  steamId      String   @id
+  lastNickname String?
+  firstSeenAt  DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+}
+
+model PlayerRelation {
+  id           Int      @id @default(autoincrement())
+  steamIdA     String   
+  steamIdB     String   
+  bondStrength Int      @default(1)
+  lastSeenTgt  DateTime @default(now())
+
+  @@unique([steamIdA, steamIdB])
+}
+
+model SessionEncounter {
+  id            Int      @id @default(autoincrement())
+  targetId      String   
+  bystanderId   String   
+  serverIp      String
+  encounteredAt DateTime @default(now())
+}
+

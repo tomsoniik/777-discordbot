@@ -5,10 +5,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.unturnedCommands = void 0;
 exports.handleUnturnedInteraction = handleUnturnedInteraction;
+exports.startTrackingLoop = startTrackingLoop;
 const discord_js_1 = require("discord.js");
-const gamedig_1 = require("gamedig");
+const client_1 = require("@prisma/client");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const prisma = new client_1.PrismaClient();
 const configPath = path_1.default.join(__dirname, '..', 'unturnedConfig.json');
 function loadConfig() {
     try {
@@ -25,58 +27,6 @@ function saveConfig(config) {
     fs_1.default.writeFileSync(configPath, JSON.stringify(config, null, 2));
 }
 let unturnedConfig = loadConfig();
-async function fetchSteamProfile(steamId) {
-    try {
-        let url = `https://steamcommunity.com/profiles/${steamId}`;
-        if (steamId.match(/^[a-zA-Z0-9_-]+$/) && !steamId.match(/^\d+$/)) {
-            // To prawdopodobnie custom URL (vanity)
-            url = `https://steamcommunity.com/id/${steamId}`;
-        }
-        const res = await fetch(url);
-        const html = await res.text();
-        const nameMatch = html.match(/<title>Steam Community :: (.+?)<\/title>/);
-        const imgMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
-        let serverIpAndPort = null;
-        const connectMatch = html.match(/steam:\/\/(?:connect|joinlobby\/\d+)\/([0-9\.:]+)/);
-        if (connectMatch) {
-            serverIpAndPort = connectMatch[1];
-        }
-        return {
-            name: (nameMatch && nameMatch[1] !== 'Error') ? nameMatch[1] : steamId,
-            avatarUrl: imgMatch ? imgMatch[1] : 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png',
-            currentServerIp: serverIpAndPort,
-            profileUrl: url
-        };
-    }
-    catch (e) {
-        return { name: steamId, avatarUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png', currentServerIp: null, profileUrl: `https://steamcommunity.com/profiles/${steamId}` };
-    }
-}
-async function fetchBattlemetricsPlayers(ip, port) {
-    try {
-        const res = await fetch(`https://api.battlemetrics.com/servers?filter[search]=${ip}&filter[game]=unturned`);
-        const json = await res.json();
-        if (json.data && json.data.length > 0) {
-            // BattleMetrics zwraca wyniki wyszukiwania rozmytego. Musimy upewnić się, że to DOKŁADNIE ten serwer!
-            const server = json.data.find((s) => s.attributes.ip === ip && (s.attributes.port === port || s.attributes.portQuery === port));
-            if (server) {
-                const serverId = server.id;
-                const detailsRes = await fetch(`https://api.battlemetrics.com/servers/${serverId}?include=player`);
-                const detailsJson = await detailsRes.json();
-                if (detailsJson.included) {
-                    return detailsJson.included
-                        .filter((inc) => inc.type === 'player')
-                        .map((p) => ({ name: p.attributes.name, id: p.id }));
-                }
-            }
-        }
-    }
-    catch (e) {
-        console.error('BattleMetrics API error:', e);
-    }
-    return [];
-}
-const activeTrackers = new Map();
 const PREDEFINED_SERVERS = {
     'washington': { ip: '94.130.219.164', port: 27116, serverId: '85568392925775084', displayName: 'Washington x100' },
     'arena': { ip: '83.143.81.182', port: 2484, serverId: '85568392926801330', displayName: 'Arena' },
@@ -92,33 +42,21 @@ exports.unturnedCommands = [
         .setName('track')
         .setDescription('Rozpocznij śledzenie gracza na serwerze Unturned')
         .addStringOption(option => option.setName('steamid')
-        .setDescription('Link do profilu Steam lub SteamID gracza')
+        .setDescription('Link do profilu Steam, vanity URL lub SteamID64')
         .setRequired(true))
         .addStringOption(option => option.setName('server')
         .setDescription('Wybierz gotowy serwer Unbeaten')
         .addChoices({ name: 'Wszystkie serwery (All)', value: 'all' }, { name: 'Washington x100', value: 'washington' }, { name: 'Arena', value: 'arena' }, { name: 'California x100', value: 'california' }, { name: 'Germany x100', value: 'germany' }, { name: 'PEI x100', value: 'pei' }, { name: 'Russia x100', value: 'russia' }, { name: 'Arid', value: 'arid' }, { name: 'A6 Polaris', value: 'polaris' })
-        .setRequired(false))
-        .addStringOption(option => option.setName('ip')
-        .setDescription('Lub podaj własny adres IP')
-        .setRequired(false))
-        .addIntegerOption(option => option.setName('port')
-        .setDescription('Port serwera (domyślnie 27015)')
-        .setRequired(false))
-        .addChannelOption(option => option.setName('channel')
-        .setDescription('Kanał, na który wysłać powiadomienie')
         .setRequired(false)),
     new discord_js_1.SlashCommandBuilder()
         .setName('untrack')
         .setDescription('Zatrzymaj śledzenie gracza')
         .addStringOption(option => option.setName('steamid')
-        .setDescription('Link do profilu Steam lub SteamID')
+        .setDescription('Link do profilu Steam, vanity URL lub SteamID64')
         .setRequired(true)),
     new discord_js_1.SlashCommandBuilder()
         .setName('tracked_list')
-        .setDescription('Pokaż listę obecnie śledzonych graczy'),
-    new discord_js_1.SlashCommandBuilder()
-        .setName('trackp')
-        .setDescription('Pokaż wszystkich graczy online zgrupowanych po serwerach (używa Gamedig & API)'),
+        .setDescription('Pokaż listę obecnie śledzonych graczy z bazy danych'),
     new discord_js_1.SlashCommandBuilder()
         .setName('trackconfig')
         .setDescription('Ustaw domyślny kanał dla powiadomień')
@@ -126,278 +64,249 @@ exports.unturnedCommands = [
         .setDescription('Domyślny kanał')
         .setRequired(true))
 ];
+async function resolveSteamId(rawInput) {
+    const apiKey = process.env.STEAM_API_KEY;
+    if (!apiKey)
+        return null;
+    let input = rawInput.trim();
+    // Szukamy SteamID64 (długi ciąg cyfr zaczynający się od 7656119)
+    const match64 = input.match(/(7656119[0-9]{10})/);
+    if (match64)
+        return match64[0];
+    // Szukamy vanity URL, np. /id/nazwa
+    let vanity = input;
+    const matchId = input.match(/\/id\/([^\/\?]+)/);
+    if (matchId) {
+        vanity = matchId[1];
+    }
+    else {
+        const parts = input.split('/').filter(p => p.length > 0);
+        vanity = parts[parts.length - 1]; // np. sam "nazwa"
+    }
+    try {
+        const res = await fetch(`https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=${apiKey}&vanityurl=${vanity}`);
+        const data = await res.json();
+        if (data.response && data.response.success === 1) {
+            return data.response.steamid;
+        }
+    }
+    catch (e) {
+        console.error('Błąd ResolveVanityURL:', e);
+    }
+    return null;
+}
 async function handleUnturnedInteraction(interaction) {
+    if (interaction.commandName === 'trackconfig') {
+        const channel = interaction.options.getChannel('channel', true);
+        unturnedConfig.defaultChannelId = channel.id;
+        saveConfig(unturnedConfig);
+        return interaction.reply({ content: `Domyślny kanał powiadomień ustawiony na <#${channel.id}>.`, flags: discord_js_1.MessageFlags.Ephemeral });
+    }
+    if (!process.env.STEAM_API_KEY) {
+        return interaction.reply({ content: 'Brak STEAM_API_KEY w konfiguracji bota!', flags: discord_js_1.MessageFlags.Ephemeral });
+    }
     if (interaction.commandName === 'track') {
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         const rawInput = interaction.options.getString('steamid', true);
-        let steamId = rawInput.trim();
-        const match64 = rawInput.match(/(7656119[0-9]{10})/);
-        if (match64) {
-            steamId = match64[0];
+        const serverChoice = interaction.options.getString('server') || 'all';
+        const steamId = await resolveSteamId(rawInput);
+        if (!steamId) {
+            return interaction.editReply('Nie udało się rozwiązać SteamID z podanego wejścia. Podaj poprawny SteamID64 lub link do profilu publicznego.');
         }
-        else {
-            const matchId = rawInput.match(/\/id\/([^\/\?]+)/);
-            if (matchId) {
-                steamId = matchId[1];
-            }
-            else {
-                const matchProf = rawInput.match(/\/profiles\/([^\/\?]+)/);
-                if (matchProf) {
-                    steamId = matchProf[1];
-                }
-                else if (rawInput.startsWith('http')) {
-                    const parts = rawInput.split('/').filter(p => p.length > 0);
-                    steamId = parts[parts.length - 1];
-                }
-            }
-        }
-        const serverChoice = interaction.options.getString('server');
-        const customIp = interaction.options.getString('ip');
-        const customPort = interaction.options.getInteger('port') || 27015;
-        let channelId = interaction.options.getChannel('channel')?.id || unturnedConfig.defaultChannelId || interaction.channelId;
+        let channelId = unturnedConfig.defaultChannelId || interaction.channelId;
         const channel = interaction.client.channels.cache.get(channelId);
-        let targets = [];
-        if (customIp) {
-            targets.push({ ip: customIp, port: customPort });
-        }
-        else if (serverChoice && serverChoice !== 'all' && PREDEFINED_SERVERS[serverChoice]) {
-            targets.push(PREDEFINED_SERVERS[serverChoice]);
-        }
-        else {
-            // 'all' or empty means check all predefined servers
-            targets = Object.values(PREDEFINED_SERVERS);
-        }
-        if (targets.length === 0) {
-            return interaction.reply({ content: 'Nie udało się ustalić serwerów do sprawdzenia.', ephemeral: true });
-        }
         if (!channel || !(channel instanceof discord_js_1.TextChannel)) {
-            return interaction.reply({ content: 'Nieprawidłowy kanał.', ephemeral: true });
+            return interaction.editReply('Nieprawidłowy kanał do wysyłania powiadomień.');
         }
-        const trackingKey = steamId;
-        if (activeTrackers.has(trackingKey)) {
-            return interaction.reply({ content: `Już śledzę to SteamID (**${steamId}**). Wpisz /untrack by przerwać.`, ephemeral: true });
+        const existing = await prisma.trackedPlayer.findUnique({ where: { steamId } });
+        if (existing && existing.isActive) {
+            return interaction.editReply(`Już śledzę to SteamID (**${steamId}**). Wpisz /untrack by przerwać.`);
         }
-        const scopeMsg = targets.length > 1 ? 'wszystkich zapisanych serwerach' : `serwerze ${targets[0].displayName || targets[0].ip + ':' + targets[0].port}`;
-        await interaction.reply({ content: `Rozpoczęto śledzenie SteamID **${steamId}** na ${scopeMsg}. Powiadomienie zostanie wysłane na kanał <#${channel.id}>.`, ephemeral: true });
-        // Funkcja sprawdzająca pojedynczego gracza
-        const checkPlayer = async () => {
-            let found = false;
-            let foundServerName = 'Nieznany Serwer';
-            let foundIpPort = '';
-            let foundMaxPlayers = 0;
-            let foundCurrentPlayers = 0;
-            // Sprawdzamy profil Steam jako ominięcie zabezpieczeń (Fallback dla zablokowanego A2S)
-            const profile = await fetchSteamProfile(steamId);
-            // 1. Sprawdzamy gamedig (tradycyjnie)
-            for (const target of targets) {
-                try {
-                    const state = await gamedig_1.GameDig.query({
-                        type: 'unturned',
-                        host: target.ip,
-                        port: target.port,
-                        maxRetries: 1,
-                        socketTimeout: 2000
-                    });
-                    // Unturned zwraca czesto nazwe gracza
-                    const isOnlineInGamedig = state.players.some((p) => p.name?.includes(steamId) ||
-                        (profile.name && profile.name !== steamId && p.name?.includes(profile.name)) ||
-                        (p.raw && p.raw.steamid === steamId));
-                    // 2. Jeśli gamedig zawiódł, sprawdzamy czy IP na profilu Steam zgadza się z targetem lub ID Serwera (fallback SDR)
-                    const isOnlineOnSteam = profile.currentServerIp === `${target.ip}:${target.port}` || (target.serverId && profile.currentServerIp === target.serverId);
-                    if (isOnlineInGamedig || isOnlineOnSteam) {
-                        found = true;
-                        foundServerName = target.displayName || state.name || 'Unturned Server';
-                        foundIpPort = profile.currentServerIp || target.serverId || `${target.ip}:${target.port}`;
-                        foundMaxPlayers = state.maxplayers;
-                        foundCurrentPlayers = state.players.length;
-                        break;
-                    }
-                }
-                catch (error) {
-                    // Ignorujemy timeouty
-                }
-                // 3. Fallback do BattleMetrics API jeśli GameDig zawiódł lub gracz jest ukryty
-                if (!found && target.ip !== '0.0.0.0') {
-                    const bmPlayers = await fetchBattlemetricsPlayers(target.ip, target.port);
-                    const isOnlineInBM = bmPlayers.some((p) => p.name.includes(profile.name) || p.name.includes(steamId));
-                    if (isOnlineInBM) {
-                        found = true;
-                        foundServerName = target.displayName || 'Serwer (Wykryty z BattleMetrics API)';
-                        foundIpPort = target.serverId || `${target.ip}:${target.port}`;
-                        foundMaxPlayers = 0;
-                        foundCurrentPlayers = bmPlayers.length;
-                        break;
-                    }
-                }
-            }
-            // Jeśli profil Steam mówi, że gra gdzie indziej (a nie było tego w targets, ale to nasza siec lub po prostu go znalezlismy)
-            if (!found && profile.currentServerIp) {
-                found = true;
-                foundServerName = 'Serwer (Wykryty z Profilu Steam)';
-                foundIpPort = profile.currentServerIp;
-                foundMaxPlayers = 0;
-                foundCurrentPlayers = 0;
-            }
-            if (found) {
-                const embed = new discord_js_1.EmbedBuilder()
-                    .setTitle('🚨 ALARM ŚLEDZENIA 🚨')
-                    .setDescription(`Gracz **[${profile.name}](${profile.profileUrl})** został wykryty w grze!`)
-                    .setThumbnail(profile.avatarUrl)
-                    .setColor('#ff0000')
-                    .addFields({ name: 'Serwer', value: `\`${foundServerName}\``, inline: true }, { name: 'Szybkie Dołączenie', value: foundIpPort.match(/^\d+$/) ? `Kliknij w link:\nhttps://join.unbeaten.gg/${foundIpPort}` : `Wklej w przeglądarkę (lub Win+R):\n\`steam://run/304930//+connect%20${foundIpPort}\``, inline: false })
-                    .setTimestamp();
-                if (foundMaxPlayers > 0) {
-                    embed.addFields({ name: 'Graczy', value: `\`${foundCurrentPlayers} / ${foundMaxPlayers}\``, inline: true });
-                }
-                // Discord całkowicie blokuje klikalne linki steam:// (zarówno w Markdown jak i przyciskach)
-                // Używamy naszej produkcyjnej domeny Vercel jako przekierowania!
-                const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-                const row = new ActionRowBuilder().addComponents(new ButtonBuilder()
-                    .setLabel('🚀 Dołącz do gry')
-                    .setStyle(ButtonStyle.Link)
-                    .setURL(foundIpPort.match(/^\d+$/) ? `https://join.unbeaten.gg/${foundIpPort}` : `https://777-discordbot-tomsoncs.vercel.app/api/join?ip=${foundIpPort}`));
-                await channel.send({
-                    content: '@everyone',
-                    embeds: [embed],
-                    components: [row]
-                });
-                clearInterval(intervalId);
-                activeTrackers.delete(trackingKey);
-            }
-        };
-        const intervalId = setInterval(checkPlayer, 60000); // Sprawdzanie co 60 sekund
-        activeTrackers.set(trackingKey, intervalId);
-        // Zróbmy pierwsze sprawdzenie od razu by nie czekac 60 sekund
-        checkPlayer();
+        await prisma.trackedPlayer.upsert({
+            where: { steamId },
+            update: { isActive: true, targetServer: serverChoice, addedBy: interaction.user.id },
+            create: { steamId, targetServer: serverChoice, addedBy: interaction.user.id }
+        });
+        const targetName = serverChoice === 'all' ? 'wszystkich zapisanych serwerach' : `serwerze ${PREDEFINED_SERVERS[serverChoice]?.displayName}`;
+        return interaction.editReply(`Rozpoczęto śledzenie SteamID **${steamId}** na ${targetName}. Baza danych została zaktualizowana.`);
     }
     else if (interaction.commandName === 'untrack') {
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         const rawInput = interaction.options.getString('steamid', true);
-        let steamId = rawInput.trim();
-        const match64 = rawInput.match(/(7656119[0-9]{10})/);
-        if (match64) {
-            steamId = match64[0];
+        const steamId = await resolveSteamId(rawInput) || rawInput; // fallback
+        const updated = await prisma.trackedPlayer.updateMany({
+            where: { steamId, isActive: true },
+            data: { isActive: false }
+        });
+        if (updated.count > 0) {
+            return interaction.editReply(`Zatrzymano śledzenie SteamID **${steamId}** w bazie danych.`);
         }
         else {
-            const matchId = rawInput.match(/\/id\/([^\/\?]+)/);
-            if (matchId) {
-                steamId = matchId[1];
-            }
-            else {
-                const matchProf = rawInput.match(/\/profiles\/([^\/\?]+)/);
-                if (matchProf) {
-                    steamId = matchProf[1];
-                }
-                else if (rawInput.startsWith('http')) {
-                    const parts = rawInput.split('/').filter(p => p.length > 0);
-                    steamId = parts[parts.length - 1];
-                }
-            }
-        }
-        let found = false;
-        for (const [key, intervalId] of activeTrackers.entries()) {
-            if (key === steamId) {
-                clearInterval(intervalId);
-                activeTrackers.delete(key);
-                found = true;
-            }
-        }
-        if (found) {
-            await interaction.reply({ content: `Zatrzymano śledzenie SteamID **${steamId}**.`, ephemeral: true });
-        }
-        else {
-            await interaction.reply({ content: `SteamID **${steamId}** nie jest obecnie śledzony.`, ephemeral: true });
+            return interaction.editReply(`SteamID **${steamId}** nie jest obecnie śledzony.`);
         }
     }
     else if (interaction.commandName === 'tracked_list') {
-        if (activeTrackers.size === 0) {
-            return interaction.reply({ content: 'Obecnie nie śledzę żadnych graczy.', ephemeral: true });
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
+        const activeTrackers = await prisma.trackedPlayer.findMany({ where: { isActive: true } });
+        if (activeTrackers.length === 0) {
+            return interaction.editReply('Obecnie nie śledzę żadnych graczy.');
         }
-        await interaction.deferReply({ ephemeral: true });
         const embeds = [];
         const mainEmbed = new discord_js_1.EmbedBuilder()
             .setTitle('📡 Lista Śledzonych Graczy')
             .setColor('#7289da')
-            .setDescription(`Obecnie sprawdzam serwery w poszukiwaniu **${activeTrackers.size}** graczy.`);
+            .setDescription(`Obecnie sprawdzam serwery w poszukiwaniu **${activeTrackers.length}** graczy.`);
         embeds.push(mainEmbed);
-        // Discord pozwala na maksymalnie 10 embedów w jednej wiadomości
-        const trackedIds = Array.from(activeTrackers.keys()).slice(0, 9);
-        for (const id of trackedIds) {
-            const profile = await fetchSteamProfile(id);
-            const playerEmbed = new discord_js_1.EmbedBuilder()
-                .setColor('#2b2d31')
-                .setAuthor({
-                name: profile.name,
-                iconURL: profile.avatarUrl,
-                url: profile.profileUrl
-            })
-                .setDescription(`Identyfikator: \`${id}\``);
-            embeds.push(playerEmbed);
+        // Fetch ich danych do wyświetlenia (bierzemy pierwsze 9)
+        const steamIds = activeTrackers.slice(0, 9).map(t => t.steamId);
+        if (steamIds.length > 0) {
+            try {
+                const res = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${process.env.STEAM_API_KEY}&steamids=${steamIds.join(',')}`);
+                const data = await res.json();
+                const players = data.response?.players || [];
+                for (const player of players) {
+                    const embed = new discord_js_1.EmbedBuilder()
+                        .setColor('#2b2d31')
+                        .setAuthor({
+                        name: player.personaname || player.steamid,
+                        iconURL: player.avatarfull,
+                        url: player.profileurl
+                    })
+                        .setDescription(`Identyfikator: \`${player.steamid}\``);
+                    embeds.push(embed);
+                }
+            }
+            catch (e) {
+                console.error(e);
+            }
         }
-        if (activeTrackers.size > 9) {
-            embeds.push(new discord_js_1.EmbedBuilder().setColor('#2b2d31').setDescription(`*...i ${activeTrackers.size - 9} innych (limit wyświetlania)*`));
+        if (activeTrackers.length > 9) {
+            embeds.push(new discord_js_1.EmbedBuilder().setColor('#2b2d31').setDescription(`*...i ${activeTrackers.length - 9} innych w bazie (limit wyświetlania)*`));
         }
         await interaction.editReply({ embeds });
     }
-    else if (interaction.commandName === 'trackconfig') {
-        const channel = interaction.options.getChannel('channel', true);
-        unturnedConfig.defaultChannelId = channel.id;
-        saveConfig(unturnedConfig);
-        await interaction.reply({ content: `Domyślny kanał powiadomień dla śledzenia został ustawiony na <#${channel.id}>. Odtąd powiadomienia będą trafiać tam, jeśli nie podasz kanału ręcznie.`, ephemeral: true });
-    }
-    else if (interaction.commandName === 'trackp') {
-        await interaction.deferReply();
-        const embeds = [];
-        let totalPlayers = 0;
-        const serverChecks = Object.entries(PREDEFINED_SERVERS).map(async ([serverName, target]) => {
-            let playersText = '';
-            let serverTitle = `${serverName.toUpperCase()} (${target.ip}:${target.port})`;
-            let players = [];
-            try {
-                // Najpierw zapytanie A2S przez GameDig
-                const state = await gamedig_1.GameDig.query({
-                    type: 'unturned',
-                    host: target.ip,
-                    port: target.port,
-                    maxRetries: 1,
-                    socketTimeout: 2000
-                });
-                serverTitle = `${state.name || serverName.toUpperCase()} (${state.players.length}/${state.maxplayers})`;
-                players = state.players.map((p) => p.name || 'Nieznany').filter(n => n.trim() !== '');
+}
+// Globalny Pętla Śledząca (uruchamiana w index.ts)
+function startTrackingLoop(client) {
+    console.log('✅ Uruchomiono globalną pętlę śledzenia graczy (Prisma + Steam API).');
+    setInterval(async () => {
+        try {
+            const apiKey = process.env.STEAM_API_KEY;
+            if (!apiKey)
+                return;
+            const trackers = await prisma.trackedPlayer.findMany({ where: { isActive: true } });
+            if (trackers.length === 0)
+                return;
+            const steamIds = trackers.map(t => t.steamId);
+            // Dzielimy na paczki po 100 SteamID (limit API)
+            const chunks = [];
+            for (let i = 0; i < steamIds.length; i += 100) {
+                chunks.push(steamIds.slice(i, i + 100));
             }
-            catch (e) {
-                // Ignorujemy błędy i polegamy na BattleMetrics API
-            }
-            // Fallback do API, jesli A2S nie zwrocilo graczy (np. ukryci)
-            if (players.length === 0) {
-                const bmPlayers = await fetchBattlemetricsPlayers(target.ip, target.port);
-                if (bmPlayers.length > 0) {
-                    players = bmPlayers.map((p) => p.name);
-                    serverTitle += ` [z BattleMetrics API]`;
+            for (const chunk of chunks) {
+                const res = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${apiKey}&steamids=${chunk.join(',')}`);
+                const data = await res.json();
+                const players = data.response?.players || [];
+                for (const player of players) {
+                    const tracker = trackers.find(t => t.steamId === player.steamid);
+                    if (!tracker)
+                        continue;
+                    const isPlayingUnturned = player.gameextrainfo === 'Unturned' || player.gameid === '304930';
+                    const currentIp = player.gameserverip;
+                    const currentLobby = player.lobbysteamid;
+                    // Jeśli w ogóle nie jest w grze z widocznym lobby lub IP, ignorujemy
+                    if (!isPlayingUnturned && !currentIp && !currentLobby)
+                        continue;
+                    let found = false;
+                    let foundServerName = 'Nieznany Serwer';
+                    let foundIpPort = currentLobby || currentIp || '';
+                    const targets = tracker.targetServer && tracker.targetServer !== 'all'
+                        ? [PREDEFINED_SERVERS[tracker.targetServer]]
+                        : Object.values(PREDEFINED_SERVERS);
+                    for (const target of targets) {
+                        if (!target)
+                            continue;
+                        // Sprawdzamy czy IP pasuje LUB czy LobbyID pasuje (SDR fallback)
+                        const isOnlineOnSteam = (currentIp && currentIp === `${target.ip}:${target.port}`) ||
+                            (currentLobby && target.serverId && currentLobby === target.serverId);
+                        if (isOnlineOnSteam) {
+                            found = true;
+                            foundServerName = target.displayName || 'Unturned Server';
+                            foundIpPort = currentLobby || currentIp || `${target.ip}:${target.port}`;
+                            break;
+                        }
+                    }
+                    // Jeśli target to ALL i jesteśmy pewni że w coś gra (ale nie wiemy co to za serwer bo nie mamy go na liście)
+                    if (!found && (currentIp || currentLobby) && tracker.targetServer === 'all') {
+                        found = true;
+                        foundServerName = player.gameextrainfo || 'Serwer (Wykryty ze Steam API)';
+                        foundIpPort = currentLobby || currentIp;
+                    }
+                    if (found) {
+                        let mapName = 'Nieznana';
+                        let playersInfo = 'Brak danych';
+                        try {
+                            const targetServerConfig = Object.values(PREDEFINED_SERVERS).find(s => (s.serverId && s.serverId === foundIpPort) || `${s.ip}:${s.port}` === foundIpPort);
+                            const ipToQuery = targetServerConfig ? `${targetServerConfig.ip}:${targetServerConfig.port}` : foundIpPort;
+                            if (ipToQuery.includes(':')) {
+                                const serverRes = await fetch(`https://api.steampowered.com/IGameServersService/GetServerList/v1/?key=${apiKey}&filter=\\gameaddr\\${ipToQuery}`);
+                                const serverData = await serverRes.json();
+                                if (serverData.response?.servers && serverData.response.servers.length > 0) {
+                                    const srv = serverData.response.servers[0];
+                                    mapName = srv.map || mapName;
+                                    playersInfo = `${srv.players}/${srv.max_players}`;
+                                    if (srv.name) {
+                                        foundServerName = srv.name;
+                                    }
+                                }
+                            }
+                        }
+                        catch (e) {
+                            console.error('Błąd pobierania danych Master Server:', e);
+                        }
+                        // Zapis do historii w bazie danych
+                        await prisma.playerHistory.create({
+                            data: {
+                                steamId: player.steamid,
+                                nickname: player.personaname || player.steamid,
+                                serverIp: foundIpPort,
+                                serverName: foundServerName
+                            }
+                        });
+                        // Wyłączenie śledzenia
+                        await prisma.trackedPlayer.update({
+                            where: { steamId: player.steamid },
+                            data: { isActive: false }
+                        });
+                        // Alert Discord
+                        const channelId = unturnedConfig.defaultChannelId;
+                        if (channelId) {
+                            const channel = client.channels.cache.get(channelId);
+                            if (channel && channel.isTextBased() && 'send' in channel) {
+                                const embed = new discord_js_1.EmbedBuilder()
+                                    .setTitle('🚨 ALARM ŚLEDZENIA 🚨')
+                                    .setDescription(`Gracz **[${player.personaname || player.steamid}](${player.profileurl})** został wykryty w grze!`)
+                                    .setThumbnail(player.avatarfull)
+                                    .setColor('#ff0000')
+                                    .addFields({ name: 'Serwer', value: `\`${foundServerName}\``, inline: false }, { name: 'Mapa', value: `\`${mapName}\``, inline: true }, { name: 'Graczy', value: `\`${playersInfo}\``, inline: true }, { name: 'Szybkie Dołączenie', value: foundIpPort.match(/^\d+$/) ? `Kliknij w link:\nhttps://join.unbeaten.gg/${foundIpPort}` : `Wklej w przeglądarkę:\n\`steam://run/304930//+connect%20${foundIpPort}\``, inline: false })
+                                    .setTimestamp();
+                                const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder()
+                                    .setLabel('🚀 Dołącz do gry')
+                                    .setStyle(discord_js_1.ButtonStyle.Link)
+                                    .setURL(foundIpPort.match(/^\d+$/) ? `https://join.unbeaten.gg/${foundIpPort}` : `https://777-discordbot-tomsoncs.vercel.app/api/join?ip=${foundIpPort}`));
+                                await channel.send({
+                                    content: '@everyone',
+                                    embeds: [embed],
+                                    components: [row]
+                                });
+                            }
+                        }
+                    }
                 }
             }
-            if (players.length > 0) {
-                playersText = players.join(', ');
-                if (playersText.length > 1024) {
-                    playersText = playersText.substring(0, 1020) + '...';
-                }
-            }
-            else {
-                playersText = 'Brak widocznych graczy lub serwer offline.';
-            }
-            return { serverTitle, playersText, count: players.length };
-        });
-        const results = await Promise.all(serverChecks);
-        for (const result of results) {
-            totalPlayers += result.count;
-            const embed = new discord_js_1.EmbedBuilder()
-                .setColor('#2b2d31')
-                .setTitle(result.serverTitle)
-                .setDescription(result.playersText);
-            embeds.push(embed);
         }
-        const mainEmbed = new discord_js_1.EmbedBuilder()
-            .setTitle('📡 Aktywni Gracze na serwerach Unbeaten')
-            .setColor('#7289da')
-            .setDescription(`Łącznie widocznych graczy: **${totalPlayers}**`);
-        await interaction.editReply({ embeds: [mainEmbed, ...embeds.slice(0, 9)] });
-    }
+        catch (error) {
+            console.error('Błąd pętli śledzenia graczy:', error);
+        }
+    }, 60000); // 60 sekund
 }

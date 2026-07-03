@@ -36,3 +36,33 @@ model BotSettings {
   id               Int     @id @default(1)
   defaultChannelId String?
 }
+
+// ==========================================
+// ECHO-TRACKER: Shadow Network Models
+// ==========================================
+
+model PlayerNode {
+  steamId      String   @id
+  lastNickname String?
+  firstSeenAt  DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+}
+
+model PlayerRelation {
+  id           Int      @id @default(autoincrement())
+  steamIdA     String   // Alfabetically smaller steamId for uniqueness
+  steamIdB     String   // Alfabetically larger steamId
+  bondStrength Int      @default(1) // Goes up each time they are seen together
+  lastSeenTgt  DateTime @default(now())
+
+  @@unique([steamIdA, steamIdB])
+}
+
+model SessionEncounter {
+  id           Int      @id @default(autoincrement())
+  targetId     String   // The tracked player
+  bystanderId  String   // The other player on the server
+  serverIp     String
+  encounteredAt DateTime @default(now())
+}
+

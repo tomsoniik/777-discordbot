@@ -31,7 +31,7 @@
     "@types/express": "^5.0.6",
     "@types/gamedig": "^5.0.3",
     "@types/libsodium-wrappers": "^0.7.14",
-    "@types/node": "^26.0.1",
+    "@types/node": "^26.1.0",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"

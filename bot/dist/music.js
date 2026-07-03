@@ -203,11 +203,11 @@ async function skip(interaction) {
         return;
     const serverQueue = exports.queue.get(interaction.guild.id);
     if (!interaction.member || !interaction.member.voice.channel) {
-        await interaction.reply({ content: 'Musisz być na kanale głosowym, aby pominąć utwór!', ephemeral: true });
+        await interaction.reply({ content: 'Musisz być na kanale głosowym, aby pominąć utwór!', flags: discord_js_1.MessageFlags.Ephemeral });
         return;
     }
     if (!serverQueue) {
-        await interaction.reply({ content: 'Nie ma nic w kolejce!', ephemeral: true });
+        await interaction.reply({ content: 'Nie ma nic w kolejce!', flags: discord_js_1.MessageFlags.Ephemeral });
         return;
     }
     serverQueue.player.stop();
@@ -218,11 +218,11 @@ async function stop(interaction) {
         return;
     const serverQueue = exports.queue.get(interaction.guild.id);
     if (!interaction.member || !interaction.member.voice.channel) {
-        await interaction.reply({ content: 'Musisz być na kanale głosowym, aby zatrzymać muzykę!', ephemeral: true });
+        await interaction.reply({ content: 'Musisz być na kanale głosowym, aby zatrzymać muzykę!', flags: discord_js_1.MessageFlags.Ephemeral });
         return;
     }
     if (!serverQueue) {
-        await interaction.reply({ content: 'Nie ma nic w kolejce!', ephemeral: true });
+        await interaction.reply({ content: 'Nie ma nic w kolejce!', flags: discord_js_1.MessageFlags.Ephemeral });
         return;
     }
     serverQueue.songs = [];
@@ -234,7 +234,7 @@ async function showQueue(interaction) {
         return;
     const serverQueue = exports.queue.get(interaction.guild.id);
     if (!serverQueue || serverQueue.songs.length === 0) {
-        await interaction.reply({ content: 'Kolejka jest pusta!', ephemeral: true });
+        await interaction.reply({ content: 'Kolejka jest pusta!', flags: discord_js_1.MessageFlags.Ephemeral });
         return;
     }
     const queueString = serverQueue.songs.map((song, index) => `${index === 0 ? '**Teraz gram:**' : `**${index}.**`} ${song.title}`).join('\n');
@@ -274,12 +274,12 @@ async function handleMusicButtonInteraction(interaction) {
         return;
     const serverQueue = exports.queue.get(guildId);
     if (!serverQueue) {
-        await interaction.reply({ content: 'Obecnie nie jest odtwarzana żadna muzyka!', ephemeral: true });
+        await interaction.reply({ content: 'Obecnie nie jest odtwarzana żadna muzyka!', flags: discord_js_1.MessageFlags.Ephemeral });
         return;
     }
     const voiceChannel = interaction.member?.voice.channel;
     if (!voiceChannel || voiceChannel.id !== serverQueue.voiceChannel.id) {
-        await interaction.reply({ content: 'Musisz być na tym samym kanale głosowym co bot, aby sterować muzyką!', ephemeral: true });
+        await interaction.reply({ content: 'Musisz być na tym samym kanale głosowym co bot, aby sterować muzyką!', flags: discord_js_1.MessageFlags.Ephemeral });
         return;
     }
     if (interaction.customId === 'music_pause_resume') {
@@ -293,20 +293,20 @@ async function handleMusicButtonInteraction(interaction) {
     }
     else if (interaction.customId === 'music_skip') {
         serverQueue.player.stop(); // Triggers Idle and plays next song
-        await interaction.reply({ content: '⏭️ Pominięto utwór.', ephemeral: true });
+        await interaction.reply({ content: '⏭️ Pominięto utwór.', flags: discord_js_1.MessageFlags.Ephemeral });
     }
     else if (interaction.customId === 'music_stop') {
         serverQueue.songs = [];
         serverQueue.player.stop();
-        await interaction.reply({ content: '⏹️ Zatrzymano odtwarzanie i wyczyszczono kolejkę.', ephemeral: true });
+        await interaction.reply({ content: '⏹️ Zatrzymano odtwarzanie i wyczyszczono kolejkę.', flags: discord_js_1.MessageFlags.Ephemeral });
     }
     else if (interaction.customId === 'music_queue') {
         if (serverQueue.songs.length === 0) {
-            await interaction.reply({ content: 'Kolejka jest pusta!', ephemeral: true });
+            await interaction.reply({ content: 'Kolejka jest pusta!', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
         const queueString = serverQueue.songs.map((song, index) => `${index === 0 ? '**Teraz gram:**' : `**${index}.**`} ${song.title}`).join('\n');
-        await interaction.reply({ content: `**Kolejka:**\n${queueString.substring(0, 1900)}`, ephemeral: true });
+        await interaction.reply({ content: `**Kolejka:**\n${queueString.substring(0, 1900)}`, flags: discord_js_1.MessageFlags.Ephemeral });
     }
     else if (interaction.customId === 'music_loop') {
         serverQueue.loop = !serverQueue.loop;
@@ -314,7 +314,7 @@ async function handleMusicButtonInteraction(interaction) {
     }
     else if (interaction.customId === 'music_vol_up') {
         if (serverQueue.volume >= 200) {
-            await interaction.reply({ content: 'Głośność jest już na maksymalnym poziomie (200%)!', ephemeral: true });
+            await interaction.reply({ content: 'Głośność jest już na maksymalnym poziomie (200%)!', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
         serverQueue.volume += 10;
@@ -323,7 +323,7 @@ async function handleMusicButtonInteraction(interaction) {
     }
     else if (interaction.customId === 'music_vol_down') {
         if (serverQueue.volume <= 10) {
-            await interaction.reply({ content: 'Głośność jest na minimalnym poziomie (10%)!', ephemeral: true });
+            await interaction.reply({ content: 'Głośność jest na minimalnym poziomie (10%)!', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
         serverQueue.volume -= 10;
