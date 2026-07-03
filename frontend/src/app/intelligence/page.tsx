@@ -22,17 +22,20 @@ export default function IntelligencePage() {
   }, []);
 
   const filteredData = useMemo(() => {
-    if (!searchTerm) return data;
-    
-    const searchLower = searchTerm.toLowerCase();
-    const matchedNodes = new Set(
-      data.nodes
-        .filter((n: any) => n.id.toLowerCase().includes(searchLower) || (n.name && n.name.toLowerCase().includes(searchLower)))
-        .map((n: any) => n.id)
-    );
-    
-    const finalNodes = data.nodes.filter((n: any) => matchedNodes.has(n.id));
-    const finalLinks = data.links.filter((l: any) => matchedNodes.has(l.source?.id || l.source) || matchedNodes.has(l.target?.id || l.target));
+    let finalNodes = data.nodes;
+    let finalLinks = data.links;
+
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchedNodes = new Set(
+        data.nodes
+          .filter((n: any) => n.id.toLowerCase().includes(searchLower) || (n.name && n.name.toLowerCase().includes(searchLower)))
+          .map((n: any) => n.id)
+      );
+      
+      finalNodes = data.nodes.filter((n: any) => matchedNodes.has(n.id));
+      finalLinks = data.links.filter((l: any) => matchedNodes.has(l.source?.id || l.source) || matchedNodes.has(l.target?.id || l.target));
+    }
 
     const cyNodes = finalNodes.map((n: any) => ({
       data: { id: n.id, label: n.name }
