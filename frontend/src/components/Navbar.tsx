@@ -107,15 +107,7 @@ export default function Navbar() {
 
                   { (session.user as any)?.role === 'ADMIN' && (
                     <>
-                      <Link 
-                        href="/intelligence" 
-                        onClick={() => setIsMenuOpen(false)}
-                        style={{ padding: '10px', color: '#ff4757', textDecoration: 'none', borderRadius: '8px', display: 'block', transition: '0.2s' }}
-                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,71,87,0.1)'}
-                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                      >
-                        Intelligence
-                      </Link>
+
                       <Link 
                         href="/admin" 
                         onClick={() => setIsMenuOpen(false)}
