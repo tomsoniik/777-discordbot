@@ -36,6 +36,25 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
+    async signIn({ user, profile }) {
+      if (user && user.id) {
+        try {
+          let newImage = user.image;
+          if (profile && (profile as any).avatar) {
+            const p = profile as any;
+            const format = p.avatar.startsWith("a_") ? "gif" : "png";
+            newImage = `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.${format}`;
+          }
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { image: newImage, name: user.name }
+          });
+        } catch (e) {
+          console.error("Failed to sync avatar:", e);
+        }
+      }
+      return true;
+    },
     async session({ session, user }) {
       if (session.user) {
         // @ts-ignore

@@ -34,7 +34,7 @@ export default function Navbar() {
   }, []);
 
   return (
-    <header className="container" style={{ paddingBottom: 0 }}>
+    <header className="container" style={{ paddingBottom: 0, position: 'relative', zIndex: 999999 }}>
       <nav className="navbar animate-fade-in-up">
         <div className="navbar-brand">
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', textDecoration: 'none' }}>
