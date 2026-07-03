@@ -34,6 +34,12 @@ export default function Navbar() {
             <>
               <Link href="/apply" className="nav-link">{t("recruitment")}</Link>
               <Link href="/music" className="nav-link" style={{ color: 'var(--accent-green)' }}>🎶 Playlist</Link>
+              { (session?.user as any)?.role === 'ADMIN' && (
+                <>
+                  <Link href="/intelligence" className="nav-link" style={{ color: '#ff4757' }}>👁️ Intelligence</Link>
+                  <Link href="/admin" className="nav-link" style={{ color: '#ff4757' }}>⚙️ Admin Panel</Link>
+                </>
+              )}
               <button 
                 onClick={() => signOut()} 
                 className="nav-link" 
