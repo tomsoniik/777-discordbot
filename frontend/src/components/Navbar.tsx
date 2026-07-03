@@ -67,8 +67,9 @@ export default function Navbar() {
               >
                 <img 
                   src={session.user?.image || 'https://cdn.discordapp.com/embed/avatars/0.png'} 
+                  onError={(e) => { e.currentTarget.src = 'https://cdn.discordapp.com/embed/avatars/0.png'; }}
                   alt="Avatar" 
-                  style={{ width: '30px', height: '30px', borderRadius: '50%' }}
+                  style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover' }}
                 />
                 <span style={{ color: '#fff', fontWeight: 500 }}>{session.user?.name}</span>
                 <ArrowDown2 size="16" color="#aaa" />
