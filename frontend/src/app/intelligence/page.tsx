@@ -4,8 +4,8 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Radar, Profile2User, SearchNormal } from 'iconsax-react';
 
-// Dynamiczny import ForceGraph (nie dziala przy SSR)
-const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
+// Dynamiczny import grafu Cytoscape
+const IntelligenceGraph = dynamic(() => import('@/components/IntelligenceGraph'), { ssr: false });
 
 export default function IntelligencePage() {
   const [data, setData] = useState({ nodes: [], links: [] });
@@ -31,9 +31,20 @@ export default function IntelligencePage() {
         .map((n: any) => n.id)
     );
     
+    const finalNodes = data.nodes.filter((n: any) => matchedNodes.has(n.id));
+    const finalLinks = data.links.filter((l: any) => matchedNodes.has(l.source?.id || l.source) || matchedNodes.has(l.target?.id || l.target));
+
+    const cyNodes = finalNodes.map((n: any) => ({
+      data: { id: n.id, label: n.name }
+    }));
+    const cyEdges = finalLinks.map((l: any) => ({
+      data: { source: l.source?.id || l.source, target: l.target?.id || l.target, label: `Siła: ${l.value}` }
+    }));
+
     return {
-      nodes: data.nodes.filter((n: any) => matchedNodes.has(n.id)),
-      links: data.links.filter((l: any) => matchedNodes.has(l.source?.id || l.source) || matchedNodes.has(l.target?.id || l.target))
+      nodesCount: finalNodes.length,
+      linksCount: finalLinks.length,
+      elements: [...cyNodes, ...cyEdges]
     };
   }, [data, searchTerm]);
 
@@ -64,10 +75,10 @@ export default function IntelligencePage() {
             />
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '1rem', color: 'var(--text-muted)' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Profile2User size="20" /> {filteredData.nodes.length} Węzłów
+                    <Profile2User size="20" /> {filteredData.nodesCount} Węzłów
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Radar size="20" /> {filteredData.links.length} Powiązań
+                    <Radar size="20" /> {filteredData.linksCount} Powiązań
                 </span>
             </div>
         </div>
@@ -79,23 +90,11 @@ export default function IntelligencePage() {
             </div>
           ) : data.nodes.length === 0 ? (
              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--text-muted)' }}>
-                Brak zgromadzonych danych w systemie. Dodaj kogoś na Discordzie komendą /track.
+                Brak zgromadzonych danych w systemie. Dodaj kogoś na Discordzie nową komendą np: /track steamid:X link_to:Y
              </div>
           ) : (
             <div style={{ width: '100%', height: '100%', background: '#0a0a0c' }}>
-                <ForceGraph2D
-                    graphData={filteredData}
-                    nodeLabel="name"
-                    nodeColor={(node: any) => node.val > 1 ? '#ff4757' : '#2ecc71'}
-                    nodeRelSize={6}
-                    linkColor={() => 'rgba(255, 255, 255, 0.2)'}
-                    linkWidth={(link: any) => Math.min(link.value, 10)}
-                    enableNodeDrag={true}
-                    enableZoomInteraction={true}
-                    onNodeClick={(node: any) => {
-                        window.open(`https://steamcommunity.com/profiles/${node.id}`, '_blank');
-                    }}
-                />
+                <IntelligenceGraph elements={filteredData.elements} />
             </div>
           )}
         </div>
