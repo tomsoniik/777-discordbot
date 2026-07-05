@@ -586,30 +586,27 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
       <div className={styles.mainArea}>
         <div className={styles.toolbar}>
           {project && (
-             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'white' }}>
-               <div>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'white', flex: 1, minWidth: 0 }}>
                  {isEditingInfo ? (
-                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                   <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '0.5rem', flexWrap: 'nowrap' }}>
                      <input 
                        value={editName}
                        onChange={(e) => setEditName(e.target.value)}
-                       style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid #2ecc71', color: 'white', padding: '0.3rem 0.5rem', borderRadius: '4px', fontSize: '1.1rem', width: '250px' }}
+                       style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(46, 204, 113, 0.4)', color: 'white', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '1rem', width: '180px', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }}
                        placeholder={t('prompt_new_name')}
                      />
                      <input 
                        value={editDesc}
                        onChange={(e) => setEditDesc(e.target.value)}
-                       style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid #1a4a2c', color: '#aaa', padding: '0.3rem 0.5rem', borderRadius: '4px', fontSize: '0.85rem', width: '250px' }}
+                       style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#ccc', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.9rem', width: '220px', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }}
                        placeholder={t('prompt_new_desc')}
                      />
-                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                       <button onClick={() => { saveProjectInfo(editName, editDesc); setIsEditingInfo(false); }} style={{ background: '#2ecc71', border: 'none', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Zapisz</button>
-                       <button onClick={() => setIsEditingInfo(false)} style={{ background: 'transparent', border: '1px solid #ff4757', color: '#ff4757', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer' }}>Anuluj</button>
-                     </div>
+                     <button onClick={() => { saveProjectInfo(editName, editDesc); setIsEditingInfo(false); }} style={{ background: '#2ecc71', border: 'none', color: '#000', padding: '0.4rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 4px 6px rgba(46, 204, 113, 0.2)', whiteSpace: 'nowrap' }}>Zapisz</button>
+                     <button onClick={() => setIsEditingInfo(false)} style={{ background: 'rgba(255, 71, 87, 0.1)', border: '1px solid rgba(255, 71, 87, 0.3)', color: '#ff4757', padding: '0.4rem 1rem', borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Anuluj</button>
                    </div>
                  ) : (
-                   <>
-                     <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
+                     <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
                        {project.name}
                        <button 
                          onClick={() => {
@@ -622,12 +619,11 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                          {t('builder_edit')}
                        </button>
                      </h2>
-                     {project.description && <span style={{ color: '#aaa', fontSize: '0.85rem' }}>{project.description}</span>}
-                   </>
+                     {project.description && <span style={{ color: '#aaa', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px' }}>{project.description}</span>}
+                   </div>
                  )}
-               </div>
-               <span style={{ color: '#888', fontSize: '0.9rem', marginLeft: '1rem' }}>{t('builder_code')} {project.joinCode}</span>
-               {isSyncing && <span style={{ color: '#2ecc71', fontSize: '0.8rem' }}>{t('builder_saving')}</span>}
+               <span style={{ color: '#888', fontSize: '0.9rem', marginLeft: 'auto', whiteSpace: 'nowrap' }}>{t('builder_code')} {project.joinCode}</span>
+               {isSyncing && <span style={{ color: '#2ecc71', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{t('builder_saving')}</span>}
              </div>
           )}
           <button 
