@@ -71,11 +71,12 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
     const bedLength = 40 * scale;
     const bedHeight = 0.2;
     const bedPosY = bedHeight / 2;
+    const bedBaseY = 0.4; // Place on top of foundations
 
     const radius = 270 * scale; // 4.5 foundations
 
     return (
-      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+      <group position={[posX, bedBaseY, posZ]} rotation={[0, rotY, 0]}>
         {/* The Bed itself */}
         <mesh position={[0, bedPosY, 0]} castShadow receiveShadow>
           <boxGeometry args={[bedWidth, bedHeight, bedLength]} />
@@ -121,10 +122,12 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
     const extrudeSettings = { depth: height, bevelEnabled: false };
 
     return (
-      <mesh position={[posX, posY, posZ]} rotation={[-Math.PI / 2, 0, rotY]} castShadow receiveShadow>
-        <extrudeGeometry args={[shape, extrudeSettings]} />
-        <meshStandardMaterial color={color} roughness={def.materialClass === 'metal' ? 0.2 : 0.8} metalness={def.materialClass === 'metal' ? 0.8 : 0.1} />
-      </mesh>
+      <group position={[posX, height + heightOffset, posZ]} rotation={[0, rotY, 0]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
+          <extrudeGeometry args={[shape, extrudeSettings]} />
+          <meshStandardMaterial color={color} roughness={def.materialClass === 'metal' ? 0.2 : 0.8} metalness={def.materialClass === 'metal' ? 0.8 : 0.1} />
+        </mesh>
+      </group>
     );
   }
 };
