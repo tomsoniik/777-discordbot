@@ -49,6 +49,9 @@ model User {
   sessions      Session[]
   submissions   Submission[]
   ownedGroups   MusicGroup[] @relation("GroupOwner")
+  
+  ownedProjects BaseProject[] @relation("ProjectOwner")
+  collabProjects BaseProject[] @relation("ProjectCollaborators")
 }
 
 model VerificationToken {
@@ -107,6 +110,20 @@ model MusicGroup {
   members MusicGroupMember[]
 }
 
+model BaseProject {
+  id          String   @id @default(cuid())
+  name        String   @default("Nowy Projekt")
+  ownerId     String
+  owner       User     @relation("ProjectOwner", fields: [ownerId], references: [id])
+  data        String   @default("[]") // JSON array of PlacedItem
+  isPublic    Boolean  @default(false)
+  joinCode    String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  collaborators User[] @relation("ProjectCollaborators")
+}
+
 model MusicGroupMember {
   id        String   @id @default(cuid())
   groupId   String
@@ -145,4 +162,17 @@ model SessionEncounter {
   serverIp      String
   encounteredAt DateTime @default(now())
 }
+
+model BotSettings {
+  id Int @id @default(autoincrement())
+}
+
+model PlayerHistory {
+  id Int @id @default(autoincrement())
+}
+
+model TrackedPlayer {
+  id Int @id @default(autoincrement())
+}
+
 
