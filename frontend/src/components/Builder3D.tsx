@@ -12,7 +12,7 @@ export interface BuildItem {
   id: string;
   name: string;
   shape: ShapeType;
-  materialClass: 'wood' | 'metal' | 'brick';
+  materialClass: 'wood' | 'metal' | 'brick' | 'furniture';
   color: string;
   texture: string;
   fallbackTexture?: string;
