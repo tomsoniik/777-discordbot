@@ -18,14 +18,12 @@ interface BuildItem {
 const getIconUrl = (id: number) => `https://cdn.jsdelivr.net/gh/SilKsPlugins/UnturnedImages@images/vanilla/items/${id}.png`;
 
 const BUILD_ITEMS: BuildItem[] = [
-  // Wood
   { id: 'w_found', name: 'Pine Foundation', shape: 'square', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(31), costs: { 'Pine Plank': 3 } },
   { id: 'w_found_tri', name: 'Pine Tri Foundation', shape: 'triangle', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(1266), costs: { 'Pine Plank': 2 } },
   { id: 'w_roof', name: 'Pine Roof', shape: 'square', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(32), costs: { 'Pine Plank': 3 } },
   { id: 'w_roof_tri', name: 'Pine Tri Roof', shape: 'triangle', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(1262), costs: { 'Pine Plank': 2 } },
   { id: 'w_hole', name: 'Pine Hole', shape: 'square', materialClass: 'wood', color: '#A0522D', texture: getIconUrl(316), costs: { 'Pine Plank': 3 } },
   
-  // Metal
   { id: 'm_found', name: 'Metal Foundation', shape: 'square', materialClass: 'metal', color: '#708090', texture: getIconUrl(369), costs: { 'Metal Sheet': 3 } },
   { id: 'm_found_tri', name: 'Metal Tri Foundation', shape: 'triangle', materialClass: 'metal', color: '#708090', texture: getIconUrl(1268), costs: { 'Metal Sheet': 2 } },
   { id: 'm_roof', name: 'Metal Roof', shape: 'square', materialClass: 'metal', color: '#808080', texture: getIconUrl(370), costs: { 'Metal Sheet': 3 } },
@@ -38,13 +36,66 @@ interface PlacedItem {
   itemId: string;
   x: number;
   y: number;
-  rotation: number; // 0, 90, 180, 270, etc.
+  rotation: number; // in degrees
+}
+
+const SIDE = 60;
+const TRI_R = (SIDE * Math.sqrt(3)) / 6; // 17.3205
+const TRI_H = (SIDE * Math.sqrt(3)) / 2; // 51.9615
+
+function normalizeAngle(a: number) {
+  let res = a % 360;
+  if (res < 0) res += 360;
+  return res;
+}
+
+function getEdges(shape: ShapeType, cx: number, cy: number, rotation: number) {
+  const rad = (rotation * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  
+  const rotatePoint = (x: number, y: number) => ({
+    x: cx + x * cos - y * sin,
+    y: cy + x * sin + y * cos
+  });
+
+  if (shape === 'square') {
+    return [
+      { ...rotatePoint(0, -30), angle: normalizeAngle(rotation - 90) },
+      { ...rotatePoint(30, 0), angle: normalizeAngle(rotation) },
+      { ...rotatePoint(0, 30), angle: normalizeAngle(rotation + 90) },
+      { ...rotatePoint(-30, 0), angle: normalizeAngle(rotation + 180) },
+    ];
+  } else {
+    return [
+      { ...rotatePoint(0, TRI_R), angle: normalizeAngle(rotation + 90) }, // bottom
+      { ...rotatePoint(15, -TRI_R), angle: normalizeAngle(rotation - 30) }, // top right
+      { ...rotatePoint(-15, -TRI_R), angle: normalizeAngle(rotation - 150) }, // top left
+    ];
+  }
+}
+
+// Fixed get edges for base shape at (0,0) rot 0
+function getBaseEdges(shape: ShapeType) {
+  if (shape === 'square') {
+    return [
+      { x: 0, y: -30, angle: 270 },
+      { x: 30, y: 0, angle: 0 },
+      { x: 0, y: 30, angle: 90 },
+      { x: -30, y: 0, angle: 180 },
+    ];
+  } else {
+    return [
+      { x: 0, y: TRI_R, angle: 90 },
+      { x: 15, y: -TRI_R, angle: 330 }, // -30
+      { x: -15, y: -TRI_R, angle: 210 }, // -150
+    ];
+  }
 }
 
 export default function BuilderPage() {
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
-  const [selectedPlacedId, setSelectedPlacedId] = useState<string | null>(null);
   
   // Canvas View State
   const [pan, setPan] = useState({ 
@@ -52,41 +103,123 @@ export default function BuilderPage() {
     y: typeof window !== 'undefined' ? window.innerHeight / 3 : 0 
   });
   const [isPanning, setIsPanning] = useState(false);
-  const [snapToGrid, setSnapToGrid] = useState(true);
   
-  // Dragging Item State
-  const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
+  // Placement State
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [activeEdgeIndex, setActiveEdgeIndex] = useState(0); // for rotating the active item during placement
+  const [freeRotation, setFreeRotation] = useState(0); // for placing freely
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handlePointerDownCanvas = (e: React.PointerEvent) => {
-    // If clicking directly on canvas background (not an item)
-    if (e.target === containerRef.current) {
-      if (activeItem) {
-        // Place new item
-        const rect = containerRef.current.getBoundingClientRect();
-        let placedX = e.clientX - rect.left - pan.x;
-        let placedY = e.clientY - rect.top - pan.y;
-
-        if (snapToGrid) {
-          placedX = Math.round(placedX / 30) * 30;
-          placedY = Math.round(placedY / 30) * 30;
+  // Handle keyboard rotation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'r' || e.key === 'R') {
+        if (activeItem) {
+          const def = BUILD_ITEMS.find(d => d.id === activeItem);
+          if (def) {
+            const maxEdges = def.shape === 'square' ? 4 : 3;
+            setActiveEdgeIndex(prev => (prev + 1) % maxEdges);
+            setFreeRotation(prev => (prev + (def.shape === 'square' ? 90 : 60)) % 360);
+          }
         }
-
-        const newItem: PlacedItem = {
-          id: `${Date.now()}-${Math.random()}`,
-          itemId: activeItem,
-          x: placedX,
-          y: placedY,
-          rotation: 0
-        };
-        setPlacedItems(prev => [...prev, newItem]);
-        setSelectedPlacedId(newItem.id);
-      } else {
-        // Start panning
-        setIsPanning(true);
-        containerRef.current?.setPointerCapture(e.pointerId);
       }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeItem]);
+
+  const selectedItemDef = BUILD_ITEMS.find(i => i.id === activeItem);
+
+  // Calculate Snapping
+  let previewItem: PlacedItem | null = null;
+  let snappedEdgeLine = null;
+
+  if (selectedItemDef) {
+    let closestEdge = null;
+    let minDist = 40; // snap threshold
+
+    // Find closest placed edge
+    placedItems.forEach(item => {
+      const def = BUILD_ITEMS.find(d => d.id === item.itemId);
+      if (!def) return;
+      
+      const edges = getEdges(def.shape, item.x, item.y, item.rotation);
+      edges.forEach(edge => {
+        const dist = Math.hypot(edge.x - mousePos.x, edge.y - mousePos.y);
+        if (dist < minDist) {
+          minDist = dist;
+          closestEdge = edge;
+        }
+      });
+    });
+
+    if (closestEdge) {
+      // Snap to edge
+      const targetEdge = closestEdge as any;
+      const baseEdges = getBaseEdges(selectedItemDef.shape);
+      const chosenEdge = baseEdges[activeEdgeIndex % baseEdges.length];
+      
+      // We want our chosen edge to oppose the target edge
+      const requiredAngle = normalizeAngle(targetEdge.angle + 180);
+      const R = normalizeAngle(requiredAngle - chosenEdge.angle);
+      
+      // Calculate new center
+      const radR = (R * Math.PI) / 180;
+      const cosR = Math.cos(radR);
+      const sinR = Math.sin(radR);
+      
+      const rotatedBx = chosenEdge.x * cosR - chosenEdge.y * sinR;
+      const rotatedBy = chosenEdge.x * sinR + chosenEdge.y * cosR;
+      
+      const cx = targetEdge.x - rotatedBx;
+      const cy = targetEdge.y - rotatedBy;
+      
+      previewItem = {
+        id: 'preview',
+        itemId: selectedItemDef.id,
+        x: cx,
+        y: cy,
+        rotation: R
+      };
+
+      // Draw debug line for snapped edge
+      snappedEdgeLine = targetEdge;
+    } else {
+      // Free placement (snapped to global invisible 30x30 grid for neatness)
+      previewItem = {
+        id: 'preview',
+        itemId: selectedItemDef.id,
+        x: Math.round(mousePos.x / 30) * 30,
+        y: Math.round(mousePos.y / 30) * 30,
+        rotation: freeRotation
+      };
+    }
+  }
+
+  const handlePointerDownCanvas = (e: React.PointerEvent) => {
+    if (e.button === 2) {
+      // Right click cancels active item
+      setActiveItem(null);
+      return;
+    }
+    
+    if (e.button === 1 || (!activeItem && e.button === 0)) {
+      // Middle click or Left click without item -> Pan
+      setIsPanning(true);
+      containerRef.current?.setPointerCapture(e.pointerId);
+      return;
+    }
+
+    if (activeItem && previewItem && e.button === 0) {
+      // Place item
+      setPlacedItems(prev => [...prev, {
+        id: `${Date.now()}-${Math.random()}`,
+        itemId: previewItem!.itemId,
+        x: previewItem!.x,
+        y: previewItem!.y,
+        rotation: previewItem!.rotation
+      }]);
     }
   };
 
@@ -96,71 +229,26 @@ export default function BuilderPage() {
         x: prev.x + e.movementX,
         y: prev.y + e.movementY
       }));
-    } else if (draggingItemId) {
-      setPlacedItems(prev => prev.map(item => {
-        if (item.id === draggingItemId) {
-          let newX = item.x + e.movementX;
-          let newY = item.y + e.movementY;
-          
-          if (snapToGrid) {
-            // Realtime snap visually could be jarring if raw movement is added, 
-            // but we can snap on mouse up, or round the actual values.
-            // For smoother feel, we don't snap during move but snap on release.
-          }
-          return { ...item, x: newX, y: newY };
-        }
-        return item;
-      }));
+    } else {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        setMousePos({
+          x: e.clientX - rect.left - pan.x,
+          y: e.clientY - rect.top - pan.y
+        });
+      }
     }
   };
 
   const handlePointerUpCanvas = (e: React.PointerEvent) => {
     setIsPanning(false);
     containerRef.current?.releasePointerCapture(e.pointerId);
-
-    if (draggingItemId && snapToGrid) {
-      setPlacedItems(prev => prev.map(item => {
-        if (item.id === draggingItemId) {
-          return {
-            ...item,
-            x: Math.round(item.x / 30) * 30,
-            y: Math.round(item.y / 30) * 30
-          };
-        }
-        return item;
-      }));
-    }
-    setDraggingItemId(null);
   };
 
-  const handleItemPointerDown = (e: React.PointerEvent, id: string) => {
-    e.stopPropagation(); // prevent canvas pan
-    if (e.button === 2) {
-      // Right click to delete
-      setPlacedItems(prev => prev.filter(i => i.id !== id));
-      if (selectedPlacedId === id) setSelectedPlacedId(null);
-      return;
-    }
-    
-    setSelectedPlacedId(id);
-    setDraggingItemId(id);
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const rotateSelected = () => {
-    if (!selectedPlacedId) return;
-    setPlacedItems(prev => prev.map(item => {
-      if (item.id === selectedPlacedId) {
-        return { ...item, rotation: (item.rotation + 30) % 360 };
-      }
-      return item;
-    }));
-  };
-
-  const deleteSelected = () => {
-    if (!selectedPlacedId) return;
-    setPlacedItems(prev => prev.filter(i => i.id !== selectedPlacedId));
-    setSelectedPlacedId(null);
+  const handleItemRightClick = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPlacedItems(prev => prev.filter(i => i.id !== id));
   };
 
   // Calculate Materials
@@ -180,37 +268,13 @@ export default function BuilderPage() {
   return (
     <div className={styles.container}>
       <div className={styles.sidebar}>
-        <div className={styles.sectionTitle}>Narzędzia i Edycja</div>
-        <button 
-          className={styles.actionButton} 
-          style={{ marginBottom: '10px' }}
-          onClick={() => setSnapToGrid(!snapToGrid)}
-        >
-          Przyciąganie do siatki (Snapping): {snapToGrid ? 'WŁ' : 'WYŁ'}
-        </button>
-
-        {selectedPlacedId ? (
-          <div style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginBottom: '15px' }}>
-            <div style={{ marginBottom: '10px', color: '#aaa', fontSize: '0.9rem' }}>Wybrano element.</div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button className={styles.actionButton} onClick={rotateSelected}>Obróć 30°</button>
-              <button className={styles.deleteButton} onClick={deleteSelected}>Usuń</button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', marginBottom: '15px', color: '#aaa', fontSize: '0.85rem' }}>
-            Wybierz z listy poniżej, by postawić nowy element, lub kliknij na postawiony na mapie, by go edytować.
-          </div>
-        )}
-
         <div className={styles.sectionTitle}>Budulec</div>
         {BUILD_ITEMS.map(item => (
           <button
             key={item.id}
-            className={`${styles.itemButton} ${activeItem === item.id && !selectedPlacedId ? styles.active : ''}`}
+            className={`${styles.itemButton} ${activeItem === item.id ? styles.active : ''}`}
             onClick={() => {
               setActiveItem(item.id);
-              setSelectedPlacedId(null);
             }}
           >
             <div 
@@ -241,11 +305,12 @@ export default function BuilderPage() {
         </div>
         
         <div className={styles.instructions}>
-          <b>Instrukcja:</b><br/>
-          - Wybierz element i kliknij na pustym polu by go postawić.<br/>
-          - Chwyć i przeciągnij postawiony element by zmienić pozycję.<br/>
-          - Prawy Przycisk Myszy usuwa element.<br/>
-          - Kliknij i przeciągnij tło by przesuwać widok kamery.
+          <b>Instrukcja Budowania (Jak w grze):</b><br/>
+          - Wybierz element z listy po lewej.<br/>
+          - Najedź na krawędź postawionego obiektu, by automatycznie do niego "przykleić" (Snap) kolejny.<br/>
+          - Wciśnij <b>[R]</b>, aby zmienić krawędź / obrócić element przed postawieniem.<br/>
+          - Kliknij <b>Prawy Przycisk Myszy</b> na obiekcie, by go usunąć.<br/>
+          - Przytrzymaj tło i przeciągnij, by przesuwać kamerę.
         </div>
       </div>
 
@@ -257,7 +322,6 @@ export default function BuilderPage() {
             onClick={() => {
               if (confirm('Czy na pewno chcesz wyczyścić cały projekt?')) {
                 setPlacedItems([]);
-                setSelectedPlacedId(null);
               }
             }}
           >
@@ -277,32 +341,74 @@ export default function BuilderPage() {
             className={styles.canvas} 
             style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}
           >
+            {/* Draw Placed Items */}
             {placedItems.map(item => {
               const def = BUILD_ITEMS.find(d => d.id === item.itemId);
               if (!def) return null;
-
-              const isSelected = item.id === selectedPlacedId;
               const shapeClass = def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare;
 
               return (
                 <div 
                   key={item.id}
-                  className={`${styles.placedItem} ${shapeClass} ${isSelected ? styles.selected : ''}`}
+                  className={`${styles.placedItem} ${shapeClass}`}
                   style={{
                     left: `${item.x}px`,
                     top: `${item.y}px`,
-                    transform: `translate(-50%, -50%) rotate(${item.rotation}deg)`,
+                    transform: def.shape === 'triangle' 
+                      ? `translate(-50%, -66.666%) rotate(${item.rotation}deg)` 
+                      : `translate(-50%, -50%) rotate(${item.rotation}deg)`,
                     backgroundColor: def.color,
                     backgroundImage: `url(${def.texture})`
                   }}
-                  onPointerDown={(e) => handleItemPointerDown(e, item.id)}
-                  onContextMenu={(e) => e.preventDefault()}
-                >
-                  {/* Centrum obrotu */}
-                  {isSelected && <div style={{width: 4, height: 4, background: '#fff', borderRadius: '50%', position: 'absolute'}}/>}
-                </div>
+                  onContextMenu={(e) => handleItemRightClick(e, item.id)}
+                />
               );
             })}
+
+            {/* Draw Preview Item */}
+            {activeItem && previewItem && (() => {
+              const def = BUILD_ITEMS.find(d => d.id === previewItem.itemId);
+              if (!def) return null;
+              const shapeClass = def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare;
+
+              return (
+                <div 
+                  className={`${styles.placedItem} ${shapeClass}`}
+                  style={{
+                    left: `${previewItem.x}px`,
+                    top: `${previewItem.y}px`,
+                    transform: def.shape === 'triangle' 
+                      ? `translate(-50%, -66.666%) rotate(${previewItem.rotation}deg)` 
+                      : `translate(-50%, -50%) rotate(${previewItem.rotation}deg)`,
+                    backgroundColor: def.color,
+                    backgroundImage: `url(${def.texture})`,
+                    opacity: 0.6,
+                    zIndex: 1000,
+                    pointerEvents: 'none',
+                    border: '2px solid #2ecc71',
+                    boxShadow: '0 0 20px rgba(46, 204, 113, 0.8)'
+                  }}
+                />
+              );
+            })()}
+
+            {/* Draw Snap Point Debug */}
+            {snappedEdgeLine && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  left: snappedEdgeLine.x,
+                  top: snappedEdgeLine.y,
+                  width: '6px',
+                  height: '6px',
+                  background: '#ff4757',
+                  borderRadius: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  pointerEvents: 'none',
+                  zIndex: 2000
+                }}
+              />
+            )}
           </div>
         </div>
       </div>

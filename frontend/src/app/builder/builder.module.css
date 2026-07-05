@@ -86,23 +86,15 @@
 .shapeSquare {
   width: 60px;
   height: 60px;
+  transform-origin: 50% 50%;
 }
 
-/* CSS Triangle mapping for footprint visually if no texture */
-.shapeTriangle {
-  width: 0;
-  height: 0;
-  border-left: 30px solid transparent;
-  border-right: 30px solid transparent;
-  border-bottom: 52px solid inherit; /* roughly equilateral */
-  background: none !important; 
-  border-top: none;
-}
 /* If texture is present, we just use a square div and clip-path */
 .shapeTriangleTextured {
   width: 60px;
-  height: 52px;
+  height: 51.9615px; /* side * sqrt(3) / 2 */
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  transform-origin: 50% 66.666%; /* centroid is 1/3 from the bottom */
 }
 
 .sectionTitle {
