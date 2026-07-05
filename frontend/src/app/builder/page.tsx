@@ -49,7 +49,6 @@ interface PlacedItem {
 
 const renderShapeInterior = (def: BuildItem) => {
   const isHole = def.id.includes('hole');
-  const isRoof = def.id.includes('roof');
   const isTri = def.shape === 'triangle';
 
   if (isHole) {
@@ -64,25 +63,6 @@ const renderShapeInterior = (def: BuildItem) => {
         boxShadow: 'inset 0 0 8px rgba(0,0,0,0.9)',
         clipPath: isTri ? 'polygon(50% 0%, 100% 100%, 0% 100%)' : 'none'
       }} />
-    );
-  }
-
-  if (isRoof) {
-    return (
-      <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', opacity: 0.6 }}>
-        {isTri ? (
-          <>
-            <line x1="50%" y1="0%" x2="50%" y2="66.66%" stroke="#000" strokeWidth="2" />
-            <line x1="100%" y1="100%" x2="50%" y2="66.66%" stroke="#000" strokeWidth="2" />
-            <line x1="0%" y1="100%" x2="50%" y2="66.66%" stroke="#000" strokeWidth="2" />
-          </>
-        ) : (
-          <>
-            <line x1="0" y1="0" x2="100%" y2="100%" stroke="#000" strokeWidth="2" />
-            <line x1="100%" y1="0" x2="0" y2="100%" stroke="#000" strokeWidth="2" />
-          </>
-        )}
-      </svg>
     );
   }
 
