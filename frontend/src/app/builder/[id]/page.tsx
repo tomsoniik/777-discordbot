@@ -376,12 +376,13 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
       // Draw debug line for snapped edge
       snappedEdgeLine = targetEdge;
     } else {
-      // Free placement (snapped to global invisible 30x30 grid for neatness)
+      // Free placement
+      const isBed = selectedItemDef.shape === 'bed';
       previewItem = {
         id: 'preview',
         itemId: selectedItemDef.id,
-        x: Math.round(mousePos.x / 30) * 30,
-        y: Math.round(mousePos.y / 30) * 30,
+        x: isBed ? Math.round(mousePos.x) : Math.round(mousePos.x / 30) * 30,
+        y: isBed ? Math.round(mousePos.y) : Math.round(mousePos.y / 30) * 30,
         rotation: freeRotation
       };
     }
