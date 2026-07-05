@@ -513,7 +513,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
       <div className={styles.sidebar}>
         <div className={styles.sectionTitle}>{t('builder_materials')}</div>
         
-        {['wood', 'metal', 'brick'].map(cat => {
+        {['wood', 'metal', 'brick', 'furniture'].map(cat => {
           const isExpanded = expandedCats[cat];
           return (
             <div key={cat} className={styles.categoryGroup}>
