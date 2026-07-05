@@ -148,7 +148,7 @@ const Item3D = ({ item, def, allPlacedItems, allBuildItems }: { item: PlacedItem
     const extrudeSettings = { depth: height, bevelEnabled: false };
 
     return (
-      <group position={[posX, height + heightOffset, posZ]} rotation={[0, rotY, 0]}>
+      <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
           <extrudeGeometry args={[shape, extrudeSettings]} />
           <meshStandardMaterial color={color} roughness={def.materialClass === 'metal' ? 0.2 : 0.8} metalness={def.materialClass === 'metal' ? 0.8 : 0.1} />
