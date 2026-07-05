@@ -36,6 +36,9 @@ interface Builder3DProps {
   buildItems: BuildItem[];
 }
 
+const SIDE = 60;
+const TRI_H = (SIDE * Math.sqrt(3)) / 2; // 51.9615
+
 const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
   // Convert 2D canvas coordinates to 3D world coordinates
   const scale = 1 / 10;
