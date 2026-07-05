@@ -225,7 +225,23 @@ export default function BuilderPage() {
     if (previewItem) {
       placedItems.forEach(item => {
         const dist = Math.hypot(item.x - previewItem!.x, item.y - previewItem!.y);
-        if (dist < 5) {
+        
+        const itemDef = BUILD_ITEMS.find(d => d.id === item.itemId);
+        if (!itemDef) return;
+        
+        const shape1 = selectedItemDef.shape;
+        const shape2 = itemDef.shape;
+        
+        let minDist = 0;
+        if (shape1 === 'square' && shape2 === 'square') {
+          minDist = 58; // 60 is minimum valid (edge shared)
+        } else if (shape1 === 'triangle' && shape2 === 'triangle') {
+          minDist = 33; // 34.64 is minimum valid (edge shared)
+        } else {
+          minDist = 45; // 47.32 is minimum valid (edge shared)
+        }
+        
+        if (dist < minDist) {
           isValidPlacement = false;
         }
       });
