@@ -128,6 +128,7 @@ function getBaseEdges(shape: ShapeType) {
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/store/useAppStore';
+import Builder3D from '@/components/Builder3D';
 
 export default function BuilderCanvas({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -146,6 +147,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [is3DMode, setIs3DMode] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/api/auth/signin');
@@ -626,10 +628,26 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                {isSyncing && <span style={{ color: '#2ecc71', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{t('builder_saving')}</span>}
              </div>
           )}
-          <button 
-            className={styles.deleteButton}
-            style={{ marginLeft: 'auto' }}
-            onClick={() => {
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <button 
+              onClick={() => setIs3DMode(!is3DMode)}
+              style={{ 
+                background: is3DMode ? '#3498db' : 'transparent',
+                border: '1px solid #3498db',
+                color: is3DMode ? '#fff' : '#3498db',
+                padding: '0.4rem 1rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                transition: '0.2s',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {is3DMode ? 'Wróć do 2D' : 'Widok 3D (BETA)'}
+            </button>
+            <button 
+              className={styles.deleteButton}
+              onClick={() => {
               if (confirm(t('clear_project_confirm'))) {
                 setPlacedItems([]);
               }
@@ -642,17 +660,20 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         <div 
           ref={containerRef}
           className={styles.canvasContainer}
-          onPointerDown={handlePointerDownCanvas}
-          onPointerMove={handlePointerMoveCanvas}
-          onPointerUp={handlePointerUpCanvas}
-          onWheel={handleWheel}
+          onPointerDown={is3DMode ? undefined : handlePointerDownCanvas}
+          onPointerMove={is3DMode ? undefined : handlePointerMoveCanvas}
+          onPointerUp={is3DMode ? undefined : handlePointerUpCanvas}
+          onWheel={is3DMode ? undefined : handleWheel}
           onContextMenu={e => e.preventDefault()}
         >
-          <div 
-            className={styles.canvas} 
-            style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})` }}
-          >
-            {/* Draw Placed Items */}
+          {is3DMode ? (
+            <Builder3D placedItems={placedItems} buildItems={BUILD_ITEMS} />
+          ) : (
+            <div 
+              className={styles.canvas} 
+              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})` }}
+            >
+              {/* Draw Placed Items */}
             {placedItems.map(item => {
               const def = BUILD_ITEMS.find(d => d.id === item.itemId);
               if (!def) return null;
@@ -728,6 +749,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
               />
             )}
           </div>
+          )}
         </div>
       </div>
     </div>
