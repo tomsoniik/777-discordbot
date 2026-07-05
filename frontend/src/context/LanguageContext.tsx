@@ -47,7 +47,41 @@ const translations: Translations = {
   aboutStory: { 
     en: "We are a group of friends who met in Unturned and founded the 777 clan in 2022. Since then, we've been regularly terrorizing the servers we play on.", 
     pl: "Jesteśmy grupką znajomych, którzy poznali się właśnie w Unturned i założyli w 2022 clan 777. Od tego czasu regularnie terroryzujemy serwery, na których gramy." 
-  }
+  },
+  
+  builder_materials: { en: "Building Blocks", pl: "Budulec" },
+  builder_cost: { en: "Total Cost", pl: "Materiały (Koszt)" },
+  builder_empty: { en: "No structures placed.", pl: "Brak postawionych struktur." },
+  builder_instructions_title: { en: "Building Instructions:", pl: "Instrukcja Budowania:" },
+  builder_instructions_1: { en: "- Select an item from the left. (Press [ESC] to deselect).", pl: "- Wybierz element z listy po lewej. (Wciśnij [ESC] by odznaczyć)." },
+  builder_instructions_2: { en: "- Hover over a placed object's edge to snap the next one.", pl: "- Najedź na krawędź postawionego obiektu, by \"przykleić\" (Snap) kolejny." },
+  builder_instructions_3: { en: "- Press [R] to change edge / rotate element.", pl: "- Wciśnij [R], aby zmienić krawędź / obrócić element." },
+  builder_instructions_4: { en: "- Hold [Right Click] on background to pan camera.", pl: "- Przytrzymaj Prawy Przycisk Myszy (PPM) na tle, by przesuwać kamerę." },
+  builder_instructions_5: { en: "- To delete an object, hold [Left Click] on it for 2 seconds (when no item is selected).", pl: "- Aby usunąć obiekt, przytrzymaj na nim Lewy Przycisk Myszy (LPM) przez 2 sekundy (gdy nie masz wybranego klocka w ręce)." },
+  builder_instructions_6: { en: "- Scroll wheel to zoom in/out.", pl: "- Kółko myszy przybliża/oddala widok." },
+  clear_project_confirm: { en: "Are you sure you want to clear the entire project?", pl: "Czy na pewno chcesz wyczyścić cały projekt?" },
+  
+  pine_plank: { en: "Pine Plank", pl: "Sosnowa Deska" },
+  metal_sheet: { en: "Metal Sheet", pl: "Metalowa Płyta" },
+  brick: { en: "Brick", pl: "Cegła" },
+  
+  w_found: { en: "Pine Foundation", pl: "Sosnowy Fundament" },
+  w_found_tri: { en: "Pine Tri Foundation", pl: "Sosnowy Trój. Fundament" },
+  w_roof: { en: "Pine Roof", pl: "Sosnowy Dach" },
+  w_roof_tri: { en: "Pine Tri Roof", pl: "Sosnowy Trój. Dach" },
+  w_hole: { en: "Pine Hole", pl: "Sosnowa Dziura" },
+
+  m_found: { en: "Metal Foundation", pl: "Metalowy Fundament" },
+  m_found_tri: { en: "Metal Tri Foundation", pl: "Metalowy Trój. Fundament" },
+  m_roof: { en: "Metal Roof", pl: "Metalowy Dach" },
+  m_roof_tri: { en: "Metal Tri Roof", pl: "Metalowy Trój. Dach" },
+  m_hole: { en: "Metal Hole", pl: "Metalowa Dziura" },
+
+  b_found: { en: "Brick Foundation", pl: "Ceglany Fundament" },
+  b_found_tri: { en: "Brick Tri Foundation", pl: "Ceglany Trój. Fundament" },
+  b_roof: { en: "Brick Roof", pl: "Ceglany Dach" },
+  b_roof_tri: { en: "Brick Tri Roof", pl: "Ceglany Trój. Dach" },
+  b_hole: { en: "Brick Hole", pl: "Ceglana Dziura" }
 };
 
 interface LanguageContextType {

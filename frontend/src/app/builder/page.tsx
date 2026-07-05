@@ -2,6 +2,7 @@
 
 import React, { useState, MouseEvent, useMemo, useRef, useEffect } from 'react';
 import styles from './builder.module.css';
+import { useLanguage } from '@/context/LanguageContext';
 
 type ShapeType = 'square' | 'triangle';
 
@@ -20,23 +21,23 @@ interface BuildItem {
 const getIconUrl = (id: number) => `https://cdn.jsdelivr.net/gh/SilKsPlugins/UnturnedImages@images/vanilla/items/${id}.png`;
 
 const BUILD_ITEMS: BuildItem[] = [
-  { id: 'w_found', name: 'Pine Foundation', shape: 'square', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(52), costs: { 'Pine Log': 3 } },
-  { id: 'w_found_tri', name: 'Pine Tri Foundation', shape: 'triangle', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(1264), costs: { 'Pine Log': 2 } },
-  { id: 'w_roof', name: 'Pine Roof', shape: 'square', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(56), costs: { 'Pine Log': 3 } },
-  { id: 'w_roof_tri', name: 'Pine Tri Roof', shape: 'triangle', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(1268), costs: { 'Pine Log': 2 } },
-  { id: 'w_hole', name: 'Pine Hole', shape: 'square', materialClass: 'wood', color: '#A0522D', texture: getIconUrl(320), costs: { 'Pine Log': 3 } },
+  { id: 'w_found', name: 'Pine Foundation', shape: 'square', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(52), costs: { 'pine_plank': 3 } },
+  { id: 'w_found_tri', name: 'Pine Tri Foundation', shape: 'triangle', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(1264), costs: { 'pine_plank': 2 } },
+  { id: 'w_roof', name: 'Pine Roof', shape: 'square', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(56), costs: { 'pine_plank': 3 } },
+  { id: 'w_roof_tri', name: 'Pine Tri Roof', shape: 'triangle', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(1268), costs: { 'pine_plank': 2 } },
+  { id: 'w_hole', name: 'Pine Hole', shape: 'square', materialClass: 'wood', color: '#A0522D', texture: getIconUrl(320), costs: { 'pine_plank': 3 } },
   
-  { id: 'm_found', name: 'Metal Foundation', shape: 'square', materialClass: 'metal', color: '#708090', texture: getIconUrl(369), costs: { 'Metal Sheet': 3 } },
-  { id: 'm_found_tri', name: 'Metal Tri Foundation', shape: 'triangle', materialClass: 'metal', color: '#708090', texture: getIconUrl(1265), costs: { 'Metal Sheet': 2 } },
-  { id: 'm_roof', name: 'Metal Roof', shape: 'square', materialClass: 'metal', color: '#808080', texture: getIconUrl(373), costs: { 'Metal Sheet': 3 } },
-  { id: 'm_roof_tri', name: 'Metal Tri Roof', shape: 'triangle', materialClass: 'metal', color: '#808080', texture: getIconUrl(1269), costs: { 'Metal Sheet': 2 } },
-  { id: 'm_hole', name: 'Metal Hole', shape: 'square', materialClass: 'metal', color: '#696969', texture: getIconUrl(376), costs: { 'Metal Sheet': 3 } },
+  { id: 'm_found', name: 'Metal Foundation', shape: 'square', materialClass: 'metal', color: '#708090', texture: getIconUrl(369), costs: { 'metal_sheet': 3 } },
+  { id: 'm_found_tri', name: 'Metal Tri Foundation', shape: 'triangle', materialClass: 'metal', color: '#708090', texture: getIconUrl(1265), costs: { 'metal_sheet': 2 } },
+  { id: 'm_roof', name: 'Metal Roof', shape: 'square', materialClass: 'metal', color: '#808080', texture: getIconUrl(373), costs: { 'metal_sheet': 3 } },
+  { id: 'm_roof_tri', name: 'Metal Tri Roof', shape: 'triangle', materialClass: 'metal', color: '#808080', texture: getIconUrl(1269), costs: { 'metal_sheet': 2 } },
+  { id: 'm_hole', name: 'Metal Hole', shape: 'square', materialClass: 'metal', color: '#696969', texture: getIconUrl(376), costs: { 'metal_sheet': 3 } },
 
-  { id: 'b_found', name: 'Brick Foundation', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1979), fallbackTexture: getIconUrl(52), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'Bricks': 3 } },
-  { id: 'b_found_tri', name: 'Brick Tri Foundation', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1980), fallbackTexture: getIconUrl(1264), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'Bricks': 2 } },
-  { id: 'b_roof', name: 'Brick Roof', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1984), fallbackTexture: getIconUrl(56), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'Bricks': 3 } },
-  { id: 'b_roof_tri', name: 'Brick Tri Roof', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1985), fallbackTexture: getIconUrl(1268), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'Bricks': 2 } },
-  { id: 'b_hole', name: 'Brick Hole', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1981), fallbackTexture: getIconUrl(320), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'Bricks': 3 } },
+  { id: 'b_found', name: 'Brick Foundation', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1979), fallbackTexture: getIconUrl(52), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'brick': 3 } },
+  { id: 'b_found_tri', name: 'Brick Tri Foundation', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1980), fallbackTexture: getIconUrl(1264), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'brick': 2 } },
+  { id: 'b_roof', name: 'Brick Roof', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1984), fallbackTexture: getIconUrl(56), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'brick': 3 } },
+  { id: 'b_roof_tri', name: 'Brick Tri Roof', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1985), fallbackTexture: getIconUrl(1268), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'brick': 2 } },
+  { id: 'b_hole', name: 'Brick Hole', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1981), fallbackTexture: getIconUrl(320), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'brick': 3 } },
 ];
 
 interface PlacedItem {
@@ -124,6 +125,7 @@ function getBaseEdges(shape: ShapeType) {
 }
 
 export default function BuilderPage() {
+  const { t } = useLanguage();
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ wood: true, metal: false, brick: false });
@@ -151,10 +153,12 @@ export default function BuilderPage() {
     const el = containerRef.current;
     if (!el) return;
     const preventScroll = (e: WheelEvent) => {
-      e.preventDefault();
+      if (el.contains(e.target as Node)) {
+        e.preventDefault();
+      }
     };
-    el.addEventListener('wheel', preventScroll, { passive: false });
-    return () => el.removeEventListener('wheel', preventScroll);
+    document.addEventListener('wheel', preventScroll, { passive: false });
+    return () => document.removeEventListener('wheel', preventScroll);
   }, []);
 
   // Handle keyboard rotation and deselection
@@ -370,7 +374,7 @@ export default function BuilderPage() {
   return (
     <div className={styles.container}>
       <div className={styles.sidebar}>
-        <div className={styles.sectionTitle}>Budulec</div>
+        <div className={styles.sectionTitle}>{t('builder_materials')}</div>
         
         {['wood', 'metal', 'brick'].map(cat => {
           const isExpanded = expandedCats[cat];
@@ -402,7 +406,7 @@ export default function BuilderPage() {
                           }}
                         />
                       </div>
-                      {item.name}
+                      {t(item.id)}
                     </button>
                   ))}
                 </div>
@@ -426,13 +430,13 @@ export default function BuilderPage() {
         </div>
         
         <div className={styles.instructions}>
-          <b>Instrukcja Budowania:</b><br/>
-          - Wybierz element z listy po lewej. (Wciśnij <b>[ESC]</b> by odznaczyć).<br/>
-          - Najedź na krawędź postawionego obiektu, by "przykleić" (Snap) kolejny.<br/>
-          - Wciśnij <b>[R]</b>, aby zmienić krawędź / obrócić element.<br/>
-          - Przytrzymaj <b>Prawy Przycisk Myszy (PPM)</b> na tle, by przesuwać kamerę.<br/>
-          - Aby usunąć obiekt, przytrzymaj na nim <b>Lewy Przycisk Myszy (LPM)</b> przez 2 sekundy (gdy nie masz wybranego klocka w ręce).<br/>
-          - Kółko myszy przybliża/oddala widok.
+          <b>{t('builder_instructions_title')}</b><br/>
+          {t('builder_instructions_1')}<br/>
+          {t('builder_instructions_2')}<br/>
+          {t('builder_instructions_3')}<br/>
+          {t('builder_instructions_4')}<br/>
+          {t('builder_instructions_5')}<br/>
+          {t('builder_instructions_6')}
         </div>
       </div>
 
@@ -442,7 +446,7 @@ export default function BuilderPage() {
             className={styles.deleteButton}
             style={{ marginLeft: 'auto' }}
             onClick={() => {
-              if (confirm('Czy na pewno chcesz wyczyścić cały projekt?')) {
+              if (confirm(t('clear_project_confirm'))) {
                 setPlacedItems([]);
               }
             }}
