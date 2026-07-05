@@ -44,6 +44,7 @@ export default function Navbar() {
         </div>
         <div className="navbar-nav" style={{ alignItems: 'center', position: 'relative' }}>
           <Link href="/about" className="nav-link">{t("about")}</Link>
+          <Link href="/builder" className="nav-link">Builder</Link>
           {session && (
             <Link href="/apply" className="nav-link">{t("recruitment")}</Link>
           )}
