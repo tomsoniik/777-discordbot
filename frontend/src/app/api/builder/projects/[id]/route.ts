@@ -5,7 +5,8 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   
   const userId = (session?.user as any)?.id;
@@ -15,7 +16,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   try {
     const project = await (prisma as any).baseProject.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         owner: { select: { id: true, name: true } },
         collaborators: { select: { id: true, name: true } }
@@ -39,7 +40,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   
   const userId = (session?.user as any)?.id;
@@ -49,7 +51,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
   try {
     const project = await (prisma as any).baseProject.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { collaborators: { select: { id: true } } }
     });
 
@@ -67,7 +69,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const { data } = body;
 
     const updated = await (prisma as any).baseProject.update({
-      where: { id: params.id },
+      where: { id },
       data: { data: JSON.stringify(data) }
     });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, MouseEvent, useMemo, useRef, useEffect } from 'react';
+import React, { useState, MouseEvent, useMemo, useRef, useEffect, use } from 'react';
 import styles from '../builder.module.css';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -127,7 +127,8 @@ function getBaseEdges(shape: ShapeType) {
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
-export default function BuilderCanvas({ params }: { params: { id: string } }) {
+export default function BuilderCanvas({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const { t } = useLanguage();
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -148,7 +149,7 @@ export default function BuilderCanvas({ params }: { params: { id: string } }) {
 
   const fetchProject = async () => {
     try {
-      const res = await fetch(`/api/builder/projects/${params.id}`);
+      const res = await fetch(`/api/builder/projects/${id}`);
       if (res.ok) {
         const data = await res.json();
         setProject(data);
@@ -171,7 +172,7 @@ export default function BuilderCanvas({ params }: { params: { id: string } }) {
     
     setIsSyncing(true);
     try {
-      await fetch(`/api/builder/projects/${params.id}`, {
+      await fetch(`/api/builder/projects/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: newItems })
@@ -200,7 +201,7 @@ export default function BuilderCanvas({ params }: { params: { id: string } }) {
     if (!project) return;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/builder/projects/${params.id}`);
+        const res = await fetch(`/api/builder/projects/${id}`);
         if (res.ok) {
           const data = await res.json();
           if (data.data) {
@@ -214,7 +215,7 @@ export default function BuilderCanvas({ params }: { params: { id: string } }) {
       } catch (e) {}
     }, 3000);
     return () => clearInterval(interval);
-  }, [project, params.id]);
+  }, [project, id]);
 
   
   // Canvas View State
