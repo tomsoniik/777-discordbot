@@ -12,6 +12,8 @@ interface BuildItem {
   materialClass: 'wood' | 'metal' | 'brick';
   color: string;
   texture: string;
+  fallbackTexture?: string;
+  imageFilter?: string;
   costs: Record<string, number>;
 }
 
@@ -30,11 +32,11 @@ const BUILD_ITEMS: BuildItem[] = [
   { id: 'm_roof_tri', name: 'Metal Tri Roof', shape: 'triangle', materialClass: 'metal', color: '#808080', texture: getIconUrl(1269), costs: { 'Metal Sheet': 2 } },
   { id: 'm_hole', name: 'Metal Hole', shape: 'square', materialClass: 'metal', color: '#696969', texture: getIconUrl(376), costs: { 'Metal Sheet': 3 } },
 
-  { id: 'b_found', name: 'Brick Foundation', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1979), costs: { 'Bricks': 3 } },
-  { id: 'b_found_tri', name: 'Brick Tri Foundation', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1980), costs: { 'Bricks': 2 } },
-  { id: 'b_roof', name: 'Brick Roof', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1984), costs: { 'Bricks': 3 } },
-  { id: 'b_roof_tri', name: 'Brick Tri Roof', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1985), costs: { 'Bricks': 2 } },
-  { id: 'b_hole', name: 'Brick Hole', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1981), costs: { 'Bricks': 3 } },
+  { id: 'b_found', name: 'Brick Foundation', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1979), fallbackTexture: getIconUrl(52), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'Bricks': 3 } },
+  { id: 'b_found_tri', name: 'Brick Tri Foundation', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1980), fallbackTexture: getIconUrl(1264), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'Bricks': 2 } },
+  { id: 'b_roof', name: 'Brick Roof', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1984), fallbackTexture: getIconUrl(56), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'Bricks': 3 } },
+  { id: 'b_roof_tri', name: 'Brick Tri Roof', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1985), fallbackTexture: getIconUrl(1268), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'Bricks': 2 } },
+  { id: 'b_hole', name: 'Brick Hole', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1981), fallbackTexture: getIconUrl(320), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'Bricks': 3 } },
 ];
 
 interface PlacedItem {
@@ -366,13 +368,18 @@ export default function BuilderPage() {
                       className={`${styles.itemButton} ${activeItem === item.id ? styles.active : ''}`}
                       onClick={() => setActiveItem(item.id)}
                     >
-                      <div 
-                        className={styles.colorIndicator} 
-                        style={{ 
-                          backgroundColor: 'rgba(0,0,0,0.2)',
-                          backgroundImage: `url(${item.texture})`
-                        }} 
-                      />
+                      <div className={styles.colorIndicator} style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                        <img 
+                          src={item.texture} 
+                          alt=""
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', filter: item.imageFilter || 'none' }}
+                          onError={(e) => {
+                            if (item.fallbackTexture && e.currentTarget.src !== item.fallbackTexture) {
+                              e.currentTarget.src = item.fallbackTexture;
+                            }
+                          }}
+                        />
+                      </div>
                       {item.name}
                     </button>
                   ))}
@@ -469,7 +476,13 @@ export default function BuilderPage() {
                       objectFit: 'contain',
                       opacity: 0.8,
                       pointerEvents: 'none',
-                      transform: def.shape === 'triangle' ? 'translateY(15%)' : 'none'
+                      transform: def.shape === 'triangle' ? 'translateY(15%)' : 'none',
+                      filter: def.imageFilter || 'none'
+                    }}
+                    onError={(e) => {
+                      if (def.fallbackTexture && e.currentTarget.src !== def.fallbackTexture) {
+                        e.currentTarget.src = def.fallbackTexture;
+                      }
                     }}
                   />
                 </div>
@@ -509,7 +522,13 @@ export default function BuilderPage() {
                       objectFit: 'contain',
                       opacity: 0.8,
                       pointerEvents: 'none',
-                      transform: def.shape === 'triangle' ? 'translateY(15%)' : 'none'
+                      transform: def.shape === 'triangle' ? 'translateY(15%)' : 'none',
+                      filter: def.imageFilter || 'none'
+                    }}
+                    onError={(e) => {
+                      if (def.fallbackTexture && e.currentTarget.src !== def.fallbackTexture) {
+                        e.currentTarget.src = def.fallbackTexture;
+                      }
                     }}
                   />
                 </div>
