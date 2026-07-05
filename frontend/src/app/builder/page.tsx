@@ -47,7 +47,10 @@ export default function BuilderPage() {
   const [selectedPlacedId, setSelectedPlacedId] = useState<string | null>(null);
   
   // Canvas View State
-  const [pan, setPan] = useState({ x: window.innerWidth / 3, y: window.innerHeight / 3 });
+  const [pan, setPan] = useState({ 
+    x: typeof window !== 'undefined' ? window.innerWidth / 3 : 0, 
+    y: typeof window !== 'undefined' ? window.innerHeight / 3 : 0 
+  });
   const [isPanning, setIsPanning] = useState(false);
   const [snapToGrid, setSnapToGrid] = useState(true);
   
