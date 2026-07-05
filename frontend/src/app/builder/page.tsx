@@ -1,116 +1,163 @@
 "use client";
 
-import React, { useState, MouseEvent, useMemo } from 'react';
+import React, { useState, MouseEvent, useMemo, useRef, useEffect } from 'react';
 import styles from './builder.module.css';
+
+type ShapeType = 'square' | 'triangle';
 
 interface BuildItem {
   id: string;
   name: string;
-  type: 'foundation' | 'wall' | 'pillar' | 'roof' | 'doorway' | 'window';
+  shape: ShapeType;
   materialClass: 'wood' | 'metal';
   color: string;
   texture: string;
   costs: Record<string, number>;
 }
 
+const getIconUrl = (id: number) => `https://cdn.jsdelivr.net/gh/SilKsPlugins/UnturnedImages@images/vanilla/items/${id}.png`;
+
 const BUILD_ITEMS: BuildItem[] = [
   // Wood
-  { id: 'w_found', name: 'Pine Foundation', type: 'foundation', materialClass: 'wood', color: '#8B5A2B', texture: '/textures/w_found.png', costs: { 'Pine Plank': 3 } },
-  { id: 'w_wall', name: 'Pine Wall', type: 'wall', materialClass: 'wood', color: '#A0522D', texture: '/textures/w_wall.png', costs: { 'Pine Plank': 3 } },
-  { id: 'w_pillar', name: 'Pine Pillar', type: 'pillar', materialClass: 'wood', color: '#D2691E', texture: '/textures/w_pillar.png', costs: { 'Pine Plank': 2 } },
-  { id: 'w_roof', name: 'Pine Roof', type: 'roof', materialClass: 'wood', color: '#CD853F', texture: '/textures/w_roof.png', costs: { 'Pine Plank': 3 } },
-  { id: 'w_doorway', name: 'Pine Doorway', type: 'doorway', materialClass: 'wood', color: '#DEB887', texture: '/textures/w_doorway.png', costs: { 'Pine Plank': 3 } },
-  { id: 'w_window', name: 'Pine Window', type: 'window', materialClass: 'wood', color: '#DEB887', texture: '/textures/w_window.png', costs: { 'Pine Plank': 3 } },
+  { id: 'w_found', name: 'Pine Foundation', shape: 'square', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(31), costs: { 'Pine Plank': 3 } },
+  { id: 'w_found_tri', name: 'Pine Tri Foundation', shape: 'triangle', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(1266), costs: { 'Pine Plank': 2 } },
+  { id: 'w_roof', name: 'Pine Roof', shape: 'square', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(32), costs: { 'Pine Plank': 3 } },
+  { id: 'w_roof_tri', name: 'Pine Tri Roof', shape: 'triangle', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(1262), costs: { 'Pine Plank': 2 } },
+  { id: 'w_hole', name: 'Pine Hole', shape: 'square', materialClass: 'wood', color: '#A0522D', texture: getIconUrl(316), costs: { 'Pine Plank': 3 } },
   
   // Metal
-  { id: 'm_found', name: 'Metal Foundation', type: 'foundation', materialClass: 'metal', color: '#708090', texture: '/textures/m_found.png', costs: { 'Metal Sheet': 3 } },
-  { id: 'm_wall', name: 'Metal Wall', type: 'wall', materialClass: 'metal', color: '#778899', texture: '/textures/m_wall.png', costs: { 'Metal Sheet': 3 } },
-  { id: 'm_pillar', name: 'Metal Pillar', type: 'pillar', materialClass: 'metal', color: '#B0C4DE', texture: '/textures/m_pillar.png', costs: { 'Metal Bar': 2 } },
-  { id: 'm_roof', name: 'Metal Roof', type: 'roof', materialClass: 'metal', color: '#808080', texture: '/textures/m_roof.png', costs: { 'Metal Sheet': 3 } },
-  { id: 'm_doorway', name: 'Metal Doorway', type: 'doorway', materialClass: 'metal', color: '#696969', texture: '/textures/m_doorway.png', costs: { 'Metal Sheet': 3 } },
-  { id: 'm_window', name: 'Metal Window', type: 'window', materialClass: 'metal', color: '#696969', texture: '/textures/m_window.png', costs: { 'Metal Sheet': 3 } },
+  { id: 'm_found', name: 'Metal Foundation', shape: 'square', materialClass: 'metal', color: '#708090', texture: getIconUrl(369), costs: { 'Metal Sheet': 3 } },
+  { id: 'm_found_tri', name: 'Metal Tri Foundation', shape: 'triangle', materialClass: 'metal', color: '#708090', texture: getIconUrl(1268), costs: { 'Metal Sheet': 2 } },
+  { id: 'm_roof', name: 'Metal Roof', shape: 'square', materialClass: 'metal', color: '#808080', texture: getIconUrl(370), costs: { 'Metal Sheet': 3 } },
+  { id: 'm_roof_tri', name: 'Metal Tri Roof', shape: 'triangle', materialClass: 'metal', color: '#808080', texture: getIconUrl(1269), costs: { 'Metal Sheet': 2 } },
+  { id: 'm_hole', name: 'Metal Hole', shape: 'square', materialClass: 'metal', color: '#696969', texture: getIconUrl(374), costs: { 'Metal Sheet': 3 } },
 ];
-
-type ItemPosition = 'center' | 'top' | 'right' | 'bottom' | 'left' | 'tl' | 'tr' | 'bl' | 'br';
 
 interface PlacedItem {
   id: string; // unique
   itemId: string;
   x: number;
   y: number;
-  position: ItemPosition;
-  layer: 'base' | 'roof';
+  rotation: number; // 0, 90, 180, 270, etc.
 }
 
-const GRID_SIZE = 15;
-const CELL_SIZE = 50;
-
 export default function BuilderPage() {
-  const [activeItem, setActiveItem] = useState<string>(BUILD_ITEMS[0].id);
+  const [activeItem, setActiveItem] = useState<string | null>(null);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
-  const [viewLayer, setViewLayer] = useState<'base' | 'roof' | 'all'>('all');
+  const [selectedPlacedId, setSelectedPlacedId] = useState<string | null>(null);
+  
+  // Canvas View State
+  const [pan, setPan] = useState({ x: window.innerWidth / 3, y: window.innerHeight / 3 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  
+  // Dragging Item State
+  const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
 
-  const selectedItemDef = BUILD_ITEMS.find(i => i.id === activeItem);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const getPositionFromEvent = (e: MouseEvent<HTMLDivElement>): ItemPosition => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+  const handlePointerDownCanvas = (e: React.PointerEvent) => {
+    // If clicking directly on canvas background (not an item)
+    if (e.target === containerRef.current) {
+      if (activeItem) {
+        // Place new item
+        const rect = containerRef.current.getBoundingClientRect();
+        let placedX = e.clientX - rect.left - pan.x;
+        let placedY = e.clientY - rect.top - pan.y;
 
-    if (!selectedItemDef) return 'center';
+        if (snapToGrid) {
+          placedX = Math.round(placedX / 30) * 30;
+          placedY = Math.round(placedY / 30) * 30;
+        }
 
-    if (['wall', 'doorway', 'window'].includes(selectedItemDef.type)) {
-      // Find closest edge
-      const distTop = y;
-      const distBottom = 1 - y;
-      const distLeft = x;
-      const distRight = 1 - x;
-      
-      const minDist = Math.min(distTop, distBottom, distLeft, distRight);
-      if (minDist === distTop) return 'top';
-      if (minDist === distBottom) return 'bottom';
-      if (minDist === distLeft) return 'left';
-      return 'right';
+        const newItem: PlacedItem = {
+          id: `${Date.now()}-${Math.random()}`,
+          itemId: activeItem,
+          x: placedX,
+          y: placedY,
+          rotation: 0
+        };
+        setPlacedItems(prev => [...prev, newItem]);
+        setSelectedPlacedId(newItem.id);
+      } else {
+        // Start panning
+        setIsPanning(true);
+        containerRef.current?.setPointerCapture(e.pointerId);
+      }
     }
-
-    if (selectedItemDef.type === 'pillar') {
-      if (x < 0.5 && y < 0.5) return 'tl';
-      if (x > 0.5 && y < 0.5) return 'tr';
-      if (x < 0.5 && y > 0.5) return 'bl';
-      return 'br';
-    }
-
-    return 'center';
   };
 
-  const handleCellClick = (x: number, y: number, e: MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!selectedItemDef) return;
-
-    const isErase = e.type === 'contextmenu' || e.button === 2;
-    const position = getPositionFromEvent(e);
-    
-    // Determine layer based on item type
-    const layer = selectedItemDef.type === 'roof' ? 'roof' : 'base';
-
-    if (isErase) {
-      // Find item to erase at this exact cell, position, and layer
-      setPlacedItems(prev => prev.filter(i => 
-        !(i.x === x && i.y === y && i.position === position && i.layer === layer)
-      ));
-    } else {
-      // Prevent duplicates
-      setPlacedItems(prev => {
-        const filtered = prev.filter(i => 
-          !(i.x === x && i.y === y && i.position === position && i.layer === layer)
-        );
-        return [...filtered, {
-          id: `${Date.now()}-${Math.random()}`,
-          itemId: selectedItemDef.id,
-          x, y, position, layer
-        }];
-      });
+  const handlePointerMoveCanvas = (e: React.PointerEvent) => {
+    if (isPanning) {
+      setPan(prev => ({
+        x: prev.x + e.movementX,
+        y: prev.y + e.movementY
+      }));
+    } else if (draggingItemId) {
+      setPlacedItems(prev => prev.map(item => {
+        if (item.id === draggingItemId) {
+          let newX = item.x + e.movementX;
+          let newY = item.y + e.movementY;
+          
+          if (snapToGrid) {
+            // Realtime snap visually could be jarring if raw movement is added, 
+            // but we can snap on mouse up, or round the actual values.
+            // For smoother feel, we don't snap during move but snap on release.
+          }
+          return { ...item, x: newX, y: newY };
+        }
+        return item;
+      }));
     }
+  };
+
+  const handlePointerUpCanvas = (e: React.PointerEvent) => {
+    setIsPanning(false);
+    containerRef.current?.releasePointerCapture(e.pointerId);
+
+    if (draggingItemId && snapToGrid) {
+      setPlacedItems(prev => prev.map(item => {
+        if (item.id === draggingItemId) {
+          return {
+            ...item,
+            x: Math.round(item.x / 30) * 30,
+            y: Math.round(item.y / 30) * 30
+          };
+        }
+        return item;
+      }));
+    }
+    setDraggingItemId(null);
+  };
+
+  const handleItemPointerDown = (e: React.PointerEvent, id: string) => {
+    e.stopPropagation(); // prevent canvas pan
+    if (e.button === 2) {
+      // Right click to delete
+      setPlacedItems(prev => prev.filter(i => i.id !== id));
+      if (selectedPlacedId === id) setSelectedPlacedId(null);
+      return;
+    }
+    
+    setSelectedPlacedId(id);
+    setDraggingItemId(id);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const rotateSelected = () => {
+    if (!selectedPlacedId) return;
+    setPlacedItems(prev => prev.map(item => {
+      if (item.id === selectedPlacedId) {
+        return { ...item, rotation: (item.rotation + 30) % 360 };
+      }
+      return item;
+    }));
+  };
+
+  const deleteSelected = () => {
+    if (!selectedPlacedId) return;
+    setPlacedItems(prev => prev.filter(i => i.id !== selectedPlacedId));
+    setSelectedPlacedId(null);
   };
 
   // Calculate Materials
@@ -127,78 +174,49 @@ export default function BuilderPage() {
     return totals;
   }, [placedItems]);
 
-  // Generate grid rendering
-  const gridCells = [];
-  for (let y = 0; y < GRID_SIZE; y++) {
-    for (let x = 0; x < GRID_SIZE; x++) {
-      
-      const cellItems = placedItems.filter(i => i.x === x && i.y === y && (viewLayer === 'all' || i.layer === viewLayer));
-      
-      gridCells.push(
-        <div 
-          key={`${x}-${y}`} 
-          className={styles.cell}
-          style={{ width: CELL_SIZE, height: CELL_SIZE }}
-          onClick={(e) => handleCellClick(x, y, e)}
-          onContextMenu={(e) => handleCellClick(x, y, e)}
-        >
-          {cellItems.map(item => {
-            const def = BUILD_ITEMS.find(d => d.id === item.itemId);
-            if (!def) return null;
-
-            let itemClass = '';
-            if (def.type === 'foundation') itemClass = styles.placedFoundation;
-            if (def.type === 'roof') itemClass = styles.placedRoof;
-            if (['wall', 'doorway', 'window'].includes(def.type)) {
-              itemClass = `${styles.placedWall} ${
-                item.position === 'top' ? styles.wallTop : 
-                item.position === 'right' ? styles.wallRight : 
-                item.position === 'bottom' ? styles.wallBottom : styles.wallLeft
-              }`;
-            }
-            if (def.type === 'pillar') {
-              itemClass = `${styles.placedPillar} ${
-                item.position === 'tl' ? styles.pillarTL : 
-                item.position === 'tr' ? styles.pillarTR : 
-                item.position === 'bl' ? styles.pillarBL : styles.pillarBR
-              }`;
-            }
-
-            return (
-              <div 
-                key={item.id} 
-                className={itemClass}
-                style={{ 
-                  backgroundColor: def.color,
-                  backgroundImage: `url(${def.texture})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
-                }}
-                title={def.name}
-              />
-            );
-          })}
-        </div>
-      );
-    }
-  }
-
   return (
     <div className={styles.container}>
       <div className={styles.sidebar}>
+        <div className={styles.sectionTitle}>Narzędzia i Edycja</div>
+        <button 
+          className={styles.actionButton} 
+          style={{ marginBottom: '10px' }}
+          onClick={() => setSnapToGrid(!snapToGrid)}
+        >
+          Przyciąganie do siatki (Snapping): {snapToGrid ? 'WŁ' : 'WYŁ'}
+        </button>
+
+        {selectedPlacedId ? (
+          <div style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginBottom: '15px' }}>
+            <div style={{ marginBottom: '10px', color: '#aaa', fontSize: '0.9rem' }}>Wybrano element.</div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className={styles.actionButton} onClick={rotateSelected}>Obróć 30°</button>
+              <button className={styles.deleteButton} onClick={deleteSelected}>Usuń</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', marginBottom: '15px', color: '#aaa', fontSize: '0.85rem' }}>
+            Wybierz z listy poniżej, by postawić nowy element, lub kliknij na postawiony na mapie, by go edytować.
+          </div>
+        )}
+
         <div className={styles.sectionTitle}>Budulec</div>
         {BUILD_ITEMS.map(item => (
           <button
             key={item.id}
-            className={`${styles.itemButton} ${activeItem === item.id ? styles.active : ''}`}
-            onClick={() => setActiveItem(item.id)}
+            className={`${styles.itemButton} ${activeItem === item.id && !selectedPlacedId ? styles.active : ''}`}
+            onClick={() => {
+              setActiveItem(item.id);
+              setSelectedPlacedId(null);
+            }}
           >
             <div 
               className={styles.colorIndicator} 
               style={{ 
                 backgroundColor: item.color,
                 backgroundImage: `url(${item.texture})`,
-                backgroundSize: 'cover'
+                borderRadius: item.shape === 'triangle' ? '0' : '4px',
+                clipPath: item.shape === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : 'none'
               }} 
             />
             {item.name}
@@ -218,55 +236,70 @@ export default function BuilderPage() {
             ))
           )}
         </div>
+        
+        <div className={styles.instructions}>
+          <b>Instrukcja:</b><br/>
+          - Wybierz element i kliknij na pustym polu by go postawić.<br/>
+          - Chwyć i przeciągnij postawiony element by zmienić pozycję.<br/>
+          - Prawy Przycisk Myszy usuwa element.<br/>
+          - Kliknij i przeciągnij tło by przesuwać widok kamery.
+        </div>
       </div>
 
       <div className={styles.mainArea}>
         <div className={styles.toolbar}>
-          <span style={{ fontWeight: 'bold' }}>Warstwa:</span>
           <button 
-            className={`${styles.layerToggle} ${viewLayer === 'all' ? styles.active : ''}`}
-            onClick={() => setViewLayer('all')}
-          >
-            Wszystko
-          </button>
-          <button 
-            className={`${styles.layerToggle} ${viewLayer === 'base' ? styles.active : ''}`}
-            onClick={() => setViewLayer('base')}
-          >
-            Baza (Fundamenty)
-          </button>
-          <button 
-            className={`${styles.layerToggle} ${viewLayer === 'roof' ? styles.active : ''}`}
-            onClick={() => setViewLayer('roof')}
-          >
-            Dach
-          </button>
-          
-          <button 
-            className={styles.clearButton}
+            className={styles.deleteButton}
+            style={{ marginLeft: 'auto' }}
             onClick={() => {
               if (confirm('Czy na pewno chcesz wyczyścić cały projekt?')) {
                 setPlacedItems([]);
+                setSelectedPlacedId(null);
               }
             }}
           >
             Wyczyść projekt
           </button>
-          
-          <span style={{ marginLeft: 'auto', color: '#aaa', fontSize: '0.9rem' }}>
-            LPM - Postaw | PPM - Usuń
-          </span>
         </div>
 
-        <div className={styles.gridContainer}>
+        <div 
+          ref={containerRef}
+          className={styles.canvasContainer}
+          onPointerDown={handlePointerDownCanvas}
+          onPointerMove={handlePointerMoveCanvas}
+          onPointerUp={handlePointerUpCanvas}
+          onContextMenu={e => e.preventDefault()}
+        >
           <div 
-            className={styles.grid}
-            style={{ 
-              gridTemplateColumns: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
-              gridTemplateRows: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`
-            }}
+            className={styles.canvas} 
+            style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}
           >
-            {gridCells}
+            {placedItems.map(item => {
+              const def = BUILD_ITEMS.find(d => d.id === item.itemId);
+              if (!def) return null;
+
+              const isSelected = item.id === selectedPlacedId;
+              const shapeClass = def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare;
+
+              return (
+                <div 
+                  key={item.id}
+                  className={`${styles.placedItem} ${shapeClass} ${isSelected ? styles.selected : ''}`}
+                  style={{
+                    left: `${item.x}px`,
+                    top: `${item.y}px`,
+                    transform: `translate(-50%, -50%) rotate(${item.rotation}deg)`,
+                    backgroundColor: def.color,
+                    backgroundImage: `url(${def.texture})`
+                  }}
+                  onPointerDown={(e) => handleItemPointerDown(e, item.id)}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  {/* Centrum obrotu */}
+                  {isSelected && <div style={{width: 4, height: 4, background: '#fff', borderRadius: '50%', position: 'absolute'}}/>}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
