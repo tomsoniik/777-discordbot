@@ -47,6 +47,48 @@ interface PlacedItem {
   rotation: number; // in degrees
 }
 
+const renderShapeInterior = (def: BuildItem) => {
+  const isHole = def.id.includes('hole');
+  const isRoof = def.id.includes('roof');
+  const isTri = def.shape === 'triangle';
+
+  if (isHole) {
+    return (
+      <div style={{
+        width: '50%',
+        height: '50%',
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        position: 'absolute',
+        top: isTri ? '33.33%' : '25%',
+        left: '25%',
+        boxShadow: 'inset 0 0 8px rgba(0,0,0,0.9)',
+        clipPath: isTri ? 'polygon(50% 0%, 100% 100%, 0% 100%)' : 'none'
+      }} />
+    );
+  }
+
+  if (isRoof) {
+    return (
+      <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', opacity: 0.6 }}>
+        {isTri ? (
+          <>
+            <line x1="50%" y1="0%" x2="50%" y2="66.66%" stroke="#000" strokeWidth="2" />
+            <line x1="100%" y1="100%" x2="50%" y2="66.66%" stroke="#000" strokeWidth="2" />
+            <line x1="0%" y1="100%" x2="50%" y2="66.66%" stroke="#000" strokeWidth="2" />
+          </>
+        ) : (
+          <>
+            <line x1="0" y1="0" x2="100%" y2="100%" stroke="#000" strokeWidth="2" />
+            <line x1="100%" y1="0" x2="0" y2="100%" stroke="#000" strokeWidth="2" />
+          </>
+        )}
+      </svg>
+    );
+  }
+
+  return null;
+};
+
 const SIDE = 60;
 const TRI_R = (SIDE * Math.sqrt(3)) / 6; // 17.3205
 const TRI_H = (SIDE * Math.sqrt(3)) / 2; // 51.9615
@@ -467,24 +509,7 @@ export default function BuilderPage() {
                   onPointerLeave={cancelDismantle}
                   onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 >
-                  <img 
-                    src={def.texture} 
-                    alt={def.name}
-                    style={{
-                      width: '60%',
-                      height: '60%',
-                      objectFit: 'contain',
-                      opacity: 0.8,
-                      pointerEvents: 'none',
-                      transform: def.shape === 'triangle' ? 'translateY(15%)' : 'none',
-                      filter: def.imageFilter || 'none'
-                    }}
-                    onError={(e) => {
-                      if (def.fallbackTexture && e.currentTarget.src !== def.fallbackTexture) {
-                        e.currentTarget.src = def.fallbackTexture;
-                      }
-                    }}
-                  />
+                  {renderShapeInterior(def)}
                 </div>
               );
             })}
@@ -513,24 +538,7 @@ export default function BuilderPage() {
                     boxShadow: isValidPlacement ? '0 0 20px rgba(46, 204, 113, 0.8)' : '0 0 20px rgba(255, 71, 87, 0.8)'
                   }}
                 >
-                  <img 
-                    src={def.texture} 
-                    alt={def.name}
-                    style={{
-                      width: '60%',
-                      height: '60%',
-                      objectFit: 'contain',
-                      opacity: 0.8,
-                      pointerEvents: 'none',
-                      transform: def.shape === 'triangle' ? 'translateY(15%)' : 'none',
-                      filter: def.imageFilter || 'none'
-                    }}
-                    onError={(e) => {
-                      if (def.fallbackTexture && e.currentTarget.src !== def.fallbackTexture) {
-                        e.currentTarget.src = def.fallbackTexture;
-                      }
-                    }}
-                  />
+                  {renderShapeInterior(def)}
                 </div>
               );
             })()}
