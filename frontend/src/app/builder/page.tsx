@@ -112,6 +112,9 @@ export default function BuilderPage() {
   const [scale, setScale] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   
+  const [dismantlingId, setDismantlingId] = useState<string | null>(null);
+  const dismantleTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
   // Placement State
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [activeEdgeIndex, setActiveEdgeIndex] = useState(0); // for rotating the active item during placement
@@ -130,9 +133,12 @@ export default function BuilderPage() {
     return () => el.removeEventListener('wheel', preventScroll);
   }, []);
 
-  // Handle keyboard rotation
+  // Handle keyboard rotation and deselection
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveItem(null);
+      }
       if (e.key === 'r' || e.key === 'R') {
         if (activeItem) {
           const def = BUILD_ITEMS.find(d => d.id === activeItem);
@@ -153,6 +159,7 @@ export default function BuilderPage() {
   // Calculate Snapping
   let previewItem: PlacedItem | null = null;
   let snappedEdgeLine = null;
+  let isValidPlacement = true;
 
   if (selectedItemDef) {
     let closestEdge = null;
@@ -214,23 +221,26 @@ export default function BuilderPage() {
         rotation: freeRotation
       };
     }
+
+    if (previewItem) {
+      placedItems.forEach(item => {
+        const dist = Math.hypot(item.x - previewItem!.x, item.y - previewItem!.y);
+        if (dist < 5) {
+          isValidPlacement = false;
+        }
+      });
+    }
   }
 
   const handlePointerDownCanvas = (e: React.PointerEvent) => {
     if (e.button === 2) {
-      // Right click cancels active item
-      setActiveItem(null);
-      return;
-    }
-    
-    if (e.button === 1 || (!activeItem && e.button === 0)) {
-      // Middle click or Left click without item -> Pan
+      // RMB -> Pan
       setIsPanning(true);
       containerRef.current?.setPointerCapture(e.pointerId);
       return;
     }
 
-    if (activeItem && previewItem && e.button === 0) {
+    if (activeItem && previewItem && isValidPlacement && e.button === 0) {
       // Place item
       setPlacedItems(prev => [...prev, {
         id: `${Date.now()}-${Math.random()}`,
@@ -284,10 +294,23 @@ export default function BuilderPage() {
     setScale(newScale);
   };
 
-  const handleItemRightClick = (e: React.MouseEvent, id: string) => {
-    e.preventDefault();
+  const handleItemPointerDown = (e: React.PointerEvent, id: string) => {
+    if (e.button !== 0 || activeItem !== null) return;
     e.stopPropagation();
-    setPlacedItems(prev => prev.filter(i => i.id !== id));
+    
+    setDismantlingId(id);
+    dismantleTimerRef.current = setTimeout(() => {
+      setPlacedItems(prev => prev.filter(i => i.id !== id));
+      setDismantlingId(null);
+    }, 2000);
+  };
+
+  const cancelDismantle = () => {
+    if (dismantleTimerRef.current) {
+      clearTimeout(dismantleTimerRef.current);
+      dismantleTimerRef.current = null;
+    }
+    setDismantlingId(null);
   };
 
   // Calculate Materials
@@ -358,12 +381,13 @@ export default function BuilderPage() {
         </div>
         
         <div className={styles.instructions}>
-          <b>Instrukcja Budowania (Jak w grze):</b><br/>
-          - Wybierz element z listy po lewej.<br/>
-          - Najedź na krawędź postawionego obiektu, by automatycznie do niego "przykleić" (Snap) kolejny.<br/>
-          - Wciśnij <b>[R]</b>, aby zmienić krawędź / obrócić element przed postawieniem.<br/>
-          - Kliknij <b>Prawy Przycisk Myszy</b> na obiekcie, by go usunąć.<br/>
-          - Przytrzymaj tło i przeciągnij, by przesuwać kamerę.
+          <b>Instrukcja Budowania:</b><br/>
+          - Wybierz element z listy po lewej. (Wciśnij <b>[ESC]</b> by odznaczyć).<br/>
+          - Najedź na krawędź postawionego obiektu, by "przykleić" (Snap) kolejny.<br/>
+          - Wciśnij <b>[R]</b>, aby zmienić krawędź / obrócić element.<br/>
+          - Przytrzymaj <b>Prawy Przycisk Myszy (PPM)</b> na tle, by przesuwać kamerę.<br/>
+          - Aby usunąć obiekt, przytrzymaj na nim <b>Lewy Przycisk Myszy (LPM)</b> przez 2 sekundy (gdy nie masz wybranego klocka w ręce).<br/>
+          - Kółko myszy przybliża/oddala widok.
         </div>
       </div>
 
@@ -400,11 +424,12 @@ export default function BuilderPage() {
               const def = BUILD_ITEMS.find(d => d.id === item.itemId);
               if (!def) return null;
               const shapeClass = def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare;
+              const isDismantling = dismantlingId === item.id;
 
               return (
                 <div 
                   key={item.id}
-                  className={`${styles.placedItem} ${shapeClass}`}
+                  className={`${styles.placedItem} ${shapeClass} ${isDismantling ? styles.dismantling : ''}`}
                   data-material={def.materialClass}
                   style={{
                     left: `${item.x}px`,
@@ -414,7 +439,10 @@ export default function BuilderPage() {
                       : `translate(-50%, -50%) rotate(${item.rotation}deg)`,
                     backgroundColor: def.color
                   }}
-                  onContextMenu={(e) => handleItemRightClick(e, item.id)}
+                  onPointerDown={(e) => handleItemPointerDown(e, item.id)}
+                  onPointerUp={cancelDismantle}
+                  onPointerLeave={cancelDismantle}
+                  onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 />
               );
             })}
@@ -435,12 +463,12 @@ export default function BuilderPage() {
                     transform: def.shape === 'triangle' 
                       ? `translate(-50%, -66.666%) rotate(${previewItem.rotation}deg)` 
                       : `translate(-50%, -50%) rotate(${previewItem.rotation}deg)`,
-                    backgroundColor: def.color,
+                    backgroundColor: isValidPlacement ? def.color : '#ff4757',
                     opacity: 0.6,
                     zIndex: 1000,
                     pointerEvents: 'none',
-                    border: '2px solid #2ecc71',
-                    boxShadow: '0 0 20px rgba(46, 204, 113, 0.8)'
+                    border: isValidPlacement ? '2px solid #2ecc71' : '2px solid #ff4757',
+                    boxShadow: isValidPlacement ? '0 0 20px rgba(46, 204, 113, 0.8)' : '0 0 20px rgba(255, 71, 87, 0.8)'
                   }}
                 />
               );

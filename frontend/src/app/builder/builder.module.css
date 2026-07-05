@@ -68,7 +68,7 @@
   background-position: center;
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-  transition: transform 0.1s ease-out, filter 0.2s;
+  transition: transform 0.1s ease-out, filter 0.2s, opacity 0.2s;
 }
 
 .placedItem:hover {
@@ -250,4 +250,10 @@
   background: rgba(0,0,0,0.2);
   padding: 1rem;
   border-radius: 8px;
+}
+
+.dismantling {
+  transition: opacity 2s linear, filter 2s linear !important;
+  opacity: 0.2 !important;
+  filter: sepia(1) hue-rotate(-50deg) saturate(5) brightness(0.8) !important;
 }
