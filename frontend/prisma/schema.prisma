@@ -113,6 +113,7 @@ model MusicGroup {
 model BaseProject {
   id          String   @id @default(cuid())
   name        String   @default("Nowy Projekt")
+  description String?  @db.Text
   ownerId     String
   owner       User     @relation("ProjectOwner", fields: [ownerId], references: [id])
   data        String   @default("[]") // JSON array of PlacedItem

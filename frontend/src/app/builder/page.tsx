@@ -38,11 +38,15 @@ export default function BuilderDashboard() {
   };
 
   const createProject = async () => {
+    const name = window.prompt('Podaj nazwę projektu:', 'Nowy Projekt ' + new Date().toLocaleTimeString());
+    if (!name) return; // cancelled
+    const description = window.prompt('Podaj krótki opis (opcjonalnie):', '');
+    
     try {
       const res = await fetch('/api/builder/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Nowy Projekt ' + new Date().toLocaleTimeString() })
+        body: JSON.stringify({ name, description })
       });
       if (res.ok) {
         const p = await res.json();
@@ -165,7 +169,8 @@ export default function BuilderDashboard() {
                 }}
               >
                 <div>
-                  <h3 style={{ color: 'white', fontSize: '1.2rem', marginBottom: '0.5rem' }}>{p.name}</h3>
+                  <h3 style={{ color: 'white', fontSize: '1.2rem', marginBottom: '0.2rem' }}>{p.name}</h3>
+                  {p.description && <p style={{ color: '#ccc', fontSize: '0.9rem', marginBottom: '0.5rem', fontStyle: 'italic' }}>{p.description}</p>}
                   <p style={{ color: '#888', fontSize: '0.85rem' }}>Zaktualizowano: {new Date(p.updatedAt).toLocaleString()}</p>
                 </div>
                 

@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name = 'Nowy Projekt' } = body;
+    const { name = 'Nowy Projekt', description = '' } = body;
 
     // Create a random join code
     const joinCode = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -53,6 +53,7 @@ export async function POST(request: Request) {
     const project = await (prisma as any).baseProject.create({
       data: {
         name,
+        description,
         ownerId: userId,
         joinCode,
         data: '[]',

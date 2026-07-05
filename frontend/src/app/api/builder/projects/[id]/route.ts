@@ -66,11 +66,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const body = await request.json();
-    const { data } = body;
+    const { data, name, description } = body;
+
+    const updateData: any = {};
+    if (data !== undefined) updateData.data = JSON.stringify(data);
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
 
     const updated = await (prisma as any).baseProject.update({
       where: { id },
-      data: { data: JSON.stringify(data) }
+      data: updateData
     });
 
     return NextResponse.json({ success: true });

@@ -46,6 +46,7 @@ interface PlacedItem {
   x: number;
   y: number;
   rotation: number; // in degrees
+  customColor?: string; // custom tint color
 }
 
 const renderShapeInterior = (def: BuildItem) => {
@@ -136,8 +137,9 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const [isSyncing, setIsSyncing] = useState(false);
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
+  const [selectedColor, setSelectedColor] = useState<string>(''); // empty means default
   const lastSyncRef = useRef<string>('');
-  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ wood: true, metal: false, brick: false });
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ wood: true, metal: false, brick: false, color: true });
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/api/auth/signin');
@@ -160,6 +162,21 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         }
       } else {
         router.push('/builder');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const saveProjectInfo = async (name: string, description: string) => {
+    try {
+      const res = await fetch(`/api/builder/projects/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description })
+      });
+      if (res.ok) {
+        setProject((p: any) => ({ ...p, name, description }));
       }
     } catch (e) {
       console.error(e);
@@ -379,7 +396,8 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         itemId: previewItem!.itemId,
         x: previewItem!.x,
         y: previewItem!.y,
-        rotation: previewItem!.rotation
+        rotation: previewItem!.rotation,
+        customColor: selectedColor || undefined
       }]);
     }
   };
@@ -482,11 +500,11 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                       className={`${styles.itemButton} ${activeItem === item.id ? styles.active : ''}`}
                       onClick={() => setActiveItem(item.id)}
                     >
-                      <div className={styles.colorIndicator} style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                      <div className={styles.colorIndicator} style={{ backgroundColor: selectedColor || item.color }}>
                         <img 
                           src={item.texture} 
                           alt=""
-                          style={{ width: '100%', height: '100%', objectFit: 'contain', filter: item.imageFilter || 'none' }}
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', filter: item.imageFilter || 'none', mixBlendMode: selectedColor ? 'multiply' : 'normal' }}
                           onError={(e) => {
                             if (item.fallbackTexture && e.currentTarget.src !== item.fallbackTexture) {
                               e.currentTarget.src = item.fallbackTexture;
@@ -502,6 +520,33 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
             </div>
           );
         })}
+
+        <div className={styles.categoryGroup}>
+          <div className={styles.categoryHeader} onClick={() => setExpandedCats(p => ({ ...p, color: !p.color }))}>
+            KOLOROWANIE (MALOWANIE) <span>{expandedCats.color ? '▼' : '▶'}</span>
+          </div>
+          {expandedCats.color && (
+            <div className={styles.categoryContent} style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {['', '#ff4757', '#2ecc71', '#3498db', '#f1c40f', '#9b59b6', '#e67e22', '#34495e'].map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setSelectedColor(c)}
+                    style={{
+                      width: '32px', height: '32px', borderRadius: '4px', cursor: 'pointer',
+                      border: selectedColor === c ? '2px solid white' : '1px solid rgba(255,255,255,0.2)',
+                      backgroundColor: c || '#222',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      position: 'relative'
+                    }}
+                  >
+                    {!c && <span style={{ color: '#fff', fontSize: '10px' }}>OFF</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className={styles.sectionTitle} style={{ marginTop: '2rem' }}>Materiały (Koszt)</div>
         <div className={styles.materialsList}>
@@ -532,7 +577,24 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         <div className={styles.toolbar}>
           {project && (
              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'white' }}>
-               <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{project.name}</h2>
+               <div>
+                 <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                   {project.name}
+                   <button 
+                     onClick={() => {
+                       const newName = window.prompt('Zmień nazwę projektu:', project.name);
+                       if (newName !== null) {
+                         const newDesc = window.prompt('Zmień opis projektu:', project.description || '');
+                         saveProjectInfo(newName, newDesc || '');
+                       }
+                     }}
+                     style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', fontSize: '0.8rem' }}
+                   >
+                     (Edytuj)
+                   </button>
+                 </h2>
+                 {project.description && <span style={{ color: '#aaa', fontSize: '0.85rem' }}>{project.description}</span>}
+               </div>
                <span style={{ color: '#888', fontSize: '0.9rem' }}>Kod: {project.joinCode}</span>
                {isSyncing && <span style={{ color: '#2ecc71', fontSize: '0.8rem' }}>Zapisywanie...</span>}
              </div>
@@ -581,7 +643,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                     transform: def.shape === 'triangle' 
                       ? `translate(-50%, -66.666%) rotate(${item.rotation}deg)` 
                       : `translate(-50%, -50%) rotate(${item.rotation}deg)`,
-                    backgroundColor: def.color
+                    backgroundColor: item.customColor || def.color
                   }}
                   onPointerDown={(e) => handleItemPointerDown(e, item.id)}
                   onPointerUp={cancelDismantle}
@@ -609,7 +671,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                     transform: def.shape === 'triangle' 
                       ? `translate(-50%, -66.666%) rotate(${previewItem.rotation}deg)` 
                       : `translate(-50%, -50%) rotate(${previewItem.rotation}deg)`,
-                    backgroundColor: isValidPlacement ? def.color : '#ff4757',
+                    backgroundColor: isValidPlacement ? (selectedColor || def.color) : '#ff4757',
                     opacity: 0.6,
                     zIndex: 1000,
                     pointerEvents: 'none',
