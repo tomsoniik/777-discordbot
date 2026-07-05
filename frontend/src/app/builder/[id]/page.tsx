@@ -655,6 +655,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
           >
             {t('builder_clear_project')}
           </button>
+          </div>
         </div>
 
         <div 
