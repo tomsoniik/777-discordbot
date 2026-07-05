@@ -114,8 +114,6 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
     <div style={{ width: '100%', height: '100%', position: 'relative', background: '#0f0f14' }}>
       <Canvas shadows camera={{ position: [center[0], 15, center[2] + 15] as [number, number, number], fov: 45 }}>
         <color attach="background" args={['#0f0f14']} />
-        <fog attach="fog" args={['#0f0f14', 20, 100]} />
-        
         <ambientLight intensity={0.4} />
         <directionalLight 
           position={[10, 20, 10]} 
@@ -129,14 +127,14 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
 
         <Grid 
           position={[0, -0.01, 0]} 
-          args={[100, 100]} 
+          args={[200, 200]} 
           cellSize={0.6} 
           cellThickness={1} 
           cellColor="#2ecc71" 
           sectionSize={3} 
           sectionThickness={1.5} 
           sectionColor="#1a4a2c" 
-          fadeDistance={30} 
+          fadeDistance={100} 
           fadeStrength={1}
         />
 
