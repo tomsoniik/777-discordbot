@@ -19,7 +19,7 @@ export default function Navbar() {
   }
 
   const toggleLanguage = () => {
-    setLanguage(language === "pl" ? "en" : "pl");
+    setLanguage(language === "pl" ? "en" : language === "en" ? "ru" : "pl");
   };
 
   // Zamykanie menu po kliknieciu poza nim
@@ -139,7 +139,7 @@ export default function Navbar() {
           <div style={{ marginLeft: '1rem', display: 'flex', alignItems: 'center' }}>
             <button 
               onClick={toggleLanguage}
-              title={language === "pl" ? "Switch to English" : "Zmień na Polski"}
+              title={language === "pl" ? "Switch to English" : language === "en" ? "Переключить на русский" : "Zmień na Polski"}
               style={{
                 background: 'rgba(46, 204, 113, 0.1)', 
                 border: '1px solid var(--accent-green)', 
@@ -155,8 +155,8 @@ export default function Navbar() {
               }}
             >
               <img 
-                src={language === "pl" ? "https://flagcdn.com/pl.svg" : "https://flagcdn.com/gb.svg"} 
-                alt={language === "pl" ? "Polski" : "English"} 
+                src={language === "pl" ? "https://flagcdn.com/pl.svg" : language === "en" ? "https://flagcdn.com/gb.svg" : "https://flagcdn.com/ru.svg"} 
+                alt={language === "pl" ? "Polski" : language === "en" ? "English" : "Русский"} 
                 width="24" 
                 height="18"
                 style={{ borderRadius: '2px', display: 'block' }} 
