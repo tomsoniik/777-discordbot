@@ -4,13 +4,13 @@ import React, { useState, MouseEvent, useMemo, useRef, useEffect, use } from 're
 import styles from '../builder.module.css';
 import { useLanguage } from '@/context/LanguageContext';
 
-type ShapeType = 'square' | 'triangle';
+type ShapeType = 'square' | 'triangle' | 'bed';
 
 interface BuildItem {
   id: string;
   name: string;
   shape: ShapeType;
-  materialClass: 'wood' | 'metal' | 'brick';
+  materialClass: 'wood' | 'metal' | 'brick' | 'furniture';
   color: string;
   texture: string;
   fallbackTexture?: string;
@@ -38,6 +38,7 @@ const BUILD_ITEMS: BuildItem[] = [
   { id: 'b_roof', name: 'Brick Roof', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1984), fallbackTexture: getIconUrl(56), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'brick': 3 } },
   { id: 'b_roof_tri', name: 'Brick Tri Roof', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1985), fallbackTexture: getIconUrl(1268), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'brick': 2 } },
   { id: 'b_hole', name: 'Brick Hole', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1981), fallbackTexture: getIconUrl(320), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'brick': 3 } },
+  { id: 'f_bed', name: 'Claim Bed', shape: 'bed', materialClass: 'furniture', color: '#ff4757', texture: getIconUrl(288), costs: { 'cloth': 4 } }
 ];
 
 interface PlacedItem {
@@ -52,6 +53,20 @@ interface PlacedItem {
 const renderShapeInterior = (def: BuildItem) => {
   const isHole = def.id.includes('hole');
   const isTri = def.shape === 'triangle';
+  const isBed = def.shape === 'bed';
+
+  if (isBed) {
+    return (
+      <div style={{
+        width: '100%',
+        height: '100%',
+        backgroundImage: `url(${def.texture})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        filter: def.imageFilter
+      }} />
+    );
+  }
 
   if (isHole) {
     return (
@@ -82,6 +97,7 @@ function normalizeAngle(a: number) {
 }
 
 function getEdges(shape: ShapeType, cx: number, cy: number, rotation: number) {
+  if (shape === 'bed') return [];
   const rad = (rotation * Math.PI) / 180;
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
@@ -109,6 +125,7 @@ function getEdges(shape: ShapeType, cx: number, cy: number, rotation: number) {
 
 // Fixed get edges for base shape at (0,0) rot 0
 function getBaseEdges(shape: ShapeType) {
+  if (shape === 'bed') return [];
   if (shape === 'square') {
     return [
       { x: 0, y: -30, angle: 270 },
@@ -378,7 +395,9 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         const shape2 = itemDef.shape;
         
         let minDist = 0;
-        if (shape1 === 'square' && shape2 === 'square') {
+        if (shape1 === 'bed' || shape2 === 'bed') {
+          minDist = 15; // Beds can be close to things
+        } else if (shape1 === 'square' && shape2 === 'square') {
           minDist = 58; // 60 is minimum valid (edge shared)
         } else if (shape1 === 'triangle' && shape2 === 'triangle') {
           minDist = 33; // 34.64 is minimum valid (edge shared)
@@ -678,12 +697,28 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
             {placedItems.map(item => {
               const def = BUILD_ITEMS.find(d => d.id === item.itemId);
               if (!def) return null;
-              const shapeClass = def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare;
+              const isBed = def.shape === 'bed';
+              const shapeClass = isBed ? styles.shapeBed : (def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare);
               const isDismantling = dismantlingId === item.id;
 
               return (
-                <div 
-                  key={item.id}
+                <React.Fragment key={item.id}>
+                  {isBed && (
+                    <div style={{
+                      position: 'absolute',
+                      left: `${item.x}px`,
+                      top: `${item.y}px`,
+                      width: '540px',
+                      height: '540px',
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(46, 204, 113, 0.05)',
+                      border: '2px dashed rgba(46, 204, 113, 0.3)',
+                      transform: 'translate(-50%, -50%)',
+                      pointerEvents: 'none',
+                      zIndex: 1
+                    }} />
+                  )}
+                  <div 
                   className={`${styles.placedItem} ${shapeClass} ${isDismantling ? styles.dismantling : ''}`}
                   data-material={def.materialClass}
                   style={{
@@ -700,6 +735,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                 >
                   {renderShapeInterior(def)}
                 </div>
+              </React.Fragment>
               );
             })}
 
@@ -707,11 +743,28 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
             {activeItem && previewItem && (() => {
               const def = BUILD_ITEMS.find(d => d.id === previewItem.itemId);
               if (!def) return null;
-              const shapeClass = def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare;
+              const isBed = def.shape === 'bed';
+              const shapeClass = isBed ? styles.shapeBed : (def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare);
 
               return (
-                <div 
-                  className={`${styles.placedItem} ${shapeClass}`}
+                <React.Fragment key="preview">
+                  {isBed && (
+                    <div style={{
+                      position: 'absolute',
+                      left: `${previewItem.x}px`,
+                      top: `${previewItem.y}px`,
+                      width: '540px',
+                      height: '540px',
+                      borderRadius: '50%',
+                      backgroundColor: isValidPlacement ? 'rgba(46, 204, 113, 0.1)' : 'rgba(255, 71, 87, 0.1)',
+                      border: isValidPlacement ? '2px dashed rgba(46, 204, 113, 0.5)' : '2px dashed rgba(255, 71, 87, 0.5)',
+                      transform: 'translate(-50%, -50%)',
+                      pointerEvents: 'none',
+                      zIndex: 1
+                    }} />
+                  )}
+                  <div 
+                    className={`${styles.placedItem} ${shapeClass}`}
                   data-material={def.materialClass}
                   style={{
                     left: `${previewItem.x}px`,
@@ -729,6 +782,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                 >
                   {renderShapeInterior(def)}
                 </div>
+              </React.Fragment>
               );
             })()}
 

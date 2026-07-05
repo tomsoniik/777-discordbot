@@ -6,7 +6,7 @@ import { OrbitControls, Grid, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Re-using types from the builder
-export type ShapeType = 'square' | 'triangle';
+export type ShapeType = 'square' | 'triangle' | 'bed';
 
 export interface BuildItem {
   id: string;
@@ -65,8 +65,37 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
     color.multiplyScalar(1.2);
   }
 
-  // Draw square or triangle
-  if (def.shape === 'square') {
+  // Draw square or triangle or bed
+  if (def.shape === 'bed') {
+    const bedWidth = 20 * scale;
+    const bedLength = 40 * scale;
+    const bedHeight = 0.2;
+    const bedPosY = bedHeight / 2;
+
+    const radius = 270 * scale; // 4.5 foundations
+
+    return (
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        {/* The Bed itself */}
+        <mesh position={[0, bedPosY, 0]} castShadow receiveShadow>
+          <boxGeometry args={[bedWidth, bedHeight, bedLength]} />
+          <meshStandardMaterial color={color} roughness={0.9} />
+        </mesh>
+        
+        {/* Protection Radius Area */}
+        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[radius, 32]} />
+          <meshBasicMaterial color="#2ecc71" transparent opacity={0.1} depthWrite={false} />
+        </mesh>
+        
+        {/* Protection Radius Border */}
+        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[radius - 0.1, radius, 64]} />
+          <meshBasicMaterial color="#2ecc71" transparent opacity={0.3} depthWrite={false} />
+        </mesh>
+      </group>
+    );
+  } else if (def.shape === 'square') {
     return (
       <mesh position={[posX, posY, posZ]} rotation={[0, rotY, 0]} castShadow receiveShadow>
         <boxGeometry args={[width, height, length]} />
