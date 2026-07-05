@@ -4,6 +4,7 @@ import "./globals.css";
 import { LanguageProvider } from "@/context/LanguageContext";
 import Navbar from "@/components/Navbar";
 import { SessionProvider } from "@/components/SessionProvider";
+import Notifications from "@/components/Notifications";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +33,7 @@ export default function RootLayout({
           <LanguageProvider>
             <Navbar />
             {children}
+            <Notifications />
           </LanguageProvider>
         </SessionProvider>
       </body>

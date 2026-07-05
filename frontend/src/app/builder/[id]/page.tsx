@@ -127,10 +127,12 @@ function getBaseEdges(shape: ShapeType) {
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useAppStore } from '@/store/useAppStore';
 
 export default function BuilderCanvas({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { t } = useLanguage();
+  const { addNotification } = useAppStore();
   const { data: session, status } = useSession();
   const router = useRouter();
   const [project, setProject] = useState<any>(null);
@@ -140,6 +142,10 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const [selectedColor, setSelectedColor] = useState<string>(''); // empty means default
   const lastSyncRef = useRef<string>('');
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ wood: true, metal: false, brick: false, color: true });
+
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/api/auth/signin');
@@ -177,9 +183,13 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
       });
       if (res.ok) {
         setProject((p: any) => ({ ...p, name, description }));
+        addNotification(t('successSubmit') || "Zapisano pomyślnie!", "success");
+      } else {
+        addNotification(t('errorOccurred') || "Wystąpił błąd", "error");
       }
     } catch (e) {
       console.error(e);
+      addNotification(t('errorSending') || "Błąd wysyłania", "error");
     }
   };
 
@@ -296,7 +306,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
 
   if (selectedItemDef) {
     let closestEdge = null;
-    let minDist = 40; // snap threshold
+    let minDist = 20; // snap threshold
 
     // Find closest placed edge
     placedItems.forEach(item => {
@@ -578,24 +588,45 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
           {project && (
              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'white' }}>
                <div>
-                 <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                   {project.name}
-                   <button 
-                     onClick={() => {
-                       const newName = window.prompt(t('prompt_edit_name'), project.name);
-                       if (newName !== null) {
-                         const newDesc = window.prompt(t('prompt_edit_desc'), project.description || '');
-                         saveProjectInfo(newName, newDesc || '');
-                       }
-                     }}
-                     style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', fontSize: '0.8rem' }}
-                   >
-                     {t('builder_edit')}
-                   </button>
-                 </h2>
-                 {project.description && <span style={{ color: '#aaa', fontSize: '0.85rem' }}>{project.description}</span>}
+                 {isEditingInfo ? (
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                     <input 
+                       value={editName}
+                       onChange={(e) => setEditName(e.target.value)}
+                       style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid #2ecc71', color: 'white', padding: '0.3rem 0.5rem', borderRadius: '4px', fontSize: '1.1rem', width: '250px' }}
+                       placeholder={t('prompt_new_name')}
+                     />
+                     <input 
+                       value={editDesc}
+                       onChange={(e) => setEditDesc(e.target.value)}
+                       style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid #1a4a2c', color: '#aaa', padding: '0.3rem 0.5rem', borderRadius: '4px', fontSize: '0.85rem', width: '250px' }}
+                       placeholder={t('prompt_new_desc')}
+                     />
+                     <div style={{ display: 'flex', gap: '0.5rem' }}>
+                       <button onClick={() => { saveProjectInfo(editName, editDesc); setIsEditingInfo(false); }} style={{ background: '#2ecc71', border: 'none', color: '#000', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Zapisz</button>
+                       <button onClick={() => setIsEditingInfo(false)} style={{ background: 'transparent', border: '1px solid #ff4757', color: '#ff4757', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer' }}>Anuluj</button>
+                     </div>
+                   </div>
+                 ) : (
+                   <>
+                     <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                       {project.name}
+                       <button 
+                         onClick={() => {
+                           setEditName(project.name);
+                           setEditDesc(project.description || '');
+                           setIsEditingInfo(true);
+                         }}
+                         style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', fontSize: '0.8rem' }}
+                       >
+                         {t('builder_edit')}
+                       </button>
+                     </h2>
+                     {project.description && <span style={{ color: '#aaa', fontSize: '0.85rem' }}>{project.description}</span>}
+                   </>
+                 )}
                </div>
-               <span style={{ color: '#888', fontSize: '0.9rem' }}>{t('builder_code')} {project.joinCode}</span>
+               <span style={{ color: '#888', fontSize: '0.9rem', marginLeft: '1rem' }}>{t('builder_code')} {project.joinCode}</span>
                {isSyncing && <span style={{ color: '#2ecc71', fontSize: '0.8rem' }}>{t('builder_saving')}</span>}
              </div>
           )}
@@ -647,7 +678,6 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                   }}
                   onPointerDown={(e) => handleItemPointerDown(e, item.id)}
                   onPointerUp={cancelDismantle}
-                  onPointerLeave={cancelDismantle}
                   onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 >
                   {renderShapeInterior(def)}
