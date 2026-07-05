@@ -9,7 +9,7 @@ interface BuildItem {
   id: string;
   name: string;
   shape: ShapeType;
-  materialClass: 'wood' | 'metal';
+  materialClass: 'wood' | 'metal' | 'brick';
   color: string;
   texture: string;
   costs: Record<string, number>;
@@ -29,6 +29,12 @@ const BUILD_ITEMS: BuildItem[] = [
   { id: 'm_roof', name: 'Metal Roof', shape: 'square', materialClass: 'metal', color: '#808080', texture: getIconUrl(370), costs: { 'Metal Sheet': 3 } },
   { id: 'm_roof_tri', name: 'Metal Tri Roof', shape: 'triangle', materialClass: 'metal', color: '#808080', texture: getIconUrl(1269), costs: { 'Metal Sheet': 2 } },
   { id: 'm_hole', name: 'Metal Hole', shape: 'square', materialClass: 'metal', color: '#696969', texture: getIconUrl(374), costs: { 'Metal Sheet': 3 } },
+
+  { id: 'b_found', name: 'Brick Foundation', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1215), costs: { 'Bricks': 3 } },
+  { id: 'b_found_tri', name: 'Brick Tri Foundation', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1215), costs: { 'Bricks': 2 } },
+  { id: 'b_roof', name: 'Brick Roof', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(59452), costs: { 'Bricks': 3 } },
+  { id: 'b_roof_tri', name: 'Brick Tri Roof', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(59453), costs: { 'Bricks': 2 } },
+  { id: 'b_hole', name: 'Brick Hole', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1215), costs: { 'Bricks': 3 } },
 ];
 
 interface PlacedItem {
@@ -96,6 +102,7 @@ function getBaseEdges(shape: ShapeType) {
 export default function BuilderPage() {
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ wood: true, metal: false, brick: false });
   
   // Canvas View State
   const [pan, setPan] = useState({ 
@@ -301,26 +308,40 @@ export default function BuilderPage() {
     <div className={styles.container}>
       <div className={styles.sidebar}>
         <div className={styles.sectionTitle}>Budulec</div>
-        {BUILD_ITEMS.map(item => (
-          <button
-            key={item.id}
-            className={`${styles.itemButton} ${activeItem === item.id ? styles.active : ''}`}
-            onClick={() => {
-              setActiveItem(item.id);
-            }}
-          >
-            <div 
-              className={styles.colorIndicator} 
-              style={{ 
-                backgroundColor: item.color,
-                backgroundImage: `url(${item.texture})`,
-                borderRadius: item.shape === 'triangle' ? '0' : '4px',
-                clipPath: item.shape === 'triangle' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : 'none'
-              }} 
-            />
-            {item.name}
-          </button>
-        ))}
+        
+        {['wood', 'metal', 'brick'].map(cat => {
+          const isExpanded = expandedCats[cat];
+          return (
+            <div key={cat} className={styles.categoryGroup}>
+              <div 
+                className={styles.categoryHeader} 
+                onClick={() => setExpandedCats(p => ({ ...p, [cat]: !p[cat] }))}
+              >
+                {cat.toUpperCase()} <span>{isExpanded ? '▼' : '▶'}</span>
+              </div>
+              {isExpanded && (
+                <div className={styles.categoryContent}>
+                  {BUILD_ITEMS.filter(i => i.materialClass === cat).map(item => (
+                    <button
+                      key={item.id}
+                      className={`${styles.itemButton} ${activeItem === item.id ? styles.active : ''}`}
+                      onClick={() => setActiveItem(item.id)}
+                    >
+                      <div 
+                        className={styles.colorIndicator} 
+                        style={{ 
+                          backgroundColor: 'rgba(0,0,0,0.2)',
+                          backgroundImage: `url(${item.texture})`
+                        }} 
+                      />
+                      {item.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         <div className={styles.sectionTitle} style={{ marginTop: '2rem' }}>Materiały (Koszt)</div>
         <div className={styles.materialsList}>
