@@ -112,6 +112,17 @@ export default function BuilderPage() {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Prevent default scrolling on wheel
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const preventScroll = (e: WheelEvent) => {
+      e.preventDefault();
+    };
+    el.addEventListener('wheel', preventScroll, { passive: false });
+    return () => el.removeEventListener('wheel', preventScroll);
+  }, []);
+
   // Handle keyboard rotation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
