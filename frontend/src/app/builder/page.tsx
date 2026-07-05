@@ -18,23 +18,23 @@ interface BuildItem {
 const getIconUrl = (id: number) => `https://cdn.jsdelivr.net/gh/SilKsPlugins/UnturnedImages@images/vanilla/items/${id}.png`;
 
 const BUILD_ITEMS: BuildItem[] = [
-  { id: 'w_found', name: 'Pine Foundation', shape: 'square', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(31), costs: { 'Pine Log': 3 } },
-  { id: 'w_found_tri', name: 'Pine Tri Foundation', shape: 'triangle', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(1266), costs: { 'Pine Log': 2 } },
-  { id: 'w_roof', name: 'Pine Roof', shape: 'square', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(32), costs: { 'Pine Log': 3 } },
-  { id: 'w_roof_tri', name: 'Pine Tri Roof', shape: 'triangle', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(1262), costs: { 'Pine Log': 2 } },
-  { id: 'w_hole', name: 'Pine Hole', shape: 'square', materialClass: 'wood', color: '#A0522D', texture: getIconUrl(316), costs: { 'Pine Log': 3 } },
+  { id: 'w_found', name: 'Pine Foundation', shape: 'square', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(52), costs: { 'Pine Log': 3 } },
+  { id: 'w_found_tri', name: 'Pine Tri Foundation', shape: 'triangle', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(1264), costs: { 'Pine Log': 2 } },
+  { id: 'w_roof', name: 'Pine Roof', shape: 'square', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(56), costs: { 'Pine Log': 3 } },
+  { id: 'w_roof_tri', name: 'Pine Tri Roof', shape: 'triangle', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(1268), costs: { 'Pine Log': 2 } },
+  { id: 'w_hole', name: 'Pine Hole', shape: 'square', materialClass: 'wood', color: '#A0522D', texture: getIconUrl(320), costs: { 'Pine Log': 3 } },
   
   { id: 'm_found', name: 'Metal Foundation', shape: 'square', materialClass: 'metal', color: '#708090', texture: getIconUrl(369), costs: { 'Metal Sheet': 3 } },
-  { id: 'm_found_tri', name: 'Metal Tri Foundation', shape: 'triangle', materialClass: 'metal', color: '#708090', texture: getIconUrl(1268), costs: { 'Metal Sheet': 2 } },
-  { id: 'm_roof', name: 'Metal Roof', shape: 'square', materialClass: 'metal', color: '#808080', texture: getIconUrl(370), costs: { 'Metal Sheet': 3 } },
+  { id: 'm_found_tri', name: 'Metal Tri Foundation', shape: 'triangle', materialClass: 'metal', color: '#708090', texture: getIconUrl(1265), costs: { 'Metal Sheet': 2 } },
+  { id: 'm_roof', name: 'Metal Roof', shape: 'square', materialClass: 'metal', color: '#808080', texture: getIconUrl(373), costs: { 'Metal Sheet': 3 } },
   { id: 'm_roof_tri', name: 'Metal Tri Roof', shape: 'triangle', materialClass: 'metal', color: '#808080', texture: getIconUrl(1269), costs: { 'Metal Sheet': 2 } },
-  { id: 'm_hole', name: 'Metal Hole', shape: 'square', materialClass: 'metal', color: '#696969', texture: getIconUrl(374), costs: { 'Metal Sheet': 3 } },
+  { id: 'm_hole', name: 'Metal Hole', shape: 'square', materialClass: 'metal', color: '#696969', texture: getIconUrl(376), costs: { 'Metal Sheet': 3 } },
 
-  { id: 'b_found', name: 'Brick Foundation', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1215), costs: { 'Bricks': 3 } },
-  { id: 'b_found_tri', name: 'Brick Tri Foundation', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1215), costs: { 'Bricks': 2 } },
-  { id: 'b_roof', name: 'Brick Roof', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(59452), costs: { 'Bricks': 3 } },
-  { id: 'b_roof_tri', name: 'Brick Tri Roof', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(59453), costs: { 'Bricks': 2 } },
-  { id: 'b_hole', name: 'Brick Hole', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1215), costs: { 'Bricks': 3 } },
+  { id: 'b_found', name: 'Brick Foundation', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1979), costs: { 'Bricks': 3 } },
+  { id: 'b_found_tri', name: 'Brick Tri Foundation', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1980), costs: { 'Bricks': 2 } },
+  { id: 'b_roof', name: 'Brick Roof', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1984), costs: { 'Bricks': 3 } },
+  { id: 'b_roof_tri', name: 'Brick Tri Roof', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1985), costs: { 'Bricks': 2 } },
+  { id: 'b_hole', name: 'Brick Hole', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1981), costs: { 'Bricks': 3 } },
 ];
 
 interface PlacedItem {
