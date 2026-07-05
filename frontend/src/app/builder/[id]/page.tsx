@@ -328,19 +328,21 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     let minDist = 20; // snap threshold
 
     // Find closest placed edge
-    placedItems.forEach(item => {
-      const def = BUILD_ITEMS.find(d => d.id === item.itemId);
-      if (!def) return;
-      
-      const edges = getEdges(def.shape, item.x, item.y, item.rotation);
-      edges.forEach(edge => {
-        const dist = Math.hypot(edge.x - mousePos.x, edge.y - mousePos.y);
-        if (dist < minDist) {
-          minDist = dist;
-          closestEdge = edge;
-        }
+    if (selectedItemDef.shape !== 'bed') {
+      placedItems.forEach(item => {
+        const def = BUILD_ITEMS.find(d => d.id === item.itemId);
+        if (!def) return;
+        
+        const edges = getEdges(def.shape, item.x, item.y, item.rotation);
+        edges.forEach(edge => {
+          const dist = Math.hypot(edge.x - mousePos.x, edge.y - mousePos.y);
+          if (dist < minDist) {
+            minDist = dist;
+            closestEdge = edge;
+          }
+        });
       });
-    });
+    }
 
     if (closestEdge) {
       // Snap to edge
