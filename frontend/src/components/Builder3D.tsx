@@ -37,7 +37,33 @@ interface Builder3DProps {
 const SIDE = 60;
 const TRI_H = (SIDE * Math.sqrt(3)) / 2; // 51.9615
 
-const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
+const getBedElevation = (bedItem: PlacedItem, allPlacedItems: PlacedItem[], allBuildItems: BuildItem[]) => {
+  let maxY = 0.4;
+  let closestDist = Infinity;
+  let closestTopY = 0.4;
+  
+  allPlacedItems.forEach(other => {
+    if (other.id === bedItem.id) return;
+    const otherDef = allBuildItems.find(d => d.id === other.itemId);
+    if (!otherDef || otherDef.shape === 'bed') return;
+    
+    const dist = Math.hypot(other.x - bedItem.x, other.y - bedItem.y);
+    if (dist < closestDist) {
+      closestDist = dist;
+      const isRoof = otherDef.id.includes('roof') || otherDef.id.includes('hole');
+      const heightOffset = isRoof ? 3.0 : 0.0;
+      const height = isRoof ? 0.2 : 0.4;
+      closestTopY = heightOffset + height;
+    }
+  });
+  
+  if (closestDist <= 40) {
+    maxY = closestTopY;
+  }
+  return maxY;
+};
+
+const Item3D = ({ item, def, allPlacedItems, allBuildItems }: { item: PlacedItem, def: BuildItem, allPlacedItems: PlacedItem[], allBuildItems: BuildItem[] }) => {
   // Convert 2D canvas coordinates to 3D world coordinates
   // Note: Canvas y goes down, 3D z goes back. Let's map (x, y) to (x, 0, z)
   // Scaling down by a factor of 10 to keep 3D units reasonable (e.g. 60px -> 6 units)
@@ -71,7 +97,7 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
     const bedLength = 40 * scale;
     const bedHeight = 0.2;
     const bedPosY = bedHeight / 2;
-    const bedBaseY = 0.4; // Place on top of foundations
+    const bedBaseY = getBedElevation(item, allPlacedItems, allBuildItems); // Place on top of closest structure
 
     const radius = 270 * scale; // 4.5 foundations
 
@@ -174,7 +200,7 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
           {placedItems.map(item => {
             const def = buildItems.find(d => d.id === item.itemId);
             if (!def) return null;
-            return <Item3D key={item.id} item={item} def={def} />;
+            return <Item3D key={item.id} item={item} def={def} allPlacedItems={placedItems} allBuildItems={buildItems} />;
           })}
         </group>
       </Canvas>
