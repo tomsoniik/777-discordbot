@@ -523,7 +523,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
 
         <div className={styles.categoryGroup}>
           <div className={styles.categoryHeader} onClick={() => setExpandedCats(p => ({ ...p, color: !p.color }))}>
-            KOLOROWANIE (MALOWANIE) <span>{expandedCats.color ? '▼' : '▶'}</span>
+            {t('builder_painting')} <span>{expandedCats.color ? '▼' : '▶'}</span>
           </div>
           {expandedCats.color && (
             <div className={styles.categoryContent} style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -540,7 +540,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                       position: 'relative'
                     }}
                   >
-                    {!c && <span style={{ color: '#fff', fontSize: '10px' }}>OFF</span>}
+                    {!c && <span style={{ color: '#fff', fontSize: '10px' }}>{t('builder_off')}</span>}
                   </button>
                 ))}
               </div>
@@ -548,14 +548,14 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
           )}
         </div>
 
-        <div className={styles.sectionTitle} style={{ marginTop: '2rem' }}>Materiały (Koszt)</div>
+        <div className={styles.sectionTitle} style={{ marginTop: '2rem' }}>{t('builder_cost')}</div>
         <div className={styles.materialsList}>
           {Object.keys(totalMaterials).length === 0 ? (
-            <div style={{ color: '#aaa', fontStyle: 'italic' }}>Brak postawionych struktur.</div>
+            <div style={{ color: '#aaa', fontStyle: 'italic' }}>{t('builder_empty')}</div>
           ) : (
             Object.entries(totalMaterials).map(([mat, qty]) => (
               <div key={mat} className={styles.materialRow}>
-                <span>{mat}</span>
+                <span>{t(mat)}</span>
                 <span style={{ fontWeight: 'bold', color: '#2ecc71' }}>{qty}</span>
               </div>
             ))
@@ -582,21 +582,21 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                    {project.name}
                    <button 
                      onClick={() => {
-                       const newName = window.prompt('Zmień nazwę projektu:', project.name);
+                       const newName = window.prompt(t('prompt_edit_name'), project.name);
                        if (newName !== null) {
-                         const newDesc = window.prompt('Zmień opis projektu:', project.description || '');
+                         const newDesc = window.prompt(t('prompt_edit_desc'), project.description || '');
                          saveProjectInfo(newName, newDesc || '');
                        }
                      }}
                      style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', fontSize: '0.8rem' }}
                    >
-                     (Edytuj)
+                     {t('builder_edit')}
                    </button>
                  </h2>
                  {project.description && <span style={{ color: '#aaa', fontSize: '0.85rem' }}>{project.description}</span>}
                </div>
-               <span style={{ color: '#888', fontSize: '0.9rem' }}>Kod: {project.joinCode}</span>
-               {isSyncing && <span style={{ color: '#2ecc71', fontSize: '0.8rem' }}>Zapisywanie...</span>}
+               <span style={{ color: '#888', fontSize: '0.9rem' }}>{t('builder_code')} {project.joinCode}</span>
+               {isSyncing && <span style={{ color: '#2ecc71', fontSize: '0.8rem' }}>{t('builder_saving')}</span>}
              </div>
           )}
           <button 
@@ -608,7 +608,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
               }
             }}
           >
-            Wyczyść projekt
+            {t('builder_clear_project')}
           </button>
         </div>
 

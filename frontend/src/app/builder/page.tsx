@@ -38,9 +38,9 @@ export default function BuilderDashboard() {
   };
 
   const createProject = async () => {
-    const name = window.prompt('Podaj nazwę projektu:', 'Nowy Projekt ' + new Date().toLocaleTimeString());
+    const name = window.prompt(t('prompt_new_name'), t('builder_new_project') + ' ' + new Date().toLocaleTimeString());
     if (!name) return; // cancelled
-    const description = window.prompt('Podaj krótki opis (opcjonalnie):', '');
+    const description = window.prompt(t('prompt_new_desc'), '');
     
     try {
       const res = await fetch('/api/builder/projects', {
@@ -69,7 +69,7 @@ export default function BuilderDashboard() {
         const p = await res.json();
         router.push(`/builder/${p.id}`);
       } else {
-        alert('Nie udało się dołączyć. Sprawdź kod.');
+        alert(t('prompt_join_error'));
       }
     } catch (e) {
       console.error(e);
@@ -83,7 +83,7 @@ export default function BuilderDashboard() {
   return (
     <div className="container" style={{ padding: '2rem', paddingTop: '100px', minHeight: '100vh', color: 'white' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>Projekty Baz (Planner)</h1>
+        <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{t('builder_projects_title')}</h1>
         
         <button 
           onClick={createProject}
@@ -102,20 +102,20 @@ export default function BuilderDashboard() {
           onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
           onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
         >
-          <Add size="24" /> Nowy Projekt
+          <Add size="24" /> {t('builder_new_project')}
         </button>
       </div>
 
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '3rem', background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ flex: 1 }}>
-          <h3 style={{ marginBottom: '0.5rem', color: '#ccc' }}>Dołącz do projektu grupowego</h3>
-          <p style={{ fontSize: '0.9rem', color: '#888', marginBottom: '1rem' }}>Wpisz kod dostępu, aby współtworzyć bazę ze znajomymi.</p>
+          <h3 style={{ marginBottom: '0.5rem', color: '#ccc' }}>{t('builder_join_group')}</h3>
+          <p style={{ fontSize: '0.9rem', color: '#888', marginBottom: '1rem' }}>{t('builder_join_desc')}</p>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <input 
               type="text" 
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value)}
-              placeholder="Kod np. ABC123XYZ"
+              placeholder={t('builder_join_placeholder')}
               style={{
                 background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)',
                 padding: '10px 16px', borderRadius: '8px', color: 'white', flex: 1, textTransform: 'uppercase'
@@ -128,19 +128,19 @@ export default function BuilderDashboard() {
                 padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
               }}
             >
-              Dołącz
+              {t('builder_join_btn')}
             </button>
           </div>
         </div>
       </div>
 
-      <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>Twoje i współdzielone projekty</h2>
+      <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>{t('builder_your_projects')}</h2>
       
       {projects.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px dashed rgba(255,255,255,0.1)' }}>
           <FolderOpen size="48" color="#555" style={{ marginBottom: '1rem' }} />
-          <h3 style={{ color: '#aaa', marginBottom: '0.5rem' }}>Brak projektów</h3>
-          <p style={{ color: '#666' }}>Utwórz nowy projekt, aby zacząć budować.</p>
+          <h3 style={{ color: '#aaa', marginBottom: '0.5rem' }}>{t('builder_no_projects')}</h3>
+          <p style={{ color: '#666' }}>{t('builder_no_projects_desc')}</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
@@ -171,7 +171,7 @@ export default function BuilderDashboard() {
                 <div>
                   <h3 style={{ color: 'white', fontSize: '1.2rem', marginBottom: '0.2rem' }}>{p.name}</h3>
                   {p.description && <p style={{ color: '#ccc', fontSize: '0.9rem', marginBottom: '0.5rem', fontStyle: 'italic' }}>{p.description}</p>}
-                  <p style={{ color: '#888', fontSize: '0.85rem' }}>Zaktualizowano: {new Date(p.updatedAt).toLocaleString()}</p>
+                  <p style={{ color: '#888', fontSize: '0.85rem' }}>{t('builder_updated')} {new Date(p.updatedAt).toLocaleString()}</p>
                 </div>
                 
                 <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -187,7 +187,7 @@ export default function BuilderDashboard() {
                 </div>
                 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(46, 204, 113, 0.1)', padding: '6px 10px', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--accent-green)', marginTop: '0.5rem' }}>
-                  <LinkIcon size="14" /> Kod: {p.joinCode}
+                  <LinkIcon size="14" /> {t('builder_code')} {p.joinCode}
                 </div>
               </div>
             </Link>
