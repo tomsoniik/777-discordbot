@@ -156,6 +156,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const [project, setProject] = useState<any>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [activeItem, setActiveItem] = useState<string | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
   const [selectedColor, setSelectedColor] = useState<string>(''); // empty means default
   const lastSyncRef = useRef<string>('');
@@ -272,9 +273,6 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const [scale, setScale] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   
-  const [dismantlingId, setDismantlingId] = useState<string | null>(null);
-  const dismantleTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
   // Placement State
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [activeEdgeIndex, setActiveEdgeIndex] = useState(0); // for rotating the active item during placement
@@ -300,6 +298,13 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setActiveItem(null);
+        setSelectedItemId(null);
+      }
+      if (e.key === 'Delete') {
+        if (selectedItemId) {
+          setPlacedItems(prev => prev.filter(i => i.id !== selectedItemId));
+          setSelectedItemId(null);
+        }
       }
       if (e.key === 'r' || e.key === 'R') {
         if (activeItem) {
@@ -314,7 +319,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeItem]);
+  }, [activeItem, selectedItemId]);
 
   const selectedItemDef = BUILD_ITEMS.find(i => i.id === activeItem);
 
@@ -423,6 +428,10 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
       return;
     }
 
+    if (e.button === 0 && selectedItemId) {
+      setSelectedItemId(null);
+    }
+
     if (activeItem && previewItem && isValidPlacement && e.button === 0) {
       // Place item
       setPlacedItems(prev => [...prev, {
@@ -481,20 +490,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const handleItemPointerDown = (e: React.PointerEvent, id: string) => {
     if (e.button !== 0 || activeItem !== null) return;
     e.stopPropagation();
-    
-    setDismantlingId(id);
-    dismantleTimerRef.current = setTimeout(() => {
-      setPlacedItems(prev => prev.filter(i => i.id !== id));
-      setDismantlingId(null);
-    }, 2000);
-  };
-
-  const cancelDismantle = () => {
-    if (dismantleTimerRef.current) {
-      clearTimeout(dismantleTimerRef.current);
-      dismantleTimerRef.current = null;
-    }
-    setDismantlingId(null);
+    setSelectedItemId(id);
   };
 
   // Calculate Materials
@@ -702,7 +698,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
               if (!def) return null;
               const isBed = def.shape === 'bed';
               const shapeClass = isBed ? styles.shapeBed : (def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare);
-              const isDismantling = dismantlingId === item.id;
+              const isSelected = selectedItemId === item.id;
 
               return (
                 <React.Fragment key={item.id}>
@@ -722,7 +718,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                     }} />
                   )}
                   <div 
-                  className={`${styles.placedItem} ${shapeClass} ${isDismantling ? styles.dismantling : ''}`}
+                  className={`${styles.placedItem} ${shapeClass} ${isSelected ? styles.selected : ''}`}
                   data-material={def.materialClass}
                   style={{
                     left: `${item.x}px`,
@@ -733,7 +729,6 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                     backgroundColor: item.customColor || def.color
                   }}
                   onPointerDown={(e) => handleItemPointerDown(e, item.id)}
-                  onPointerUp={cancelDismantle}
                   onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 >
                   {renderShapeInterior(def)}
