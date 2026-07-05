@@ -12,8 +12,10 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
     "@prisma/client": "^5.22.0",
+    "@react-three/csg": "^4.0.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
+    "@react-three/rapier": "^2.2.0",
     "discord-interactions": "^4.4.0",
     "iconsax-react": "^0.0.8",
     "next": "16.2.9",
@@ -22,6 +24,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "three": "^0.185.1",
+    "three-csg-ts": "^3.2.0",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

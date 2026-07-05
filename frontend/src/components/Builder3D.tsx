@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
+import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
+import { Geometry, Base, Subtraction } from '@react-three/csg';
 import * as THREE from 'three';
 
 // Re-using types from the builder
@@ -34,50 +36,15 @@ interface Builder3DProps {
   buildItems: BuildItem[];
 }
 
-const SIDE = 60;
-const TRI_H = (SIDE * Math.sqrt(3)) / 2; // 51.9615
-
-const getBedElevation = (bedItem: PlacedItem, allPlacedItems: PlacedItem[], allBuildItems: BuildItem[]) => {
-  let maxY = 0.4;
-  let closestDist = Infinity;
-  let closestTopY = 0.4;
-  
-  allPlacedItems.forEach(other => {
-    if (other.id === bedItem.id) return;
-    const otherDef = allBuildItems.find(d => d.id === other.itemId);
-    if (!otherDef || otherDef.shape === 'bed') return;
-    
-    const dist = Math.hypot(other.x - bedItem.x, other.y - bedItem.y);
-    if (dist < closestDist) {
-      closestDist = dist;
-      const isRoof = otherDef.id.includes('roof') || otherDef.id.includes('hole');
-      const heightOffset = isRoof ? 3.0 : 0.0;
-      const height = isRoof ? 0.2 : 0.4;
-      closestTopY = heightOffset + height;
-    }
-  });
-  
-  if (closestDist <= 40) {
-    maxY = closestTopY;
-  }
-  return maxY;
-};
-
-const Item3D = ({ item, def, allPlacedItems, allBuildItems }: { item: PlacedItem, def: BuildItem, allPlacedItems: PlacedItem[], allBuildItems: BuildItem[] }) => {
+const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
   // Convert 2D canvas coordinates to 3D world coordinates
-  // Note: Canvas y goes down, 3D z goes back. Let's map (x, y) to (x, 0, z)
-  // Scaling down by a factor of 10 to keep 3D units reasonable (e.g. 60px -> 6 units)
   const scale = 1 / 10;
   
   const posX = item.x * scale;
   const posZ = item.y * scale;
   
-  // Convert rotation to radians. In 2D, positive rotation is clockwise.
-  // In 3D around Y axis, positive is counter-clockwise.
   const rotY = -item.rotation * (Math.PI / 180);
 
-  // We determine height by whether it's a foundation or roof (for a basic 3D representation)
-  // Since we don't have true 3D placement yet, we stack them blindly if they are roofs.
   const isRoof = def.id.includes('roof') || def.id.includes('hole');
   const heightOffset = isRoof ? 3.0 : 0.0; 
   
@@ -97,37 +64,60 @@ const Item3D = ({ item, def, allPlacedItems, allBuildItems }: { item: PlacedItem
     const bedLength = 40 * scale;
     const bedHeight = 0.2;
     const bedPosY = bedHeight / 2;
-    const bedBaseY = getBedElevation(item, allPlacedItems, allBuildItems); // Place on top of closest structure
-
     const radius = 270 * scale; // 4.5 foundations
 
     return (
-      <group position={[posX, bedBaseY, posZ]} rotation={[0, rotY, 0]}>
-        {/* The Bed itself */}
-        <mesh position={[0, bedPosY, 0]} castShadow receiveShadow>
-          <boxGeometry args={[bedWidth, bedHeight, bedLength]} />
-          <meshStandardMaterial color={color} roughness={0.9} />
-        </mesh>
-        
-        {/* Protection Radius Area */}
-        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[radius, 32]} />
-          <meshBasicMaterial color="#2ecc71" transparent opacity={0.1} depthWrite={false} />
-        </mesh>
-        
-        {/* Protection Radius Border */}
-        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[radius - 0.1, radius, 64]} />
-          <meshBasicMaterial color="#2ecc71" transparent opacity={0.3} depthWrite={false} />
-        </mesh>
-      </group>
+      <RigidBody 
+        type="dynamic" 
+        position={[posX, 6.0, posZ]} 
+        rotation={[0, rotY, 0]} 
+        enabledRotations={[false, false, false]} 
+        colliders="cuboid"
+        restitution={0.1}
+        friction={0.5}
+      >
+        <group>
+          {/* The Bed itself */}
+          <mesh position={[0, bedPosY, 0]} castShadow receiveShadow>
+            <boxGeometry args={[bedWidth, bedHeight, bedLength]} />
+            <meshStandardMaterial color={color} roughness={0.9} />
+          </mesh>
+          
+          {/* Protection Radius Area */}
+          <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[radius, 32]} />
+            <meshBasicMaterial color="#2ecc71" transparent opacity={0.1} depthWrite={false} />
+          </mesh>
+          
+          {/* Protection Radius Border */}
+          <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[radius - 0.1, radius, 64]} />
+            <meshBasicMaterial color="#2ecc71" transparent opacity={0.3} depthWrite={false} />
+          </mesh>
+        </group>
+      </RigidBody>
     );
   } else if (def.shape === 'square') {
+    const isHole = def.id.includes('hole');
+    
     return (
-      <mesh position={[posX, posY, posZ]} rotation={[0, rotY, 0]} castShadow receiveShadow>
-        <boxGeometry args={[width, height, length]} />
-        <meshStandardMaterial color={color} roughness={def.materialClass === 'metal' ? 0.2 : 0.8} metalness={def.materialClass === 'metal' ? 0.8 : 0.1} />
-      </mesh>
+      <RigidBody type="fixed" colliders="cuboid">
+        <mesh position={[posX, height / 2 + heightOffset, posZ]} rotation={[0, rotY, 0]} castShadow receiveShadow>
+          {isHole ? (
+            <Geometry>
+              <Base>
+                <boxGeometry args={[width, height, length]} />
+              </Base>
+              <Subtraction>
+                <boxGeometry args={[width * 0.5, height * 2, length * 0.5]} />
+              </Subtraction>
+            </Geometry>
+          ) : (
+            <boxGeometry args={[width, height, length]} />
+          )}
+          <meshStandardMaterial color={color} roughness={def.materialClass === 'metal' ? 0.2 : 0.8} metalness={def.materialClass === 'metal' ? 0.8 : 0.1} />
+        </mesh>
+      </RigidBody>
     );
   } else {
     // Triangle
@@ -146,14 +136,29 @@ const Item3D = ({ item, def, allPlacedItems, allBuildItems }: { item: PlacedItem
     }, [width, scale]);
 
     const extrudeSettings = { depth: height, bevelEnabled: false };
+    const isHole = def.id.includes('hole');
 
     return (
-      <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
-          <extrudeGeometry args={[shape, extrudeSettings]} />
-          <meshStandardMaterial color={color} roughness={def.materialClass === 'metal' ? 0.2 : 0.8} metalness={def.materialClass === 'metal' ? 0.8 : 0.1} />
-        </mesh>
-      </group>
+      <RigidBody type="fixed" colliders="hull">
+        <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
+            {isHole ? (
+              <Geometry>
+                <Base>
+                  <extrudeGeometry args={[shape, extrudeSettings]} />
+                </Base>
+                <Subtraction position={[0, height / 2, 0]}>
+                  {/* Since extrude is on Z-axis which corresponds to actual height, Subtraction is positioned relative to that */}
+                  <boxGeometry args={[width * 0.4, length * 0.4, height * 2]} />
+                </Subtraction>
+              </Geometry>
+            ) : (
+              <extrudeGeometry args={[shape, extrudeSettings]} />
+            )}
+            <meshStandardMaterial color={color} roughness={def.materialClass === 'metal' ? 0.2 : 0.8} metalness={def.materialClass === 'metal' ? 0.8 : 0.1} />
+          </mesh>
+        </group>
+      </RigidBody>
     );
   }
 };
@@ -196,13 +201,21 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
           fadeStrength={1}
         />
 
-        <group>
-          {placedItems.map(item => {
-            const def = buildItems.find(d => d.id === item.itemId);
-            if (!def) return null;
-            return <Item3D key={item.id} item={item} def={def} allPlacedItems={placedItems} allBuildItems={buildItems} />;
-          })}
-        </group>
+        <Suspense fallback={null}>
+          <Physics>
+            {/* Ground Plane to catch beds that fall off structures */}
+            <RigidBody type="fixed" position={[0, -0.05, 0]}>
+              <CuboidCollider args={[1000, 0.05, 1000]} />
+            </RigidBody>
+            <group>
+              {placedItems.map(item => {
+                const def = buildItems.find(d => d.id === item.itemId);
+                if (!def) return null;
+                return <Item3D key={item.id} item={item} def={def} />;
+              })}
+            </group>
+          </Physics>
+        </Suspense>
       </Canvas>
       <div style={{ position: 'absolute', bottom: '20px', right: '20px', color: '#fff', background: 'rgba(0,0,0,0.5)', padding: '10px', borderRadius: '8px', fontSize: '0.9rem', backdropFilter: 'blur(4px)' }}>
         <p style={{ margin: 0, fontWeight: 'bold', color: '#2ecc71' }}>Testowy Widok 3D</p>
