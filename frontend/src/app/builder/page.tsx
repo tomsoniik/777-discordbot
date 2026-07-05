@@ -459,7 +459,20 @@ export default function BuilderPage() {
                   onPointerUp={cancelDismantle}
                   onPointerLeave={cancelDismantle}
                   onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                />
+                >
+                  <img 
+                    src={def.texture} 
+                    alt={def.name}
+                    style={{
+                      width: '60%',
+                      height: '60%',
+                      objectFit: 'contain',
+                      opacity: 0.8,
+                      pointerEvents: 'none',
+                      transform: def.shape === 'triangle' ? 'translateY(15%)' : 'none'
+                    }}
+                  />
+                </div>
               );
             })}
 
@@ -486,7 +499,20 @@ export default function BuilderPage() {
                     border: isValidPlacement ? '2px solid #2ecc71' : '2px solid #ff4757',
                     boxShadow: isValidPlacement ? '0 0 20px rgba(46, 204, 113, 0.8)' : '0 0 20px rgba(255, 71, 87, 0.8)'
                   }}
-                />
+                >
+                  <img 
+                    src={def.texture} 
+                    alt={def.name}
+                    style={{
+                      width: '60%',
+                      height: '60%',
+                      objectFit: 'contain',
+                      opacity: 0.8,
+                      pointerEvents: 'none',
+                      transform: def.shape === 'triangle' ? 'translateY(15%)' : 'none'
+                    }}
+                  />
+                </div>
               );
             })()}
 
