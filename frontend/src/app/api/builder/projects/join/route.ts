@@ -8,7 +8,8 @@ const prisma = new PrismaClient();
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   
-  if (!session?.user?.id) {
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { joinCode } = body;
 
-    const project = await prisma.baseProject.findUnique({
+    const project = await (prisma as any).baseProject.findUnique({
       where: { joinCode },
       include: { collaborators: { select: { id: true } } }
     });
@@ -25,18 +26,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    if (project.ownerId === session.user.id) {
+    if (project.ownerId === userId) {
       return NextResponse.json(project);
     }
 
-    const alreadyJoined = project.collaborators.some(c => c.id === session.user.id);
+    const alreadyJoined = project.collaborators.some((c: any) => c.id === userId);
     
     if (!alreadyJoined) {
-      await prisma.baseProject.update({
+      await (prisma as any).baseProject.update({
         where: { id: project.id },
         data: {
           collaborators: {
-            connect: { id: session.user.id }
+            connect: { id: userId }
           }
         }
       });

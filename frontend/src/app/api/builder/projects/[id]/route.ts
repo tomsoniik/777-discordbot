@@ -8,12 +8,13 @@ const prisma = new PrismaClient();
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   
-  if (!session?.user?.id) {
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const project = await prisma.baseProject.findUnique({
+    const project = await (prisma as any).baseProject.findUnique({
       where: { id: params.id },
       include: {
         owner: { select: { id: true, name: true } },
@@ -26,7 +27,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     }
 
     // Check access
-    const hasAccess = project.ownerId === session.user.id || project.collaborators.some(c => c.id === session.user.id);
+    const hasAccess = project.ownerId === userId || project.collaborators.some((c: any) => c.id === userId);
     if (!hasAccess) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -41,12 +42,13 @@ export async function GET(request: Request, { params }: { params: { id: string }
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   
-  if (!session?.user?.id) {
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const project = await prisma.baseProject.findUnique({
+    const project = await (prisma as any).baseProject.findUnique({
       where: { id: params.id },
       include: { collaborators: { select: { id: true } } }
     });
@@ -56,7 +58,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 
     // Check access
-    const hasAccess = project.ownerId === session.user.id || project.collaborators.some(c => c.id === session.user.id);
+    const hasAccess = project.ownerId === userId || project.collaborators.some((c: any) => c.id === userId);
     if (!hasAccess) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -64,7 +66,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const body = await request.json();
     const { data } = body;
 
-    const updated = await prisma.baseProject.update({
+    const updated = await (prisma as any).baseProject.update({
       where: { id: params.id },
       data: { data: JSON.stringify(data) }
     });

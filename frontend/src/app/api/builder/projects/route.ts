@@ -8,16 +8,17 @@ const prisma = new PrismaClient();
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   
-  if (!session?.user?.id) {
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const projects = await prisma.baseProject.findMany({
+    const projects = await (prisma as any).baseProject.findMany({
       where: {
         OR: [
-          { ownerId: session.user.id },
-          { collaborators: { some: { id: session.user.id } } }
+          { ownerId: userId },
+          { collaborators: { some: { id: userId } } }
         ]
       },
       include: {
@@ -37,7 +38,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   
-  if (!session?.user?.id) {
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -48,10 +50,10 @@ export async function POST(request: Request) {
     // Create a random join code
     const joinCode = Math.random().toString(36).substring(2, 10).toUpperCase();
 
-    const project = await prisma.baseProject.create({
+    const project = await (prisma as any).baseProject.create({
       data: {
         name,
-        ownerId: session.user.id,
+        ownerId: userId,
         joinCode,
         data: '[]',
       }
