@@ -18,11 +18,11 @@ interface BuildItem {
 const getIconUrl = (id: number) => `https://cdn.jsdelivr.net/gh/SilKsPlugins/UnturnedImages@images/vanilla/items/${id}.png`;
 
 const BUILD_ITEMS: BuildItem[] = [
-  { id: 'w_found', name: 'Pine Foundation', shape: 'square', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(31), costs: { 'Pine Plank': 3 } },
-  { id: 'w_found_tri', name: 'Pine Tri Foundation', shape: 'triangle', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(1266), costs: { 'Pine Plank': 2 } },
-  { id: 'w_roof', name: 'Pine Roof', shape: 'square', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(32), costs: { 'Pine Plank': 3 } },
-  { id: 'w_roof_tri', name: 'Pine Tri Roof', shape: 'triangle', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(1262), costs: { 'Pine Plank': 2 } },
-  { id: 'w_hole', name: 'Pine Hole', shape: 'square', materialClass: 'wood', color: '#A0522D', texture: getIconUrl(316), costs: { 'Pine Plank': 3 } },
+  { id: 'w_found', name: 'Pine Foundation', shape: 'square', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(31), costs: { 'Pine Log': 3 } },
+  { id: 'w_found_tri', name: 'Pine Tri Foundation', shape: 'triangle', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(1266), costs: { 'Pine Log': 2 } },
+  { id: 'w_roof', name: 'Pine Roof', shape: 'square', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(32), costs: { 'Pine Log': 3 } },
+  { id: 'w_roof_tri', name: 'Pine Tri Roof', shape: 'triangle', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(1262), costs: { 'Pine Log': 2 } },
+  { id: 'w_hole', name: 'Pine Hole', shape: 'square', materialClass: 'wood', color: '#A0522D', texture: getIconUrl(316), costs: { 'Pine Log': 3 } },
   
   { id: 'm_found', name: 'Metal Foundation', shape: 'square', materialClass: 'metal', color: '#708090', texture: getIconUrl(369), costs: { 'Metal Sheet': 3 } },
   { id: 'm_found_tri', name: 'Metal Tri Foundation', shape: 'triangle', materialClass: 'metal', color: '#708090', texture: getIconUrl(1268), costs: { 'Metal Sheet': 2 } },
@@ -102,6 +102,7 @@ export default function BuilderPage() {
     x: typeof window !== 'undefined' ? window.innerWidth / 3 : 0, 
     y: typeof window !== 'undefined' ? window.innerHeight / 3 : 0 
   });
+  const [scale, setScale] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   
   // Placement State
@@ -233,8 +234,8 @@ export default function BuilderPage() {
       const rect = containerRef.current?.getBoundingClientRect();
       if (rect) {
         setMousePos({
-          x: e.clientX - rect.left - pan.x,
-          y: e.clientY - rect.top - pan.y
+          x: (e.clientX - rect.left - pan.x) / scale,
+          y: (e.clientY - rect.top - pan.y) / scale
         });
       }
     }
@@ -243,6 +244,26 @@ export default function BuilderPage() {
   const handlePointerUpCanvas = (e: React.PointerEvent) => {
     setIsPanning(false);
     containerRef.current?.releasePointerCapture(e.pointerId);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    const canvasX = (mouseX - pan.x) / scale;
+    const canvasY = (mouseY - pan.y) / scale;
+    
+    const zoomFactor = 1.1;
+    const newScale = e.deltaY < 0 ? Math.min(scale * zoomFactor, 4) : Math.max(scale / zoomFactor, 0.2);
+    
+    setPan({
+      x: mouseX - canvasX * newScale,
+      y: mouseY - canvasY * newScale
+    });
+    setScale(newScale);
   };
 
   const handleItemRightClick = (e: React.MouseEvent, id: string) => {
@@ -335,11 +356,12 @@ export default function BuilderPage() {
           onPointerDown={handlePointerDownCanvas}
           onPointerMove={handlePointerMoveCanvas}
           onPointerUp={handlePointerUpCanvas}
+          onWheel={handleWheel}
           onContextMenu={e => e.preventDefault()}
         >
           <div 
             className={styles.canvas} 
-            style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}
+            style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})` }}
           >
             {/* Draw Placed Items */}
             {placedItems.map(item => {
@@ -351,14 +373,14 @@ export default function BuilderPage() {
                 <div 
                   key={item.id}
                   className={`${styles.placedItem} ${shapeClass}`}
+                  data-material={def.materialClass}
                   style={{
                     left: `${item.x}px`,
                     top: `${item.y}px`,
                     transform: def.shape === 'triangle' 
                       ? `translate(-50%, -66.666%) rotate(${item.rotation}deg)` 
                       : `translate(-50%, -50%) rotate(${item.rotation}deg)`,
-                    backgroundColor: def.color,
-                    backgroundImage: `url(${def.texture})`
+                    backgroundColor: def.color
                   }}
                   onContextMenu={(e) => handleItemRightClick(e, item.id)}
                 />
@@ -374,6 +396,7 @@ export default function BuilderPage() {
               return (
                 <div 
                   className={`${styles.placedItem} ${shapeClass}`}
+                  data-material={def.materialClass}
                   style={{
                     left: `${previewItem.x}px`,
                     top: `${previewItem.y}px`,
@@ -381,7 +404,6 @@ export default function BuilderPage() {
                       ? `translate(-50%, -66.666%) rotate(${previewItem.rotation}deg)` 
                       : `translate(-50%, -50%) rotate(${previewItem.rotation}deg)`,
                     backgroundColor: def.color,
-                    backgroundImage: `url(${def.texture})`,
                     opacity: 0.6,
                     zIndex: 1000,
                     pointerEvents: 'none',
