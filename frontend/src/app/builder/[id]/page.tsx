@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, MouseEvent, useMemo, useRef, useEffect } from 'react';
-import styles from './builder.module.css';
+import styles from '../builder.module.css';
 import { useLanguage } from '@/context/LanguageContext';
 
 type ShapeType = 'square' | 'triangle';
