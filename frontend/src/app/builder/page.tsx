@@ -69,8 +69,8 @@ function getEdges(shape: ShapeType, cx: number, cy: number, rotation: number) {
   } else {
     return [
       { ...rotatePoint(0, TRI_R), angle: normalizeAngle(rotation + 90) }, // bottom
-      { ...rotatePoint(15, -TRI_R), angle: normalizeAngle(rotation - 30) }, // top right
-      { ...rotatePoint(-15, -TRI_R), angle: normalizeAngle(rotation - 150) }, // top left
+      { ...rotatePoint(15, -TRI_R / 2), angle: normalizeAngle(rotation - 30) }, // top right
+      { ...rotatePoint(-15, -TRI_R / 2), angle: normalizeAngle(rotation - 150) }, // top left
     ];
   }
 }
@@ -87,8 +87,8 @@ function getBaseEdges(shape: ShapeType) {
   } else {
     return [
       { x: 0, y: TRI_R, angle: 90 },
-      { x: 15, y: -TRI_R, angle: 330 }, // -30
-      { x: -15, y: -TRI_R, angle: 210 }, // -150
+      { x: 15, y: -TRI_R / 2, angle: 330 }, // -30
+      { x: -15, y: -TRI_R / 2, angle: 210 }, // -150
     ];
   }
 }
