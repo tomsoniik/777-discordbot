@@ -105,7 +105,11 @@ const translations: Translations = {
   b_found_tri: { en: "Brick Tri Foundation", pl: "Ceglany Trój. Fundament", ru: "Кирпич. треуг. фундамент" },
   b_roof: { en: "Brick Roof", pl: "Ceglany Dach", ru: "Кирпичная крыша" },
   b_roof_tri: { en: "Brick Tri Roof", pl: "Ceglany Trój. Dach", ru: "Кирпич. треуг. крыша" },
-  b_hole: { en: "Brick Hole", pl: "Ceglana Dziura", ru: "Кирпичное отверстие" }
+  b_hole: { en: "Brick Hole", pl: "Ceglana Dziura", ru: "Кирпичное отверстие" },
+  
+  c_roof: { en: "Roof", pl: "Dach", ru: "Крыша" },
+  c_roof_tri: { en: "Triangle Roof", pl: "Trójkątny Dach", ru: "Треугольная крыша" },
+  f_bed: { en: "Claim Bed", pl: "Łóżko", ru: "Кровать" }
 };
 
 interface LanguageContextType {

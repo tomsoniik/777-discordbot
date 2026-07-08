@@ -409,7 +409,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         x: previewItem!.x,
         y: previewItem!.y,
         rotation: previewItem!.rotation,
-        customColor: selectedColor || undefined
+        customColor: (selectedColor && selectedColor !== 'clear') ? selectedColor : undefined
       }]);
     }
   };
@@ -459,6 +459,14 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const handleItemPointerDown = (e: React.PointerEvent, id: string) => {
     if (e.button !== 0 || activeItem !== null) return;
     e.stopPropagation();
+
+    if (selectedColor !== '') {
+      setPlacedItems(prev => prev.map(item => 
+        item.id === id ? { ...item, customColor: selectedColor === 'clear' ? undefined : selectedColor } : item
+      ));
+      return;
+    }
+
     setSelectedItemId(id);
   };
 
@@ -499,11 +507,11 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                       className={`${styles.itemButton} ${activeItem === item.id ? styles.active : ''}`}
                       onClick={() => setActiveItem(item.id)}
                     >
-                      <div className={styles.colorIndicator} style={{ backgroundColor: selectedColor || item.color }}>
+                      <div className={styles.colorIndicator} style={{ backgroundColor: (selectedColor && selectedColor !== 'clear') ? selectedColor : item.color }}>
                         <img 
                           src={item.texture} 
                           alt=""
-                          style={{ width: '100%', height: '100%', objectFit: 'contain', filter: item.imageFilter || 'none', mixBlendMode: selectedColor ? 'multiply' : 'normal' }}
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', filter: item.imageFilter || 'none', mixBlendMode: (selectedColor && selectedColor !== 'clear') ? 'multiply' : 'normal' }}
                           onError={(e) => {
                             if (item.fallbackTexture && e.currentTarget.src !== item.fallbackTexture) {
                               e.currentTarget.src = item.fallbackTexture;
@@ -527,19 +535,20 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
           {expandedCats.color && (
             <div className={styles.categoryContent} style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {['', '#ff4757', '#2ecc71', '#3498db', '#f1c40f', '#9b59b6', '#e67e22', '#34495e'].map(c => (
+                {['', 'clear', '#ff4757', '#2ecc71', '#3498db', '#f1c40f', '#9b59b6', '#e67e22', '#34495e'].map(c => (
                   <button
                     key={c}
                     onClick={() => setSelectedColor(c)}
                     style={{
                       width: '32px', height: '32px', borderRadius: '4px', cursor: 'pointer',
                       border: selectedColor === c ? '2px solid white' : '1px solid rgba(255,255,255,0.2)',
-                      backgroundColor: c || '#222',
+                      backgroundColor: c === 'clear' ? 'transparent' : (c || '#222'),
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       position: 'relative'
                     }}
                   >
                     {!c && <span style={{ color: '#fff', fontSize: '10px' }}>{t('builder_off')}</span>}
+                    {c === 'clear' && <span style={{ color: '#ff4757', fontSize: '16px', fontWeight: 'bold' }}>X</span>}
                   </button>
                 ))}
               </div>
@@ -739,7 +748,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                     transform: def.shape === 'triangle' 
                       ? `translate(-50%, -66.666%) rotate(${previewItem.rotation}deg)` 
                       : `translate(-50%, -50%) rotate(${previewItem.rotation}deg)`,
-                    backgroundColor: isValidPlacement ? (selectedColor || def.color) : '#ff4757',
+                    backgroundColor: isValidPlacement ? ((selectedColor && selectedColor !== 'clear') ? selectedColor : def.color) : '#ff4757',
                     opacity: 0.6,
                     zIndex: 1000,
                     pointerEvents: 'none',
