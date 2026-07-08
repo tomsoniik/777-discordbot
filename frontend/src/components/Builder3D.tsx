@@ -4,7 +4,6 @@ import React, { useMemo, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
-import { Geometry, Base, Subtraction } from '@react-three/csg';
 import * as THREE from 'three';
 
 // Re-using types from the builder
@@ -14,7 +13,7 @@ export interface BuildItem {
   id: string;
   name: string;
   shape: ShapeType;
-  materialClass: 'wood' | 'metal' | 'brick' | 'furniture';
+  materialClass: 'structure' | 'furniture';
   color: string;
   texture: string;
   fallbackTexture?: string;
@@ -57,8 +56,8 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
   const posY = height / 2 + heightOffset;
 
   const color = new THREE.Color(item.customColor || def.color);
-  if (def.materialClass === 'metal') {
-    color.multiplyScalar(1.2);
+  if (def.materialClass === 'structure') {
+    color.multiplyScalar(1.1);
   }
 
   // Draw square or triangle or bed
@@ -101,24 +100,11 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
       </RigidBody>
     );
   } else if (def.shape === 'square') {
-    const isHole = def.id.includes('hole');
-    
     return (
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[posX, height / 2 + heightOffset, posZ]} rotation={[0, rotY, 0]} castShadow receiveShadow>
-          {isHole ? (
-            <Geometry>
-              <Base>
-                <boxGeometry args={[width, height, length]} />
-              </Base>
-              <Subtraction>
-                <boxGeometry args={[width * 0.5, height * 2, length * 0.5]} />
-              </Subtraction>
-            </Geometry>
-          ) : (
-            <boxGeometry args={[width, height, length]} />
-          )}
-          <meshStandardMaterial color={color} roughness={def.materialClass === 'metal' ? 0.2 : 0.8} metalness={def.materialClass === 'metal' ? 0.8 : 0.1} />
+          <boxGeometry args={[width, height, length]} />
+          <meshStandardMaterial color={color} roughness={def.materialClass === 'structure' ? 0.3 : 0.8} metalness={def.materialClass === 'structure' ? 0.7 : 0.1} />
         </mesh>
       </RigidBody>
     );
@@ -139,26 +125,13 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
     }, [width, scale]);
 
     const extrudeSettings = { depth: height, bevelEnabled: false };
-    const isHole = def.id.includes('hole');
 
     return (
       <RigidBody type="fixed" colliders="hull">
         <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
-            {isHole ? (
-              <Geometry>
-                <Base>
-                  <extrudeGeometry args={[shape, extrudeSettings]} />
-                </Base>
-                <Subtraction position={[0, height / 2, 0]}>
-                  {/* Since extrude is on Z-axis which corresponds to actual height, Subtraction is positioned relative to that */}
-                  <boxGeometry args={[width * 0.4, length * 0.4, height * 2]} />
-                </Subtraction>
-              </Geometry>
-            ) : (
-              <extrudeGeometry args={[shape, extrudeSettings]} />
-            )}
-            <meshStandardMaterial color={color} roughness={def.materialClass === 'metal' ? 0.2 : 0.8} metalness={def.materialClass === 'metal' ? 0.8 : 0.1} />
+            <extrudeGeometry args={[shape, extrudeSettings]} />
+            <meshStandardMaterial color={color} roughness={def.materialClass === 'structure' ? 0.3 : 0.8} metalness={def.materialClass === 'structure' ? 0.7 : 0.1} />
           </mesh>
         </group>
       </RigidBody>

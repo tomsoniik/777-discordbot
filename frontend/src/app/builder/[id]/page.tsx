@@ -10,7 +10,7 @@ interface BuildItem {
   id: string;
   name: string;
   shape: ShapeType;
-  materialClass: 'wood' | 'metal' | 'brick' | 'furniture';
+  materialClass: 'structure' | 'furniture';
   color: string;
   texture: string;
   fallbackTexture?: string;
@@ -21,23 +21,8 @@ interface BuildItem {
 const getIconUrl = (id: number) => `https://cdn.jsdelivr.net/gh/SilKsPlugins/UnturnedImages@images/vanilla/items/${id}.png`;
 
 const BUILD_ITEMS: BuildItem[] = [
-  { id: 'w_found', name: 'Pine Foundation', shape: 'square', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(52), costs: { 'pine_plank': 3 } },
-  { id: 'w_found_tri', name: 'Pine Tri Foundation', shape: 'triangle', materialClass: 'wood', color: '#8B5A2B', texture: getIconUrl(1264), costs: { 'pine_plank': 2 } },
-  { id: 'w_roof', name: 'Pine Roof', shape: 'square', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(56), costs: { 'pine_plank': 3 } },
-  { id: 'w_roof_tri', name: 'Pine Tri Roof', shape: 'triangle', materialClass: 'wood', color: '#CD853F', texture: getIconUrl(1268), costs: { 'pine_plank': 2 } },
-  { id: 'w_hole', name: 'Pine Hole', shape: 'square', materialClass: 'wood', color: '#A0522D', texture: getIconUrl(320), costs: { 'pine_plank': 3 } },
-  
-  { id: 'm_found', name: 'Metal Foundation', shape: 'square', materialClass: 'metal', color: '#708090', texture: getIconUrl(369), costs: { 'metal_sheet': 3 } },
-  { id: 'm_found_tri', name: 'Metal Tri Foundation', shape: 'triangle', materialClass: 'metal', color: '#708090', texture: getIconUrl(1265), costs: { 'metal_sheet': 2 } },
-  { id: 'm_roof', name: 'Metal Roof', shape: 'square', materialClass: 'metal', color: '#808080', texture: getIconUrl(373), costs: { 'metal_sheet': 3 } },
-  { id: 'm_roof_tri', name: 'Metal Tri Roof', shape: 'triangle', materialClass: 'metal', color: '#808080', texture: getIconUrl(1269), costs: { 'metal_sheet': 2 } },
-  { id: 'm_hole', name: 'Metal Hole', shape: 'square', materialClass: 'metal', color: '#696969', texture: getIconUrl(376), costs: { 'metal_sheet': 3 } },
-
-  { id: 'b_found', name: 'Brick Foundation', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1979), fallbackTexture: getIconUrl(52), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'brick': 3 } },
-  { id: 'b_found_tri', name: 'Brick Tri Foundation', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1980), fallbackTexture: getIconUrl(1264), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'brick': 2 } },
-  { id: 'b_roof', name: 'Brick Roof', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1984), fallbackTexture: getIconUrl(56), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'brick': 3 } },
-  { id: 'b_roof_tri', name: 'Brick Tri Roof', shape: 'triangle', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1985), fallbackTexture: getIconUrl(1268), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'brick': 2 } },
-  { id: 'b_hole', name: 'Brick Hole', shape: 'square', materialClass: 'brick', color: '#a54331', texture: getIconUrl(1981), fallbackTexture: getIconUrl(320), imageFilter: 'hue-rotate(330deg) saturate(1.5)', costs: { 'brick': 3 } },
+  { id: 'c_roof', name: 'Custom Roof', shape: 'square', materialClass: 'structure', color: '#555555', texture: '/custom_roof.png', costs: { 'scrap': 3 } },
+  { id: 'c_roof_tri', name: 'Custom Tri Roof', shape: 'triangle', materialClass: 'structure', color: '#555555', texture: '/custom_roof.png', costs: { 'scrap': 2 } },
   { id: 'f_bed', name: 'Claim Bed', shape: 'bed', materialClass: 'furniture', color: '#ff4757', texture: getIconUrl(288), costs: { 'cloth': 4 } }
 ];
 
@@ -51,11 +36,9 @@ interface PlacedItem {
 }
 
 const renderShapeInterior = (def: BuildItem) => {
-  const isHole = def.id.includes('hole');
-  const isTri = def.shape === 'triangle';
   const isBed = def.shape === 'bed';
 
-  if (isBed) {
+  if (isBed || def.shape === 'square' || def.shape === 'triangle') {
     return (
       <div style={{
         width: '100%',
@@ -63,22 +46,8 @@ const renderShapeInterior = (def: BuildItem) => {
         backgroundImage: `url(${def.texture})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        filter: def.imageFilter
-      }} />
-    );
-  }
-
-  if (isHole) {
-    return (
-      <div style={{
-        width: '50%',
-        height: '50%',
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        position: 'absolute',
-        top: isTri ? '33.33%' : '25%',
-        left: '25%',
-        boxShadow: 'inset 0 0 8px rgba(0,0,0,0.9)',
-        clipPath: isTri ? 'polygon(50% 0%, 100% 100%, 0% 100%)' : 'none'
+        filter: def.imageFilter,
+        opacity: isBed ? 1 : 0.85
       }} />
     );
   }
@@ -160,7 +129,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
   const [selectedColor, setSelectedColor] = useState<string>(''); // empty means default
   const lastSyncRef = useRef<string>('');
-  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ wood: true, metal: false, brick: false, color: true });
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ structure: true, furniture: true, color: true });
 
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [editName, setEditName] = useState("");
@@ -512,7 +481,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
       <div className={styles.sidebar}>
         <div className={styles.sectionTitle}>{t('builder_materials')}</div>
         
-        {['wood', 'metal', 'brick', 'furniture'].map(cat => {
+        {['structure', 'furniture'].map(cat => {
           const isExpanded = expandedCats[cat];
           return (
             <div key={cat} className={styles.categoryGroup}>
