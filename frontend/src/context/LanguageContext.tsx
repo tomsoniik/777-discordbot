@@ -84,6 +84,7 @@ const translations: Translations = {
   prompt_edit_name: { en: "Change project name:", pl: "Zmień nazwę projektu:", ru: "Изменить название проекта:" },
   prompt_edit_desc: { en: "Change project description:", pl: "Zmień opis projektu:", ru: "Изменить описание проекта:" },
   prompt_join_error: { en: "Failed to join. Check the code.", pl: "Nie udało się dołączyć. Sprawdź kod.", ru: "Не удалось присоединиться. Проверьте код." },
+  builder_toggle_beds: { en: "Toggle Bed Areas", pl: "Obszar łóżek", ru: "Зоны кроватей" },
   
   pine_plank: { en: "Pine Plank", pl: "Sosnowa Deska", ru: "Сосновая доска" },
   metal_sheet: { en: "Metal Sheet", pl: "Metalowa Płyta", ru: "Металлический лист" },

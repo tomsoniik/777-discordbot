@@ -196,6 +196,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [is3DMode, setIs3DMode] = useState(false);
+  const [showBedAreas, setShowBedAreas] = useState(true);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/api/auth/signin');
@@ -685,6 +686,22 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
           )}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <button 
+              onClick={() => setShowBedAreas(!showBedAreas)}
+              style={{ 
+                background: showBedAreas ? 'rgba(46, 204, 113, 0.2)' : 'transparent',
+                border: showBedAreas ? '1px solid #2ecc71' : '1px solid #aaa',
+                color: showBedAreas ? '#2ecc71' : '#aaa',
+                padding: '0.4rem 1rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                transition: '0.2s',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {t('builder_toggle_beds')}
+            </button>
+            <button 
               onClick={() => setIs3DMode(!is3DMode)}
               style={{ 
                 background: is3DMode ? '#3498db' : 'transparent',
@@ -739,7 +756,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
 
               return (
                 <React.Fragment key={item.id}>
-                  {isBed && (
+                  {isBed && showBedAreas && (
                     <div style={{
                       position: 'absolute',
                       left: `${item.x}px`,
@@ -783,7 +800,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
 
               return (
                 <React.Fragment key="preview">
-                  {isBed && (
+                  {isBed && showBedAreas && (
                     <div style={{
                       position: 'absolute',
                       left: `${previewItem.x}px`,
