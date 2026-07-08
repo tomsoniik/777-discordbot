@@ -111,6 +111,67 @@ function getBaseEdges(shape: ShapeType) {
   }
 }
 
+function getPolygonVertices(shape: ShapeType, cx: number, cy: number, rotation: number) {
+  if (shape === 'bed') return [];
+  const rad = (rotation * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  
+  const rotatePoint = (x: number, y: number) => ({
+    x: cx + x * cos - y * sin,
+    y: cy + x * sin + y * cos
+  });
+
+  if (shape === 'square') {
+    return [
+      rotatePoint(-30, -30),
+      rotatePoint(30, -30),
+      rotatePoint(30, 30),
+      rotatePoint(-30, 30),
+    ];
+  } else {
+    return [
+      rotatePoint(-30, TRI_R), // bottom left
+      rotatePoint(30, TRI_R),  // bottom right
+      rotatePoint(0, -TRI_H + TRI_R), // top
+    ];
+  }
+}
+
+function polygonsIntersect(poly1: {x:number, y:number}[], poly2: {x:number, y:number}[]) {
+  const polys = [poly1, poly2];
+  for (let i = 0; i < polys.length; i++) {
+    const polygon = polys[i];
+    for (let i1 = 0; i1 < polygon.length; i1++) {
+      const i2 = (i1 + 1) % polygon.length;
+      const p1 = polygon[i1];
+      const p2 = polygon[i2];
+
+      const normal = { x: p2.y - p1.y, y: p1.x - p2.x };
+
+      let minA = Infinity, maxA = -Infinity;
+      for (const p of poly1) {
+        const projected = normal.x * p.x + normal.y * p.y;
+        if (projected < minA) minA = projected;
+        if (projected > maxA) maxA = projected;
+      }
+
+      let minB = Infinity, maxB = -Infinity;
+      for (const p of poly2) {
+        const projected = normal.x * p.x + normal.y * p.y;
+        if (projected < minB) minB = projected;
+        if (projected > maxB) maxB = projected;
+      }
+
+      // 0.1 tolerance to allow touching edges
+      if (maxA <= minB + 0.1 || maxB <= minA + 0.1) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/store/useAppStore';
@@ -371,19 +432,17 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         const shape1 = selectedItemDef.shape;
         const shape2 = itemDef.shape;
         
-        let minDist = 0;
         if (shape1 === 'bed' || shape2 === 'bed') {
-          minDist = 15; // Beds can be close to things
-        } else if (shape1 === 'square' && shape2 === 'square') {
-          minDist = 58; // 60 is minimum valid (edge shared)
-        } else if (shape1 === 'triangle' && shape2 === 'triangle') {
-          minDist = 33; // 34.64 is minimum valid (edge shared)
+          if (dist < 15) isValidPlacement = false;
         } else {
-          minDist = 45; // 47.32 is minimum valid (edge shared)
-        }
-        
-        if (dist < minDist) {
-          isValidPlacement = false;
+          // If they are too far apart to possibly intersect, skip heavy math
+          if (dist < 80) {
+            const poly1 = getPolygonVertices(shape1, previewItem!.x, previewItem!.y, previewItem!.rotation);
+            const poly2 = getPolygonVertices(shape2, item.x, item.y, item.rotation);
+            if (polygonsIntersect(poly1, poly2)) {
+              isValidPlacement = false;
+            }
+          }
         }
       });
     }
