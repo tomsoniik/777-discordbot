@@ -4,7 +4,7 @@ import React, { useState, MouseEvent, useMemo, useRef, useEffect, use } from 're
 import styles from '../builder.module.css';
 import { useLanguage } from '@/context/LanguageContext';
 
-type ShapeType = 'square' | 'triangle' | 'bed';
+type ShapeType = 'square' | 'triangle' | 'bed' | 'wall' | 'pillar';
 
 interface BuildItem {
   id: string;
@@ -21,8 +21,11 @@ interface BuildItem {
 const getIconUrl = (id: number) => `https://cdn.jsdelivr.net/gh/SilKsPlugins/UnturnedImages@images/vanilla/items/${id}.png`;
 
 const BUILD_ITEMS: BuildItem[] = [
-  { id: 'c_roof', name: 'Custom Roof', shape: 'square', materialClass: 'structure', color: '#555555', texture: '/custom_roof.png', costs: { 'scrap': 3 } },
-  { id: 'c_roof_tri', name: 'Custom Tri Roof', shape: 'triangle', materialClass: 'structure', color: '#555555', texture: '/custom_roof.png', costs: { 'scrap': 2 } },
+  { id: 'f_square', name: 'Foundation', shape: 'square', materialClass: 'structure', color: '#888888', texture: '/custom_roof.png', costs: { 'wood': 4 } },
+  { id: 'c_roof', name: 'Roof', shape: 'square', materialClass: 'structure', color: '#555555', texture: '/custom_roof.png', costs: { 'scrap': 3 } },
+  { id: 'c_roof_tri', name: 'Tri Roof', shape: 'triangle', materialClass: 'structure', color: '#555555', texture: '/custom_roof.png', costs: { 'scrap': 2 } },
+  { id: 'c_wall', name: 'Wall', shape: 'wall', materialClass: 'structure', color: '#444444', texture: '/custom_roof.png', costs: { 'scrap': 2 } },
+  { id: 'c_pillar', name: 'Pillar', shape: 'pillar', materialClass: 'structure', color: '#333333', texture: '/custom_roof.png', costs: { 'scrap': 1 } },
   { id: 'f_bed', name: 'Claim Bed', shape: 'bed', materialClass: 'furniture', color: '#ff4757', texture: getIconUrl(288), costs: { 'cloth': 4 } }
 ];
 
@@ -33,6 +36,7 @@ interface PlacedItem {
   y: number;
   rotation: number; // in degrees
   customColor?: string; // custom tint color
+  floor?: number; // 0 = parter, 1 = piętro 1, itd.
 }
 
 const renderShapeInterior = (def: BuildItem) => {
@@ -197,6 +201,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const [editDesc, setEditDesc] = useState("");
   const [is3DMode, setIs3DMode] = useState(false);
   const [showBedAreas, setShowBedAreas] = useState(true);
+  const [currentFloor, setCurrentFloor] = useState(0);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/api/auth/signin');
@@ -469,7 +474,8 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         x: previewItem!.x,
         y: previewItem!.y,
         rotation: previewItem!.rotation,
-        customColor: (selectedColor && selectedColor !== 'clear') ? selectedColor : undefined
+        customColor: (selectedColor && selectedColor !== 'clear') ? selectedColor : undefined,
+        floor: currentFloor
       }]);
     }
   };
@@ -686,6 +692,27 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                {isSyncing && <span style={{ color: 'var(--accent-green)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{t('builder_saving')}</span>}
              </div>
           )}
+          <div style={{ display: 'flex', gap: '0.4rem', marginRight: 'auto', marginLeft: '1rem', background: 'rgba(0,0,0,0.2)', padding: '4px', borderRadius: '8px' }}>
+            {[0, 1, 2, 3].map(lvl => (
+              <button
+                key={lvl}
+                onClick={() => setCurrentFloor(lvl)}
+                style={{
+                  background: currentFloor === lvl ? 'var(--accent-green)' : 'transparent',
+                  color: currentFloor === lvl ? '#000' : '#fff',
+                  border: 'none',
+                  padding: '0.3rem 0.8rem',
+                  borderRadius: '4px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontSize: '0.85rem'
+                }}
+              >
+                {lvl === 0 ? 'Parter' : `Piętro ${lvl}`}
+              </button>
+            ))}
+          </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
             <button 
               onClick={() => setShowBedAreas(!showBedAreas)}
@@ -736,11 +763,23 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
             >
               {/* Draw Placed Items */}
             {placedItems.map(item => {
+              const itemFloor = item.floor || 0;
+              if (itemFloor > currentFloor) return null; // Don't show floors above
+              
               const def = BUILD_ITEMS.find(d => d.id === item.itemId);
               if (!def) return null;
               const isBed = def.shape === 'bed';
-              const shapeClass = isBed ? styles.shapeBed : (def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare);
+              const isWall = def.shape === 'wall';
+              const isPillar = def.shape === 'pillar';
+              const shapeClass = isBed ? styles.shapeBed : 
+                                 isWall ? styles.shapeWall : 
+                                 isPillar ? styles.shapePillar : 
+                                 (def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare);
               const isSelected = selectedItemId === item.id;
+              
+              const isLowerFloor = itemFloor < currentFloor;
+              const opacity = isLowerFloor ? 0.3 : 1.0;
+              const pointerEvents = isLowerFloor ? 'none' : 'auto';
 
               return (
                 <React.Fragment key={item.id}>
@@ -768,7 +807,9 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                     transform: def.shape === 'triangle' 
                       ? `translate(-50%, -66.666%) rotate(${item.rotation}deg)` 
                       : `translate(-50%, -50%) rotate(${item.rotation}deg)`,
-                    backgroundColor: item.customColor || def.color
+                    backgroundColor: item.customColor || def.color,
+                    opacity: opacity,
+                    pointerEvents: pointerEvents as any
                   }}
                   onPointerDown={(e) => handleItemPointerDown(e, item.id)}
                   onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
@@ -784,7 +825,12 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
               const def = BUILD_ITEMS.find(d => d.id === previewItem.itemId);
               if (!def) return null;
               const isBed = def.shape === 'bed';
-              const shapeClass = isBed ? styles.shapeBed : (def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare);
+              const isWall = def.shape === 'wall';
+              const isPillar = def.shape === 'pillar';
+              const shapeClass = isBed ? styles.shapeBed : 
+                                 isWall ? styles.shapeWall : 
+                                 isPillar ? styles.shapePillar : 
+                                 (def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare);
 
               return (
                 <React.Fragment key="preview">

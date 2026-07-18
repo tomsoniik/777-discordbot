@@ -103,6 +103,18 @@
   border-radius: 4px;
 }
 
+.shapeWall {
+  width: 60px;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.shapePillar {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
 /* Material Patterns */
 .placedItem[data-material="wood"] {
   background-image: repeating-linear-gradient(

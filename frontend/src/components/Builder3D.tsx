@@ -7,7 +7,7 @@ import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 
 // Re-using types from the builder
-export type ShapeType = 'square' | 'triangle' | 'bed';
+export type ShapeType = 'square' | 'triangle' | 'bed' | 'wall' | 'pillar';
 
 export interface BuildItem {
   id: string;
@@ -28,6 +28,7 @@ export interface PlacedItem {
   y: number;
   rotation: number;
   customColor?: string;
+  floor?: number;
 }
 
 interface Builder3DProps {
@@ -47,8 +48,11 @@ const Item3D = ({ item, def, allItems, buildDefs }: { item: PlacedItem, def: Bui
   
   const rotY = -item.rotation * (Math.PI / 180);
 
+  const floorLevel = item.floor || 0;
+  const floorOffset = floorLevel * 3.0; // Każde piętro to 3.0 jednostki wysokości (ok 3 metry)
+
   const isRoof = def.id.includes('roof') || def.id.includes('hole');
-  const heightOffset = isRoof ? 3.0 : 0.0; 
+  const heightOffset = floorOffset + (isRoof ? 3.0 : 0.0); 
   
   const width = SIDE * scale;
   const length = SIDE * scale;
@@ -77,13 +81,14 @@ const Item3D = ({ item, def, allItems, buildDefs }: { item: PlacedItem, def: Bui
       
       const dx = Math.abs(other.x - item.x);
       const dy = Math.abs(other.y - item.y);
+      const sameFloor = (other.floor || 0) === floorLevel;
       // Bounding box dachu to 60x60, więc dajemy tolerancję do 45 jednostek
-      return dx < 45 && dy < 45; 
+      return dx < 45 && dy < 45 && sameFloor; 
     });
 
-    // Dach kończy się na 3.2 (3.0 base + 0.2 grubość)
-    // Fundament kończy się na 0.4 (0.0 base + 0.4 grubość)
-    const spawnY = isOnRoof ? 3.21 : 0.41;
+    // Dach kończy się na 3.2 względem poziomu piętra
+    // Fundament kończy się na 0.4 względem poziomu piętra
+    const spawnY = floorOffset + (isOnRoof ? 3.21 : 0.41);
 
     return (
       <RigidBody 
@@ -126,6 +131,26 @@ const Item3D = ({ item, def, allItems, buildDefs }: { item: PlacedItem, def: Bui
             roughness={0.2} 
             metalness={0.8} 
           />
+          <Edges scale={1.0} threshold={15} color={color} opacity={0.8} transparent />
+        </mesh>
+      </RigidBody>
+    );
+  } else if (def.shape === 'wall') {
+    return (
+      <RigidBody type="fixed" colliders="cuboid">
+        <mesh position={[posX, floorOffset + 1.7, posZ]} rotation={[0, rotY, 0]} castShadow receiveShadow>
+          <boxGeometry args={[width, 3.0, 0.4]} />
+          <meshStandardMaterial color={color} transparent opacity={0.6} roughness={0.2} metalness={0.8} />
+          <Edges scale={1.0} threshold={15} color={color} opacity={0.8} transparent />
+        </mesh>
+      </RigidBody>
+    );
+  } else if (def.shape === 'pillar') {
+    return (
+      <RigidBody type="fixed" colliders="cuboid">
+        <mesh position={[posX, floorOffset + 1.7, posZ]} rotation={[0, rotY, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.8, 3.0, 0.8]} />
+          <meshStandardMaterial color={color} transparent opacity={0.6} roughness={0.2} metalness={0.8} />
           <Edges scale={1.0} threshold={15} color={color} opacity={0.8} transparent />
         </mesh>
       </RigidBody>
