@@ -70,16 +70,20 @@ const Item3D = ({ item, def, allItems, buildDefs }: { item: PlacedItem, def: Bui
     const bedPosY = bedHeight / 2;
     const radius = 270 * scale; // 4.5 foundations
 
-    // Sprawdzamy czy łóżko leży na dachu (odległość od dachu < 30)
+    // Sprawdzamy czy łóżko leży na dachu (odległość w osiach X i Y zamiast okręgu)
     const isOnRoof = allItems.some(other => {
       const otherDef = buildDefs.find(d => d.id === other.itemId);
       if (!otherDef || !(otherDef.id.includes('roof') || otherDef.id.includes('hole'))) return false;
-      const dx = other.x - item.x;
-      const dy = other.y - item.y;
-      return Math.sqrt(dx*dx + dy*dy) < 30; 
+      
+      const dx = Math.abs(other.x - item.x);
+      const dy = Math.abs(other.y - item.y);
+      // Bounding box dachu to 60x60, więc dajemy tolerancję do 45 jednostek
+      return dx < 45 && dy < 45; 
     });
 
-    const spawnY = isOnRoof ? 3.4 : 0.4;
+    // Dach kończy się na 3.2 (3.0 base + 0.2 grubość)
+    // Fundament kończy się na 0.4 (0.0 base + 0.4 grubość)
+    const spawnY = isOnRoof ? 3.21 : 0.41;
 
     return (
       <RigidBody 
