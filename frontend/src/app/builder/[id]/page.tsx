@@ -625,14 +625,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     }
   };
 
-  const handleItemPointerDownRef = useRef(handleItemPointerDown);
-  useEffect(() => {
-    handleItemPointerDownRef.current = handleItemPointerDown;
-  });
-  
-  const stableHandleItemPointerDown = React.useCallback((e: React.PointerEvent, id: string) => {
-    handleItemPointerDownRef.current(e, id);
-  }, []);
+
 
   const handlePointerMoveCanvas = (e: React.PointerEvent) => {
     if (isPanning) {
@@ -778,6 +771,15 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     }
     setSelectedItemId(id); // Keep single select logic working for old features if any
   };
+
+  const handleItemPointerDownRef = useRef(handleItemPointerDown);
+  useEffect(() => {
+    handleItemPointerDownRef.current = handleItemPointerDown;
+  });
+  
+  const stableHandleItemPointerDown = React.useCallback((e: React.PointerEvent, id: string) => {
+    handleItemPointerDownRef.current(e, id);
+  }, []);
 
   // Calculate Materials
   const totalMaterials = useMemo(() => {
