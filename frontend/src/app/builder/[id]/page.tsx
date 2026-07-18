@@ -507,7 +507,6 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
             let maxEdges = 4;
             let rotStep = 90;
             if (def.shape === 'triangle') { maxEdges = 3; rotStep = 60; }
-            if (def.shape === 'wall') { maxEdges = 2; rotStep = 180; }
             
             setActiveEdgeIndex(prev => prev + 1); // We'll do modulo where it's used
             setFreeRotation(prev => (prev + rotStep) % 360);
@@ -529,7 +528,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   if (selectedItemDef) {
     let closestEdge = null;
     let closestVertex = null;
-    let minDist = 20; // snap threshold
+    let minDist = 30; // snap threshold
 
     // Find closest placed edge or vertex
     if (selectedItemDef.shape !== 'bed') {
@@ -550,15 +549,33 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
             });
           }
         } else {
-          // Snap to edges
-          const edges = getEdges(def.shape, item.x, item.y, item.rotation);
-          edges.forEach(edge => {
-            const dist = Math.hypot(edge.x - mousePos.x, edge.y - mousePos.y);
-            if (dist < minDist) {
-              minDist = dist;
-              closestEdge = edge;
+          // Snap to edges using line segment distance
+          if (def.shape === 'square' || def.shape === 'triangle') {
+            const vertices = getPolygonVertices(def.shape, item.x, item.y, item.rotation);
+            const edges = getEdges(def.shape, item.x, item.y, item.rotation);
+            
+            if (vertices.length >= 3) {
+              edges.forEach((edge, i) => {
+                const p1 = vertices[i];
+                const p2 = vertices[(i + 1) % vertices.length];
+                
+                const l2 = (p1.x - p2.x)**2 + (p1.y - p2.y)**2;
+                let dist = minDist;
+                if (l2 === 0) {
+                  dist = Math.hypot(mousePos.x - p1.x, mousePos.y - p1.y);
+                } else {
+                  let t = ((mousePos.x - p1.x) * (p2.x - p1.x) + (mousePos.y - p1.y) * (p2.y - p1.y)) / l2;
+                  t = Math.max(0, Math.min(1, t));
+                  dist = Math.hypot(mousePos.x - (p1.x + t * (p2.x - p1.x)), mousePos.y - (p1.y + t * (p2.y - p1.y)));
+                }
+
+                if (dist < minDist) {
+                  minDist = dist;
+                  closestEdge = edge;
+                }
+              });
             }
-          });
+          }
         }
       });
     }
