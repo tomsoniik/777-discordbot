@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { useSession, signOut } from 'next-auth/react';
 import { ArrowDown2 } from 'iconsax-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -35,11 +36,16 @@ export default function Navbar() {
 
   return (
     <header className="container" style={{ paddingBottom: 0, position: 'relative', zIndex: 999999 }}>
-      <nav className="navbar animate-fade-in-up">
+      <motion.nav 
+        className="navbar"
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+      >
         <div className="navbar-brand">
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', textDecoration: 'none' }}>
-            <img src="/img/untlogo.png" alt="777 Clan Logo" style={{ height: '40px', filter: 'drop-shadow(0 0 8px rgba(46,204,113,0.6))' }} />
-            <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent-green)', letterSpacing: '1px' }}>777</span>
+            <img src="/img/untlogo.png" alt="777 Clan Logo" style={{ height: '40px', filter: 'drop-shadow(0 0 12px rgba(16,185,129,0.5))' }} />
+            <span style={{ fontSize: '1.5rem', fontWeight: '800', background: 'linear-gradient(to right, #fff, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.5px' }}>777</span>
           </Link>
         </div>
         <div className="navbar-nav" style={{ alignItems: 'center', position: 'relative' }}>
@@ -59,112 +65,121 @@ export default function Navbar() {
                   alignItems: 'center',
                   gap: '10px',
                   cursor: 'pointer',
-                  padding: '6px 12px',
-                  background: 'rgba(255,255,255,0.05)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  transition: '0.2s ease'
+                  padding: '6px 16px 6px 6px',
+                  background: isMenuOpen ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.03)',
+                  borderRadius: '999px',
+                  border: `1px solid ${isMenuOpen ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255,255,255,0.1)'}`,
+                  transition: 'all 0.3s ease',
+                  boxShadow: isMenuOpen ? '0 0 15px rgba(16, 185, 129, 0.15)' : 'none'
                 }}
               >
                 <img 
                   src={session.user?.image || 'https://cdn.discordapp.com/embed/avatars/0.png'} 
                   onError={(e) => { e.currentTarget.src = 'https://cdn.discordapp.com/embed/avatars/0.png'; }}
                   alt="Avatar" 
-                  style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover' }}
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.1)' }}
                 />
-                <span style={{ color: '#fff', fontWeight: 500 }}>{session.user?.name}</span>
-                <ArrowDown2 size="16" color="#aaa" />
+                <span style={{ color: '#fff', fontWeight: 500, fontSize: '0.95rem' }}>{session.user?.name}</span>
+                <ArrowDown2 size="16" color="#aaa" style={{ transform: isMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }} />
               </div>
 
-              {isMenuOpen && (
-                <div 
-                  className="dropdown-menu"
-                  style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 10px)',
-                    right: 0,
-                    width: '220px',
-                    background: 'rgba(15, 15, 20, 0.95)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px',
-                    padding: '8px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px',
-                    zIndex: 100,
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
-                  }}
-                >
-                  <Link 
-                    href="/music" 
-                    onClick={() => setIsMenuOpen(false)}
-                    style={{ padding: '10px', color: '#fff', textDecoration: 'none', borderRadius: '8px', display: 'block', transition: '0.2s' }}
-                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+              <AnimatePresence>
+                {isMenuOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="dropdown-menu"
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 15px)',
+                      right: 0,
+                      width: '240px',
+                      background: 'rgba(5, 15, 10, 0.95)',
+                      backdropFilter: 'blur(24px)',
+                      border: '1px solid rgba(255,255,255,0.05)',
+                      borderRadius: '16px',
+                      padding: '12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      zIndex: 100,
+                      boxShadow: '0 20px 40px -10px rgba(0,0,0,0.8), 0 0 20px rgba(16, 185, 129, 0.05)'
+                    }}
                   >
-                    Playlist
-                  </Link>
+                    <div style={{ padding: '8px 12px', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Signed in as</p>
+                      <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.user?.email || session.user?.name}</p>
+                    </div>
 
-                  { (session.user as any)?.role === 'ADMIN' && (
-                    <>
+                    <Link 
+                      href="/music" 
+                      onClick={() => setIsMenuOpen(false)}
+                      style={{ padding: '10px 12px', color: '#fff', textDecoration: 'none', borderRadius: '10px', display: 'block', transition: '0.2s', fontSize: '0.95rem' }}
+                      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      Playlist
+                    </Link>
 
+                    { (session.user as any)?.role === 'ADMIN' && (
                       <Link 
                         href="/admin" 
                         onClick={() => setIsMenuOpen(false)}
-                        style={{ padding: '10px', color: '#ff4757', textDecoration: 'none', borderRadius: '8px', display: 'block', transition: '0.2s' }}
-                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,71,87,0.1)'}
+                        style={{ padding: '10px 12px', color: '#10b981', textDecoration: 'none', borderRadius: '10px', display: 'block', transition: '0.2s', fontSize: '0.95rem', fontWeight: 500 }}
+                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'}
                         onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                       >
                         Admin Panel
                       </Link>
-                    </>
-                  )}
+                    )}
 
-                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 0' }}></div>
-                  
-                  <button 
-                    onClick={() => signOut()}
-                    style={{ padding: '10px', color: '#ff6b6b', background: 'transparent', border: 'none', textAlign: 'left', borderRadius: '8px', cursor: 'pointer', transition: '0.2s', width: '100%', fontSize: '1rem' }}
-                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,107,107,0.1)'}
-                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                  >
-                    Wyloguj się
-                  </button>
-                </div>
-              )}
+                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '8px 0' }}></div>
+                    
+                    <button 
+                      onClick={() => signOut()}
+                      style={{ padding: '10px 12px', color: '#ef4444', background: 'transparent', border: 'none', textAlign: 'left', borderRadius: '10px', cursor: 'pointer', transition: '0.2s', width: '100%', fontSize: '0.95rem', fontWeight: 500 }}
+                      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      Sign Out
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
           
-          <div style={{ marginLeft: '1rem', display: 'flex', alignItems: 'center' }}>
+          <div style={{ marginLeft: '1.5rem', display: 'flex', alignItems: 'center' }}>
             <button 
               onClick={toggleLanguage}
               title={language === "pl" ? "Switch to English" : language === "en" ? "Переключить на русский" : "Zmień na Polski"}
               style={{
-                background: 'rgba(46, 204, 113, 0.1)', 
-                border: '1px solid var(--accent-green)', 
-                color: 'var(--text-main)',
+                background: 'rgba(255, 255, 255, 0.05)', 
+                border: '1px solid rgba(255, 255, 255, 0.1)', 
                 cursor: 'pointer',
-                padding: '0.4rem 0.6rem',
-                borderRadius: '8px',
+                padding: '0.5rem',
+                borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                transition: 'all 0.2s',
-                boxShadow: '0 2px 8px rgba(46, 204, 113, 0.2)'
+                transition: 'all 0.3s ease',
+                width: '40px',
+                height: '40px'
               }}
+              onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'; e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.3)' }}
+              onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)' }}
             >
               <img 
                 src={language === "pl" ? "https://flagcdn.com/pl.svg" : language === "en" ? "https://flagcdn.com/gb.svg" : "https://flagcdn.com/ru.svg"} 
                 alt={language === "pl" ? "Polski" : language === "en" ? "English" : "Русский"} 
-                width="24" 
-                height="18"
-                style={{ borderRadius: '2px', display: 'block' }} 
+                style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }} 
               />
             </button>
           </div>
         </div>
-      </nav>
+      </motion.nav>
     </header>
   );
 }

@@ -17,6 +17,7 @@
     "@react-three/fiber": "^9.6.1",
     "@react-three/rapier": "^2.2.0",
     "discord-interactions": "^4.4.0",
+    "framer-motion": "^12.42.2",
     "iconsax-react": "^0.0.8",
     "next": "16.2.9",
     "next-auth": "^4.24.14",
