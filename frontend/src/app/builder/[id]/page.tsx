@@ -598,7 +598,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
           itemId: selectedItemDef.id,
           x: targetEdge.x,
           y: targetEdge.y,
-          rotation: normalizeAngle(targetEdge.angle + (activeEdgeIndex % 2 === 1 ? 180 : 0))
+          rotation: normalizeAngle(targetEdge.angle + 90 + (activeEdgeIndex % 2 === 1 ? 180 : 0))
         };
         snappedEdgeLine = targetEdge;
       } else {
