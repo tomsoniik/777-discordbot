@@ -197,7 +197,22 @@ function getPolygonVertices(shape: ShapeType, cx: number, cy: number, rotation: 
       rotatePoint(30, 30),
       rotatePoint(-30, 30),
     ];
+  } else if (shape === 'wall') {
+    return [
+      rotatePoint(-30, -2),
+      rotatePoint(30, -2),
+      rotatePoint(30, 2),
+      rotatePoint(-30, 2)
+    ];
+  } else if (shape === 'pillar') {
+    return [
+      rotatePoint(-4, -4),
+      rotatePoint(4, -4),
+      rotatePoint(4, 4),
+      rotatePoint(-4, 4)
+    ];
   } else {
+    // triangle
     return [
       rotatePoint(-30, TRI_R), // bottom left
       rotatePoint(30, TRI_R),  // bottom right
@@ -509,56 +524,92 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
 
   if (selectedItemDef) {
     let closestEdge = null;
+    let closestVertex = null;
     let minDist = 20; // snap threshold
 
-    // Find closest placed edge
+    // Find closest placed edge or vertex
     if (selectedItemDef.shape !== 'bed') {
       placedItems.forEach(item => {
         const def = BUILD_ITEMS.find(d => d.id === item.itemId);
         if (!def) return;
         
-        const edges = getEdges(def.shape, item.x, item.y, item.rotation);
-        edges.forEach(edge => {
-          const dist = Math.hypot(edge.x - mousePos.x, edge.y - mousePos.y);
-          if (dist < minDist) {
-            minDist = dist;
-            closestEdge = edge;
+        if (selectedItemDef.shape === 'pillar') {
+          // Snap to vertices of square/triangle
+          if (def.shape === 'square' || def.shape === 'triangle') {
+            const vertices = getPolygonVertices(def.shape, item.x, item.y, item.rotation);
+            vertices.forEach(v => {
+              const dist = Math.hypot(v.x - mousePos.x, v.y - mousePos.y);
+              if (dist < minDist) {
+                minDist = dist;
+                closestVertex = v;
+              }
+            });
           }
-        });
+        } else {
+          // Snap to edges
+          const edges = getEdges(def.shape, item.x, item.y, item.rotation);
+          edges.forEach(edge => {
+            const dist = Math.hypot(edge.x - mousePos.x, edge.y - mousePos.y);
+            if (dist < minDist) {
+              minDist = dist;
+              closestEdge = edge;
+            }
+          });
+        }
       });
     }
 
-    if (closestEdge) {
-      // Snap to edge
-      const targetEdge = closestEdge as any;
-      const baseEdges = getBaseEdges(selectedItemDef.shape);
-      const chosenEdge = baseEdges[activeEdgeIndex % baseEdges.length];
-      
-      // We want our chosen edge to oppose the target edge
-      const requiredAngle = normalizeAngle(targetEdge.angle + 180);
-      const R = normalizeAngle(requiredAngle - chosenEdge.angle);
-      
-      // Calculate new center
-      const radR = (R * Math.PI) / 180;
-      const cosR = Math.cos(radR);
-      const sinR = Math.sin(radR);
-      
-      const rotatedBx = chosenEdge.x * cosR - chosenEdge.y * sinR;
-      const rotatedBy = chosenEdge.x * sinR + chosenEdge.y * cosR;
-      
-      const cx = targetEdge.x - rotatedBx;
-      const cy = targetEdge.y - rotatedBy;
-      
+    if (selectedItemDef.shape === 'pillar' && closestVertex) {
       previewItem = {
         id: 'preview',
         itemId: selectedItemDef.id,
-        x: cx,
-        y: cy,
-        rotation: R
+        x: (closestVertex as any).x,
+        y: (closestVertex as any).y,
+        rotation: 0
       };
+    } else if (closestEdge) {
+      // Snap to edge
+      const targetEdge = closestEdge as any;
+      
+      if (selectedItemDef.shape === 'wall') {
+        previewItem = {
+          id: 'preview',
+          itemId: selectedItemDef.id,
+          x: targetEdge.x,
+          y: targetEdge.y,
+          rotation: targetEdge.angle
+        };
+        snappedEdgeLine = targetEdge;
+      } else {
+        const baseEdges = getBaseEdges(selectedItemDef.shape);
+        const chosenEdge = baseEdges[activeEdgeIndex % baseEdges.length];
+        
+        // We want our chosen edge to oppose the target edge
+        const requiredAngle = normalizeAngle(targetEdge.angle + 180);
+        const R = normalizeAngle(requiredAngle - chosenEdge.angle);
+        
+        // Calculate new center
+        const radR = (R * Math.PI) / 180;
+        const cosR = Math.cos(radR);
+        const sinR = Math.sin(radR);
+        
+        const rotatedBx = chosenEdge.x * cosR - chosenEdge.y * sinR;
+        const rotatedBy = chosenEdge.x * sinR + chosenEdge.y * cosR;
+        
+        const cx = targetEdge.x - rotatedBx;
+        const cy = targetEdge.y - rotatedBy;
+        
+        previewItem = {
+          id: 'preview',
+          itemId: selectedItemDef.id,
+          x: cx,
+          y: cy,
+          rotation: R
+        };
 
-      // Draw debug line for snapped edge
-      snappedEdgeLine = targetEdge;
+        // Draw debug line for snapped edge
+        snappedEdgeLine = targetEdge;
+      }
     } else {
       // Free placement
       const isBed = selectedItemDef.shape === 'bed';
@@ -583,7 +634,11 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         
         if (shape1 === 'bed' || shape2 === 'bed') {
           if (dist < 15) isValidPlacement = false;
-        } else {
+        } else if (
+          (shape1 === 'wall' && shape2 === 'wall') ||
+          (shape1 === 'pillar' && shape2 === 'pillar') ||
+          ((shape1 === 'square' || shape1 === 'triangle') && (shape2 === 'square' || shape2 === 'triangle'))
+        ) {
           // If they are too far apart to possibly intersect, skip heavy math
           if (dist < 80) {
             const poly1 = getPolygonVertices(shape1, previewItem!.x, previewItem!.y, previewItem!.rotation);
