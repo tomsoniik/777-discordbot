@@ -38,7 +38,7 @@ interface Builder3DProps {
 const SIDE = 60;
 const TRI_H = (SIDE * Math.sqrt(3)) / 2; // 51.9615
 
-const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
+const Item3D = ({ item, def, allItems, buildDefs }: { item: PlacedItem, def: BuildItem, allItems: PlacedItem[], buildDefs: BuildItem[] }) => {
   // Convert 2D canvas coordinates to 3D world coordinates
   const scale = 1 / 10;
   
@@ -70,10 +70,21 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
     const bedPosY = bedHeight / 2;
     const radius = 270 * scale; // 4.5 foundations
 
+    // Sprawdzamy czy łóżko leży na dachu (odległość od dachu < 30)
+    const isOnRoof = allItems.some(other => {
+      const otherDef = buildDefs.find(d => d.id === other.itemId);
+      if (!otherDef || !(otherDef.id.includes('roof') || otherDef.id.includes('hole'))) return false;
+      const dx = other.x - item.x;
+      const dy = other.y - item.y;
+      return Math.sqrt(dx*dx + dy*dy) < 30; 
+    });
+
+    const spawnY = isOnRoof ? 3.4 : 0.4;
+
     return (
       <RigidBody 
         type="fixed" 
-        position={[posX, 0, posZ]} 
+        position={[posX, spawnY, posZ]} 
         rotation={[0, rotY, 0]} 
         colliders="cuboid"
       >
@@ -215,7 +226,7 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
               {placedItems.map(item => {
                 const def = buildItems.find(d => d.id === item.itemId);
                 if (!def) return null;
-                return <Item3D key={item.id} item={item} def={def} />;
+                return <Item3D key={item.id} item={item} def={def} allItems={placedItems} buildDefs={buildItems} />;
               })}
             </group>
           </Physics>
