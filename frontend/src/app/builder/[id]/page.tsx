@@ -199,10 +199,10 @@ function getPolygonVertices(shape: ShapeType, cx: number, cy: number, rotation: 
     ];
   } else if (shape === 'wall') {
     return [
-      rotatePoint(-30, -2),
-      rotatePoint(30, -2),
-      rotatePoint(30, 2),
-      rotatePoint(-30, 2)
+      rotatePoint(-28, -1),
+      rotatePoint(28, -1),
+      rotatePoint(28, 1),
+      rotatePoint(-28, 1)
     ];
   } else if (shape === 'pillar') {
     return [
