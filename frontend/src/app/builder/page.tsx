@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import Link from 'next/link';
 import { Add, FolderOpen, User, Link as LinkIcon } from 'iconsax-react';
+import { motion, Variants } from 'framer-motion';
 
 export default function BuilderDashboard() {
   const { data: session, status } = useSession();
@@ -14,6 +15,23 @@ export default function BuilderDashboard() {
   const [projects, setProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [joinCode, setJoinCode] = useState('');
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { type: "spring", stiffness: 100, damping: 20 }
+    }
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -81,119 +99,99 @@ export default function BuilderDashboard() {
   }
 
   return (
-    <div className="container" style={{ padding: '2rem', paddingTop: '100px', minHeight: '100vh', color: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{t('builder_projects_title')}</h1>
-        
-        <button 
-          onClick={createProject}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            background: 'var(--accent-green)',
-            color: '#111',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '12px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: '0.2s',
-            boxShadow: '0 4px 15px rgba(46, 204, 113, 0.3)'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-          onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-        >
-          <Add size="24" /> {t('builder_new_project')}
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '3rem', background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ flex: 1 }}>
-          <h3 style={{ marginBottom: '0.5rem', color: '#ccc' }}>{t('builder_join_group')}</h3>
-          <p style={{ fontSize: '0.9rem', color: '#888', marginBottom: '1rem' }}>{t('builder_join_desc')}</p>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <input 
-              type="text" 
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value)}
-              placeholder={t('builder_join_placeholder')}
-              style={{
-                background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)',
-                padding: '10px 16px', borderRadius: '8px', color: 'white', flex: 1, textTransform: 'uppercase'
-              }}
-            />
-            <button 
-              onClick={joinProject}
-              style={{
-                background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none',
-                padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
-              }}
-            >
-              {t('builder_join_btn')}
-            </button>
+    <div className="container" style={{ padding: '2rem', paddingTop: '120px', minHeight: '100vh' }}>
+      <motion.div 
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
+        <motion.div variants={itemVariants} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1 style={{ fontSize: '3rem', fontWeight: 800, letterSpacing: '-1.5px', marginBottom: '0.5rem' }}>
+              {t('builder_projects_title')}
+            </h1>
+            <p style={{ color: 'var(--text-muted)' }}>Zarządzaj swoimi projektami i bazami 2D/3D</p>
           </div>
-        </div>
-      </div>
+          
+          <button 
+            className="btn-cinematic primary"
+            onClick={createProject}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', fontSize: '1rem' }}
+          >
+            <Add size="24" /> {t('builder_new_project')}
+          </button>
+        </motion.div>
 
-      <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>{t('builder_your_projects')}</h2>
-      
-      {projects.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '4rem', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px dashed rgba(255,255,255,0.1)' }}>
-          <FolderOpen size="48" color="#555" style={{ marginBottom: '1rem' }} />
-          <h3 style={{ color: '#aaa', marginBottom: '0.5rem' }}>{t('builder_no_projects')}</h3>
-          <p style={{ color: '#666' }}>{t('builder_no_projects_desc')}</p>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-          {projects.map((p) => (
-            <Link href={`/builder/${p.id}`} key={p.id} style={{ textDecoration: 'none' }}>
-              <div 
-                style={{
-                  background: 'rgba(20, 20, 25, 0.8)',
-                  border: '1px solid rgba(255, 255, 255, 0.05)',
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                  transition: 'all 0.2s',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1rem',
-                  height: '100%'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(46, 204, 113, 0.5)';
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
+        <motion.div variants={itemVariants} className="bento-card" style={{ display: 'flex', gap: '1rem', marginBottom: '3rem', padding: '2rem' }}>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ marginBottom: '0.5rem', fontSize: '1.2rem', fontWeight: 600 }}>{t('builder_join_group')}</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>{t('builder_join_desc')}</p>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <input 
+                type="text" 
+                className="glass-input"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value)}
+                placeholder={t('builder_join_placeholder')}
+                style={{ flex: 1, minWidth: '200px', textTransform: 'uppercase' }}
+              />
+              <button 
+                className="btn-cinematic secondary"
+                onClick={joinProject}
               >
-                <div>
-                  <h3 style={{ color: 'white', fontSize: '1.2rem', marginBottom: '0.2rem' }}>{p.name}</h3>
-                  {p.description && <p style={{ color: '#ccc', fontSize: '0.9rem', marginBottom: '0.5rem', fontStyle: 'italic' }}>{p.description}</p>}
-                  <p style={{ color: '#888', fontSize: '0.85rem' }}>{t('builder_updated')} {new Date(p.updatedAt).toLocaleString()}</p>
-                </div>
-                
-                <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#aaa', fontSize: '0.9rem' }}>
-                    <User size="16" /> {p.owner.name}
-                  </div>
-                  
-                  {p.collaborators?.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '8px', fontSize: '0.8rem', color: '#ccc' }}>
-                      <User size="14" /> +{p.collaborators.length}
+                {t('builder_join_btn')}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.h2 variants={itemVariants} style={{ fontSize: '1.8rem', marginBottom: '1.5rem', fontWeight: 700, letterSpacing: '-0.5px' }}>
+          {t('builder_your_projects')}
+        </motion.h2>
+        
+        {projects.length === 0 ? (
+          <motion.div variants={itemVariants} className="bento-card" style={{ textAlign: 'center', padding: '4rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <FolderOpen size="48" color="var(--text-muted)" style={{ marginBottom: '1rem' }} />
+            <h3 style={{ color: 'white', marginBottom: '0.5rem', fontSize: '1.2rem' }}>{t('builder_no_projects')}</h3>
+            <p style={{ color: 'var(--text-muted)' }}>{t('builder_no_projects_desc')}</p>
+          </motion.div>
+        ) : (
+          <motion.div variants={containerVariants} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            {projects.map((p) => (
+              <motion.div variants={itemVariants} key={p.id}>
+                <Link href={`/builder/${p.id}`} style={{ textDecoration: 'none' }}>
+                  <div className="bento-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '1.5rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ color: 'white', fontSize: '1.3rem', fontWeight: 600, marginBottom: '0.4rem' }}>{p.name}</h3>
+                      {p.description && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem', fontStyle: 'italic' }}>{p.description}</p>}
+                      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>{t('builder_updated')} {new Date(p.updatedAt).toLocaleString()}</p>
                     </div>
-                  )}
-                </div>
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(46, 204, 113, 0.1)', padding: '6px 10px', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--accent-green)', marginTop: '0.5rem' }}>
-                  <LinkIcon size="14" /> {t('builder_code')} {p.joinCode}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                        <div style={{ background: 'var(--bg-card)', padding: '6px', borderRadius: '50%' }}>
+                          <User size="16" />
+                        </div>
+                        {p.owner.name}
+                      </div>
+                      
+                      {p.collaborators?.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-card)', padding: '4px 8px', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          <User size="14" /> +{p.collaborators.length}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.1)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--accent-green)', marginTop: '1rem', fontWeight: 500 }}>
+                      <LinkIcon size="14" /> {t('builder_code')} {p.joinCode}
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </motion.div>
     </div>
   );
 }

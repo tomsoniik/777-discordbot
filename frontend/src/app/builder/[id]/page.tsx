@@ -650,21 +650,23 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                      <input 
                        value={editName}
                        onChange={(e) => setEditName(e.target.value)}
-                       style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(46, 204, 113, 0.4)', color: 'white', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '1rem', width: '180px', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }}
+                       className="glass-input"
+                       style={{ width: '180px', padding: '0.4rem 0.8rem', fontSize: '1rem' }}
                        placeholder={t('prompt_new_name')}
                      />
                      <input 
                        value={editDesc}
                        onChange={(e) => setEditDesc(e.target.value)}
-                       style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#ccc', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.9rem', width: '220px', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }}
+                       className="glass-input"
+                       style={{ width: '220px', padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}
                        placeholder={t('prompt_new_desc')}
                      />
-                     <button onClick={() => { saveProjectInfo(editName, editDesc); setIsEditingInfo(false); }} style={{ background: '#2ecc71', border: 'none', color: '#000', padding: '0.4rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 4px 6px rgba(46, 204, 113, 0.2)', whiteSpace: 'nowrap' }}>Zapisz</button>
-                     <button onClick={() => setIsEditingInfo(false)} style={{ background: 'rgba(255, 71, 87, 0.1)', border: '1px solid rgba(255, 71, 87, 0.3)', color: '#ff4757', padding: '0.4rem 1rem', borderRadius: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Anuluj</button>
+                     <button onClick={() => { saveProjectInfo(editName, editDesc); setIsEditingInfo(false); }} className="btn-cinematic primary" style={{ padding: '0.4rem 1rem', fontSize: '0.9rem' }}>Zapisz</button>
+                     <button onClick={() => setIsEditingInfo(false)} className="btn-cinematic secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.9rem' }}>Anuluj</button>
                    </div>
                  ) : (
                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
-                     <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
+                     <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', fontWeight: 600 }}>
                        {project.name}
                        <button 
                          onClick={() => {
@@ -672,48 +674,34 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                            setEditDesc(project.description || '');
                            setIsEditingInfo(true);
                          }}
-                         style={{ background: 'none', border: 'none', color: '#3498db', cursor: 'pointer', fontSize: '0.8rem' }}
+                         style={{ background: 'none', border: 'none', color: 'var(--accent-green)', cursor: 'pointer', fontSize: '0.8rem', opacity: 0.8 }}
                        >
                          {t('builder_edit')}
                        </button>
                      </h2>
-                     {project.description && <span style={{ color: '#aaa', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px' }}>{project.description}</span>}
+                     {project.description && <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px' }}>{project.description}</span>}
                    </div>
                  )}
-               <span style={{ color: '#888', fontSize: '0.9rem', marginLeft: 'auto', whiteSpace: 'nowrap' }}>{t('builder_code')} {project.joinCode}</span>
-               {isSyncing && <span style={{ color: '#2ecc71', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{t('builder_saving')}</span>}
+               <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginLeft: 'auto', whiteSpace: 'nowrap', background: 'var(--bg-card)', padding: '4px 10px', borderRadius: '6px' }}>{t('builder_code')} {project.joinCode}</span>
+               {isSyncing && <span style={{ color: 'var(--accent-green)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{t('builder_saving')}</span>}
              </div>
           )}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
             <button 
               onClick={() => setShowBedAreas(!showBedAreas)}
+              className="btn-cinematic secondary"
               style={{ 
-                background: showBedAreas ? 'rgba(46, 204, 113, 0.2)' : 'transparent',
-                border: showBedAreas ? '1px solid #2ecc71' : '1px solid #aaa',
-                color: showBedAreas ? '#2ecc71' : '#aaa',
                 padding: '0.4rem 1rem',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                transition: '0.2s',
-                whiteSpace: 'nowrap'
+                borderColor: showBedAreas ? 'var(--accent-green)' : 'rgba(255,255,255,0.1)',
+                color: showBedAreas ? 'var(--accent-green)' : 'white'
               }}
             >
               {t('builder_toggle_beds')}
             </button>
             <button 
               onClick={() => setIs3DMode(!is3DMode)}
-              style={{ 
-                background: is3DMode ? '#3498db' : 'transparent',
-                border: '1px solid #3498db',
-                color: is3DMode ? '#fff' : '#3498db',
-                padding: '0.4rem 1rem',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                transition: '0.2s',
-                whiteSpace: 'nowrap'
-              }}
+              className={`btn-cinematic ${is3DMode ? 'primary' : 'secondary'}`}
+              style={{ padding: '0.4rem 1rem' }}
             >
               {is3DMode ? 'Wróć do 2D' : 'Widok 3D (BETA)'}
             </button>
