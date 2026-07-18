@@ -3,7 +3,6 @@
 import React, { useMemo, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment, Edges, Sparkles } from '@react-three/drei';
-import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 
 // Re-using types from the builder
@@ -91,18 +90,15 @@ const Item3D = ({ item, def, allItems, buildDefs }: { item: PlacedItem, def: Bui
     const spawnY = floorOffset + (isOnRoof ? 3.21 : 0.41);
 
     return (
-      <RigidBody 
-        type="fixed" 
+      <group 
         position={[posX, spawnY, posZ]} 
         rotation={[0, rotY, 0]} 
-        colliders="cuboid"
       >
         <group>
           {/* The Bed itself */}
           <mesh position={[0, bedPosY, 0]} castShadow receiveShadow>
             <boxGeometry args={[bedWidth, bedHeight, bedLength]} />
             <meshStandardMaterial color="#ff4757" roughness={0.5} transparent opacity={0.8} />
-            <Edges scale={1.05} threshold={15} color="#ff4757" />
           </mesh>
           
           {/* Protection Radius Area */}
@@ -117,12 +113,12 @@ const Item3D = ({ item, def, allItems, buildDefs }: { item: PlacedItem, def: Bui
             <meshBasicMaterial color="#ff4757" transparent opacity={0.5} depthWrite={false} />
           </mesh>
         </group>
-      </RigidBody>
+      </group>
     );
   } else if (def.shape === 'square') {
     return (
-      <RigidBody type="fixed" colliders="cuboid">
-        <mesh position={[posX, height / 2 + heightOffset, posZ]} rotation={[0, rotY, 0]} castShadow receiveShadow>
+      <group position={[posX, height / 2 + heightOffset, posZ]} rotation={[0, rotY, 0]}>
+        <mesh castShadow receiveShadow>
           <boxGeometry args={[width, height, length]} />
           <meshStandardMaterial 
             color={color} 
@@ -131,29 +127,26 @@ const Item3D = ({ item, def, allItems, buildDefs }: { item: PlacedItem, def: Bui
             roughness={0.2} 
             metalness={0.8} 
           />
-          <Edges scale={1.0} threshold={15} color={color} opacity={0.8} transparent />
         </mesh>
-      </RigidBody>
+      </group>
     );
   } else if (def.shape === 'wall') {
     return (
-      <RigidBody type="fixed" colliders="cuboid">
-        <mesh position={[posX, floorOffset + 1.7, posZ]} rotation={[0, rotY, 0]} castShadow receiveShadow>
+      <group position={[posX, floorOffset + 1.7, posZ]} rotation={[0, rotY, 0]}>
+        <mesh castShadow receiveShadow>
           <boxGeometry args={[width, 3.0, 0.4]} />
           <meshStandardMaterial color={color} transparent opacity={0.6} roughness={0.2} metalness={0.8} />
-          <Edges scale={1.0} threshold={15} color={color} opacity={0.8} transparent />
         </mesh>
-      </RigidBody>
+      </group>
     );
   } else if (def.shape === 'pillar') {
     return (
-      <RigidBody type="fixed" colliders="cuboid">
-        <mesh position={[posX, floorOffset + 1.7, posZ]} rotation={[0, rotY, 0]} castShadow receiveShadow>
+      <group position={[posX, floorOffset + 1.7, posZ]} rotation={[0, rotY, 0]}>
+        <mesh castShadow receiveShadow>
           <boxGeometry args={[0.8, 3.0, 0.8]} />
           <meshStandardMaterial color={color} transparent opacity={0.6} roughness={0.2} metalness={0.8} />
-          <Edges scale={1.0} threshold={15} color={color} opacity={0.8} transparent />
         </mesh>
-      </RigidBody>
+      </group>
     );
   } else {
     // Triangle
@@ -174,21 +167,18 @@ const Item3D = ({ item, def, allItems, buildDefs }: { item: PlacedItem, def: Bui
     const extrudeSettings = { depth: height, bevelEnabled: false };
 
     return (
-      <RigidBody type="fixed" colliders="hull">
-        <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
-            <extrudeGeometry args={[shape, extrudeSettings]} />
-            <meshStandardMaterial 
-              color={color} 
-              transparent 
-              opacity={0.6} 
-              roughness={0.2} 
-              metalness={0.8} 
-            />
-            <Edges scale={1.0} threshold={15} color={color} opacity={0.8} transparent />
-          </mesh>
-        </group>
-      </RigidBody>
+      <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
+          <extrudeGeometry args={[shape, extrudeSettings]} />
+          <meshStandardMaterial 
+            color={color} 
+            transparent 
+            opacity={0.6} 
+            roughness={0.2} 
+            metalness={0.8} 
+          />
+        </mesh>
+      </group>
     );
   }
 };
@@ -246,19 +236,13 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
         </mesh>
 
         <Suspense fallback={null}>
-          <Physics>
-            {/* Ground Plane */}
-            <RigidBody type="fixed" position={[0, -0.1, 0]}>
-              <CuboidCollider args={[1000, 0.05, 1000]} />
-            </RigidBody>
-            <group>
-              {placedItems.map(item => {
-                const def = buildItems.find(d => d.id === item.itemId);
-                if (!def) return null;
-                return <Item3D key={item.id} item={item} def={def} allItems={placedItems} buildDefs={buildItems} />;
-              })}
-            </group>
-          </Physics>
+          <group>
+            {placedItems.map(item => {
+              const def = buildItems.find(d => d.id === item.itemId);
+              if (!def) return null;
+              return <Item3D key={item.id} item={item} def={def} allItems={placedItems} buildDefs={buildItems} />;
+            })}
+          </group>
         </Suspense>
       </Canvas>
       <div style={{ position: 'absolute', bottom: '20px', right: '20px', color: '#fff', background: 'var(--bg-card)', padding: '15px', borderRadius: '12px', fontSize: '0.9rem', backdropFilter: 'blur(10px)', border: '1px solid var(--border-color)', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>

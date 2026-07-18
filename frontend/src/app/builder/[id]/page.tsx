@@ -59,6 +59,70 @@ const renderShapeInterior = (def: BuildItem) => {
   return null;
 };
 
+const RenderedItem = React.memo(({ 
+  item, def, currentFloor, showBedAreas, isSelected, onPointerDown 
+}: {
+  item: PlacedItem;
+  def: BuildItem;
+  currentFloor: number;
+  showBedAreas: boolean;
+  isSelected: boolean;
+  onPointerDown: (e: React.PointerEvent, id: string) => void;
+}) => {
+  const itemFloor = item.floor || 0;
+  if (itemFloor > currentFloor) return null; // Don't show floors above
+  
+  const isBed = def.shape === 'bed';
+  const isWall = def.shape === 'wall';
+  const isPillar = def.shape === 'pillar';
+  const shapeClass = isBed ? styles.shapeBed : 
+                     isWall ? styles.shapeWall : 
+                     isPillar ? styles.shapePillar : 
+                     (def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare);
+  
+  const isLowerFloor = itemFloor < currentFloor;
+  const opacity = isLowerFloor ? 0.3 : 1.0;
+  const pointerEvents = isLowerFloor ? 'none' : 'auto';
+
+  return (
+    <React.Fragment>
+      {isBed && showBedAreas && (
+        <div style={{
+          position: 'absolute',
+          left: `${item.x}px`,
+          top: `${item.y}px`,
+          width: '540px',
+          height: '540px',
+          borderRadius: '50%',
+          backgroundColor: 'rgba(46, 204, 113, 0.05)',
+          border: '2px dashed rgba(46, 204, 113, 0.3)',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          zIndex: 1
+        }} />
+      )}
+      <div 
+        className={`${styles.placedItem} ${shapeClass} ${isSelected ? styles.selected : ''}`}
+        data-material={def.materialClass}
+        style={{
+          left: `${item.x}px`,
+          top: `${item.y}px`,
+          transform: def.shape === 'triangle' 
+            ? `translate(-50%, -66.666%) rotate(${item.rotation}deg)` 
+            : `translate(-50%, -50%) rotate(${item.rotation}deg)`,
+          backgroundColor: item.customColor || def.color,
+          opacity: opacity,
+          pointerEvents: pointerEvents as any
+        }}
+        onPointerDown={(e) => onPointerDown(e, item.id)}
+        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      >
+        {renderShapeInterior(def)}
+      </div>
+    </React.Fragment>
+  );
+});
+
 const SIDE = 60;
 const TRI_R = (SIDE * Math.sqrt(3)) / 6; // 17.3205
 const TRI_H = (SIDE * Math.sqrt(3)) / 2; // 51.9615
@@ -561,6 +625,15 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     }
   };
 
+  const handleItemPointerDownRef = useRef(handleItemPointerDown);
+  useEffect(() => {
+    handleItemPointerDownRef.current = handleItemPointerDown;
+  });
+  
+  const stableHandleItemPointerDown = React.useCallback((e: React.PointerEvent, id: string) => {
+    handleItemPointerDownRef.current(e, id);
+  }, []);
+
   const handlePointerMoveCanvas = (e: React.PointerEvent) => {
     if (isPanning) {
       setPan(prev => ({
@@ -933,60 +1006,20 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
             >
               {/* Draw Placed Items */}
             {placedItems.map(item => {
-              const itemFloor = item.floor || 0;
-              if (itemFloor > currentFloor) return null; // Don't show floors above
-              
               const def = BUILD_ITEMS.find(d => d.id === item.itemId);
               if (!def) return null;
-              const isBed = def.shape === 'bed';
-              const isWall = def.shape === 'wall';
-              const isPillar = def.shape === 'pillar';
-              const shapeClass = isBed ? styles.shapeBed : 
-                                 isWall ? styles.shapeWall : 
-                                 isPillar ? styles.shapePillar : 
-                                 (def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare);
               const isSelected = selectedItemId === item.id || selectedItemIds.includes(item.id);
               
-              const isLowerFloor = itemFloor < currentFloor;
-              const opacity = isLowerFloor ? 0.3 : 1.0;
-              const pointerEvents = isLowerFloor ? 'none' : 'auto';
-
               return (
-                <React.Fragment key={item.id}>
-                  {isBed && showBedAreas && (
-                    <div style={{
-                      position: 'absolute',
-                      left: `${item.x}px`,
-                      top: `${item.y}px`,
-                      width: '540px',
-                      height: '540px',
-                      borderRadius: '50%',
-                      backgroundColor: 'rgba(46, 204, 113, 0.05)',
-                      border: '2px dashed rgba(46, 204, 113, 0.3)',
-                      transform: 'translate(-50%, -50%)',
-                      pointerEvents: 'none',
-                      zIndex: 1
-                    }} />
-                  )}
-                  <div 
-                  className={`${styles.placedItem} ${shapeClass} ${isSelected ? styles.selected : ''}`}
-                  data-material={def.materialClass}
-                  style={{
-                    left: `${item.x}px`,
-                    top: `${item.y}px`,
-                    transform: def.shape === 'triangle' 
-                      ? `translate(-50%, -66.666%) rotate(${item.rotation}deg)` 
-                      : `translate(-50%, -50%) rotate(${item.rotation}deg)`,
-                    backgroundColor: item.customColor || def.color,
-                    opacity: opacity,
-                    pointerEvents: pointerEvents as any
-                  }}
-                  onPointerDown={(e) => handleItemPointerDown(e, item.id)}
-                  onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                >
-                  {renderShapeInterior(def)}
-                </div>
-              </React.Fragment>
+                <RenderedItem 
+                  key={item.id}
+                  item={item}
+                  def={def}
+                  currentFloor={currentFloor}
+                  showBedAreas={showBedAreas}
+                  isSelected={isSelected}
+                  onPointerDown={stableHandleItemPointerDown}
+                />
               );
             })}
 
