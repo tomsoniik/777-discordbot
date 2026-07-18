@@ -507,6 +507,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
             let maxEdges = 4;
             let rotStep = 90;
             if (def.shape === 'triangle') { maxEdges = 3; rotStep = 60; }
+            if (def.shape === 'wall') { rotStep = 45; }
             
             setActiveEdgeIndex(prev => prev + 1); // We'll do modulo where it's used
             setFreeRotation(prev => (prev + rotStep) % 360);
