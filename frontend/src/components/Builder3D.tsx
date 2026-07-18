@@ -2,7 +2,7 @@
 
 import React, { useMemo, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, Environment, Edges, Sparkles, MeshReflectorMaterial } from '@react-three/drei';
+import { OrbitControls, Grid, Environment, Edges, Sparkles } from '@react-three/drei';
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 
@@ -53,7 +53,6 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
   const width = SIDE * scale;
   const length = SIDE * scale;
   const height = isRoof ? 0.2 : 0.4;
-  const posY = height / 2 + heightOffset;
 
   const color = new THREE.Color(item.customColor || def.color);
   if (def.materialClass === 'structure') {
@@ -73,19 +72,16 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
 
     return (
       <RigidBody 
-        type="dynamic" 
-        position={[posX, 6.0, posZ]} 
+        type="fixed" 
+        position={[posX, 0, posZ]} 
         rotation={[0, rotY, 0]} 
-        enabledRotations={[false, false, false]} 
         colliders="cuboid"
-        restitution={0.1}
-        friction={0.5}
       >
         <group>
           {/* The Bed itself */}
           <mesh position={[0, bedPosY, 0]} castShadow receiveShadow>
             <boxGeometry args={[bedWidth, bedHeight, bedLength]} />
-            <meshPhysicalMaterial color="#ff4757" roughness={0.2} transmission={0.6} thickness={0.5} />
+            <meshStandardMaterial color="#ff4757" roughness={0.5} transparent opacity={0.8} />
             <Edges scale={1.05} threshold={15} color="#ff4757" />
           </mesh>
           
@@ -108,14 +104,12 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[posX, height / 2 + heightOffset, posZ]} rotation={[0, rotY, 0]} castShadow receiveShadow>
           <boxGeometry args={[width, height, length]} />
-          <meshPhysicalMaterial 
+          <meshStandardMaterial 
             color={color} 
-            transmission={0.9} 
-            opacity={1} 
-            roughness={0.1} 
-            ior={1.5} 
-            thickness={2} 
             transparent 
+            opacity={0.6} 
+            roughness={0.2} 
+            metalness={0.8} 
           />
           <Edges scale={1.0} threshold={15} color={color} opacity={0.8} transparent />
         </mesh>
@@ -144,14 +138,12 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
         <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
             <extrudeGeometry args={[shape, extrudeSettings]} />
-            <meshPhysicalMaterial 
+            <meshStandardMaterial 
               color={color} 
-              transmission={0.9} 
-              opacity={1} 
-              roughness={0.1} 
-              ior={1.5} 
-              thickness={2} 
               transparent 
+              opacity={0.6} 
+              roughness={0.2} 
+              metalness={0.8} 
             />
             <Edges scale={1.0} threshold={15} color={color} opacity={0.8} transparent />
           </mesh>
@@ -181,7 +173,7 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
           position={[10, 20, 10]} 
           intensity={1.5} 
           castShadow 
-          shadow-mapSize={[2048, 2048]}
+          shadow-mapSize={[1024, 1024]}
           color="#a7f3d0"
         />
         <Environment preset="city" />
@@ -193,7 +185,7 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
           makeDefault 
         />
 
-        <Sparkles count={300} scale={40} size={1.5} speed={0.4} color="#10b981" opacity={0.5} />
+        <Sparkles count={100} scale={40} size={1.5} speed={0.2} color="#10b981" opacity={0.3} />
 
         <Grid 
           position={[0, -0.01, 0]} 
@@ -210,24 +202,12 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
         
         <mesh position={[0, -0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[200, 200]} />
-          <MeshReflectorMaterial
-            blur={[400, 100]}
-            resolution={1024}
-            mixBlur={1}
-            mixStrength={15}
-            roughness={0.8}
-            depthScale={1.2}
-            minDepthThreshold={0.4}
-            maxDepthThreshold={1.4}
-            color="#030705"
-            metalness={0.5}
-            mirror={1}
-          />
+          <meshStandardMaterial color="#030705" roughness={0.1} metalness={0.8} />
         </mesh>
 
         <Suspense fallback={null}>
           <Physics>
-            {/* Ground Plane to catch items that fall off structures */}
+            {/* Ground Plane */}
             <RigidBody type="fixed" position={[0, -0.1, 0]}>
               <CuboidCollider args={[1000, 0.05, 1000]} />
             </RigidBody>
@@ -244,7 +224,7 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
       <div style={{ position: 'absolute', bottom: '20px', right: '20px', color: '#fff', background: 'var(--bg-card)', padding: '15px', borderRadius: '12px', fontSize: '0.9rem', backdropFilter: 'blur(10px)', border: '1px solid var(--border-color)', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
         <p style={{ margin: 0, fontWeight: 'bold', color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-green)', boxShadow: '0 0 10px var(--accent-green)' }} />
-          Holographic 3D Engine
+          Holographic 3D Engine (Optimized)
         </p>
         <p style={{ margin: '8px 0 0 0', opacity: 0.8, lineHeight: '1.5' }}>
           <b style={{ color: 'white' }}>LMB:</b> Obracanie kamery<br/>
