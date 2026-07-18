@@ -197,9 +197,28 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     isDragging: boolean;
     startMousePos: { x: number; y: number };
     initialItems: PlacedItem[];
+    preDragState: PlacedItem[];
   } | null>(null);
   const [clipboard, setClipboard] = useState<PlacedItem[]>([]);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
+  const [past, setPast] = useState<PlacedItem[][]>([]);
+  const [future, setFuture] = useState<PlacedItem[][]>([]);
+  const placedItemsRef = useRef<PlacedItem[]>([]);
+
+  useEffect(() => {
+    placedItemsRef.current = placedItems;
+  }, [placedItems]);
+
+  const commitAction = (newItems: PlacedItem[]) => {
+    setPast(prev => {
+      const nextPast = [...prev, placedItemsRef.current];
+      if (nextPast.length > 50) return nextPast.slice(nextPast.length - 50);
+      return nextPast;
+    });
+    setFuture([]);
+    setPlacedItems(newItems);
+  };
+
   const [selectedColor, setSelectedColor] = useState<string>(''); // empty means default
   const lastSyncRef = useRef<string>('');
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({ structure: true, furniture: true, color: true });
@@ -348,11 +367,31 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
       }
       if (e.key === 'Delete') {
         if (selectedItemIds.length > 0) {
-          setPlacedItems(prev => prev.filter(i => !selectedItemIds.includes(i.id)));
+          commitAction(placedItems.filter(i => !selectedItemIds.includes(i.id)));
           setSelectedItemIds([]);
         } else if (selectedItemId) {
-          setPlacedItems(prev => prev.filter(i => i.id !== selectedItemId));
+          commitAction(placedItems.filter(i => i.id !== selectedItemId));
           setSelectedItemId(null);
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        if (past.length > 0) {
+          const prev = past[past.length - 1];
+          setFuture(f => [...f, placedItemsRef.current]);
+          setPlacedItems(prev);
+          setPast(p => p.slice(0, p.length - 1));
+          addNotification(t('undo') || "Cofnięto", "success");
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'Z' && e.shiftKey))) {
+        e.preventDefault();
+        if (future.length > 0) {
+          const next = future[future.length - 1];
+          setPast(p => [...p, placedItemsRef.current]);
+          setPlacedItems(next);
+          setFuture(f => f.slice(0, f.length - 1));
+          addNotification(t('redo') || "Ponowiono", "success");
         }
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
@@ -375,7 +414,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
             y: mousePosRef.current.y + (item.y - minY),
             floor: currentFloor
           }));
-          setPlacedItems(prev => [...prev, ...newItems]);
+          commitAction([...placedItems, ...newItems]);
           setSelectedItemIds(newItems.map(i => i.id));
           addNotification(t('pasted_items') || `Wklejono ${newItems.length} elementów`, "success");
         }
@@ -510,7 +549,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
 
     if (activeItem && previewItem && isValidPlacement && e.button === 0) {
       // Place item
-      setPlacedItems(prev => [...prev, {
+      commitAction([...placedItems, {
         id: `${Date.now()}-${Math.random()}`,
         itemId: previewItem!.itemId,
         x: previewItem!.x,
@@ -559,6 +598,22 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     containerRef.current?.releasePointerCapture(e.pointerId);
     
     if (dragState) {
+      const moved = placedItemsRef.current.some(item => {
+        const initial = dragState.initialItems.find(i => i.id === item.id);
+        if (initial) {
+          return initial.x !== item.x || initial.y !== item.y;
+        }
+        return false;
+      });
+
+      if (moved) {
+        setPast(prev => {
+          const nextPast = [...prev, dragState.preDragState];
+          if (nextPast.length > 50) return nextPast.slice(nextPast.length - 50);
+          return nextPast;
+        });
+        setFuture([]);
+      }
       setDragState(null);
     }
     
@@ -609,11 +664,11 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     if (selectedColor !== '') {
       if (selectedItemIds.includes(id)) {
         // Apply color to all selected
-        setPlacedItems(prev => prev.map(item => 
+        commitAction(placedItems.map(item => 
           selectedItemIds.includes(item.id) ? { ...item, customColor: selectedColor === 'clear' ? undefined : selectedColor } : item
         ));
       } else {
-        setPlacedItems(prev => prev.map(item => 
+        commitAction(placedItems.map(item => 
           item.id === id ? { ...item, customColor: selectedColor === 'clear' ? undefined : selectedColor } : item
         ));
       }
@@ -625,7 +680,8 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
       setDragState({
         isDragging: true,
         startMousePos: mousePosRef.current,
-        initialItems: placedItems.filter(i => selectedItemIds.includes(i.id))
+        initialItems: placedItems.filter(i => selectedItemIds.includes(i.id)),
+        preDragState: placedItems
       });
       containerRef.current?.setPointerCapture(e.pointerId);
     } else {
@@ -641,7 +697,8 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         setDragState({
           isDragging: true,
           startMousePos: mousePosRef.current,
-          initialItems: [placedItems.find(i => i.id === id)!]
+          initialItems: [placedItems.find(i => i.id === id)!],
+          preDragState: placedItems
         });
         containerRef.current?.setPointerCapture(e.pointerId);
       }
