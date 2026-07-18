@@ -262,6 +262,8 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     startMousePos: { x: number; y: number };
     initialItems: PlacedItem[];
     preDragState: PlacedItem[];
+    dx: number;
+    dy: number;
   } | null>(null);
   const [clipboard, setClipboard] = useState<PlacedItem[]>([]);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
@@ -645,13 +647,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
           const dx = Math.round((mx - dragState.startMousePos.x) / 15) * 15;
           const dy = Math.round((my - dragState.startMousePos.y) / 15) * 15;
           
-          setPlacedItems(prev => prev.map(item => {
-            const initial = dragState.initialItems.find(i => i.id === item.id);
-            if (initial) {
-              return { ...item, x: initial.x + dx, y: initial.y + dy };
-            }
-            return item;
-          }));
+          setDragState(prev => prev ? { ...prev, dx, dy } : null);
         } else if (selectionBox) {
           setSelectionBox(prev => prev ? { ...prev, endX: mx, endY: my } : null);
         }
@@ -664,15 +660,15 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     containerRef.current?.releasePointerCapture(e.pointerId);
     
     if (dragState) {
-      const moved = placedItemsRef.current.some(item => {
-        const initial = dragState.initialItems.find(i => i.id === item.id);
-        if (initial) {
-          return initial.x !== item.x || initial.y !== item.y;
-        }
-        return false;
-      });
+      if (dragState.dx !== 0 || dragState.dy !== 0) {
+        setPlacedItems(prev => prev.map(item => {
+          const initial = dragState.initialItems.find(i => i.id === item.id);
+          if (initial) {
+            return { ...item, x: initial.x + dragState.dx, y: initial.y + dragState.dy };
+          }
+          return item;
+        }));
 
-      if (moved) {
         setPast(prev => {
           const nextPast = [...prev, dragState.preDragState];
           if (nextPast.length > 50) return nextPast.slice(nextPast.length - 50);
@@ -747,7 +743,9 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         isDragging: true,
         startMousePos: mousePosRef.current,
         initialItems: placedItems.filter(i => selectedItemIds.includes(i.id)),
-        preDragState: placedItems
+        preDragState: placedItems,
+        dx: 0,
+        dy: 0
       });
       containerRef.current?.setPointerCapture(e.pointerId);
     } else {
@@ -764,7 +762,9 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
           isDragging: true,
           startMousePos: mousePosRef.current,
           initialItems: [placedItems.find(i => i.id === id)!],
-          preDragState: placedItems
+          preDragState: placedItems,
+          dx: 0,
+          dy: 0
         });
         containerRef.current?.setPointerCapture(e.pointerId);
       }
@@ -797,6 +797,9 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
 
   const memoizedPlacedItems = useMemo(() => {
     return placedItems.map(item => {
+      // Hide original item if it's currently being dragged
+      if (dragState?.isDragging && selectedItemIds.includes(item.id)) return null;
+
       const def = BUILD_ITEMS.find(d => d.id === item.itemId);
       if (!def) return null;
       const isSelected = selectedItemId === item.id || selectedItemIds.includes(item.id);
@@ -813,7 +816,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         />
       );
     });
-  }, [placedItems, selectedItemId, selectedItemIds, currentFloor, showBedAreas, stableHandleItemPointerDown]);
+  }, [placedItems, selectedItemId, selectedItemIds, currentFloor, showBedAreas, stableHandleItemPointerDown, dragState?.isDragging]);
 
   return (
     <div className={styles.container}>
@@ -1024,10 +1027,31 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
           ) : (
             <div 
               className={styles.canvas} 
-              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})` }}
+              style={{ transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${scale})`, willChange: 'transform' }}
             >
               {/* Draw Placed Items */}
               {memoizedPlacedItems}
+
+              {/* Draw Drag Layer */}
+              {dragState?.isDragging && dragState.dx !== undefined && (
+                <div style={{ transform: `translate3d(${dragState.dx}px, ${dragState.dy}px, 0)`, willChange: 'transform' }}>
+                  {dragState.initialItems.map(item => {
+                    const def = BUILD_ITEMS.find(d => d.id === item.itemId);
+                    if (!def) return null;
+                    return (
+                      <RenderedItem 
+                        key={`drag-${item.id}`}
+                        item={item}
+                        def={def}
+                        currentFloor={currentFloor}
+                        showBedAreas={showBedAreas}
+                        isSelected={true}
+                        onPointerDown={stableHandleItemPointerDown}
+                      />
+                    );
+                  })}
+                </div>
+              )}
 
 
             {/* Draw Preview Item */}
