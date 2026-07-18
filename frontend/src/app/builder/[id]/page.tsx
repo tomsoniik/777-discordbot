@@ -504,9 +504,13 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         if (activeItem) {
           const def = BUILD_ITEMS.find(d => d.id === activeItem);
           if (def) {
-            const maxEdges = def.shape === 'square' ? 4 : 3;
-            setActiveEdgeIndex(prev => (prev + 1) % maxEdges);
-            setFreeRotation(prev => (prev + (def.shape === 'square' ? 90 : 60)) % 360);
+            let maxEdges = 4;
+            let rotStep = 90;
+            if (def.shape === 'triangle') { maxEdges = 3; rotStep = 60; }
+            if (def.shape === 'wall') { maxEdges = 2; rotStep = 180; }
+            
+            setActiveEdgeIndex(prev => prev + 1); // We'll do modulo where it's used
+            setFreeRotation(prev => (prev + rotStep) % 360);
           }
         }
       }
@@ -565,7 +569,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         itemId: selectedItemDef.id,
         x: (closestVertex as any).x,
         y: (closestVertex as any).y,
-        rotation: 0
+        rotation: (activeEdgeIndex % 4) * 90
       };
     } else if (closestEdge) {
       // Snap to edge
@@ -577,7 +581,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
           itemId: selectedItemDef.id,
           x: targetEdge.x,
           y: targetEdge.y,
-          rotation: targetEdge.angle
+          rotation: normalizeAngle(targetEdge.angle + (activeEdgeIndex % 2 === 1 ? 180 : 0))
         };
         snappedEdgeLine = targetEdge;
       } else {
