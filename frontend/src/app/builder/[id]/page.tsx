@@ -193,6 +193,11 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [selectionBox, setSelectionBox] = useState<{startX: number, startY: number, endX: number, endY: number} | null>(null);
+  const [dragState, setDragState] = useState<{
+    isDragging: boolean;
+    startMousePos: { x: number; y: number };
+    initialItems: PlacedItem[];
+  } | null>(null);
   const [clipboard, setClipboard] = useState<PlacedItem[]>([]);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
   const [selectedColor, setSelectedColor] = useState<string>(''); // empty means default
@@ -531,7 +536,18 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         setMousePos({ x: mx, y: my });
         mousePosRef.current = { x: mx, y: my };
         
-        if (selectionBox) {
+        if (dragState) {
+          const dx = Math.round((mx - dragState.startMousePos.x) / 15) * 15;
+          const dy = Math.round((my - dragState.startMousePos.y) / 15) * 15;
+          
+          setPlacedItems(prev => prev.map(item => {
+            const initial = dragState.initialItems.find(i => i.id === item.id);
+            if (initial) {
+              return { ...item, x: initial.x + dx, y: initial.y + dy };
+            }
+            return item;
+          }));
+        } else if (selectionBox) {
           setSelectionBox(prev => prev ? { ...prev, endX: mx, endY: my } : null);
         }
       }
@@ -541,6 +557,10 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const handlePointerUpCanvas = (e: React.PointerEvent) => {
     setIsPanning(false);
     containerRef.current?.releasePointerCapture(e.pointerId);
+    
+    if (dragState) {
+      setDragState(null);
+    }
     
     if (selectionBox) {
       const minX = Math.min(selectionBox.startX, selectionBox.endX);
@@ -600,10 +620,31 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
       return;
     }
 
-    if (!e.shiftKey) {
-      setSelectedItemIds([id]);
+    if (selectedItemIds.includes(id) && !e.shiftKey) {
+      // Start drag of existing selection
+      setDragState({
+        isDragging: true,
+        startMousePos: mousePosRef.current,
+        initialItems: placedItems.filter(i => selectedItemIds.includes(i.id))
+      });
+      containerRef.current?.setPointerCapture(e.pointerId);
     } else {
-      setSelectedItemIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+      // Select new
+      const newSelection = e.shiftKey 
+        ? (selectedItemIds.includes(id) ? selectedItemIds.filter(i => i !== id) : [...selectedItemIds, id])
+        : [id];
+      
+      setSelectedItemIds(newSelection);
+      
+      if (!e.shiftKey) {
+        // Start drag of new single selection immediately
+        setDragState({
+          isDragging: true,
+          startMousePos: mousePosRef.current,
+          initialItems: [placedItems.find(i => i.id === id)!]
+        });
+        containerRef.current?.setPointerCapture(e.pointerId);
+      }
     }
     setSelectedItemId(id); // Keep single select logic working for old features if any
   };
