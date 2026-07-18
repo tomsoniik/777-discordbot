@@ -2,7 +2,7 @@
 
 import React, { useMemo, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, Environment } from '@react-three/drei';
+import { OrbitControls, Grid, Environment, Edges, Sparkles, MeshReflectorMaterial } from '@react-three/drei';
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 
@@ -57,7 +57,10 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
 
   const color = new THREE.Color(item.customColor || def.color);
   if (def.materialClass === 'structure') {
-    color.multiplyScalar(1.1);
+    // Apply premium tech aesthetic by forcing green glow on structures without custom color
+    if (!item.customColor) {
+      color.set('#10b981');
+    }
   }
 
   // Draw square or triangle or bed
@@ -82,19 +85,20 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
           {/* The Bed itself */}
           <mesh position={[0, bedPosY, 0]} castShadow receiveShadow>
             <boxGeometry args={[bedWidth, bedHeight, bedLength]} />
-            <meshStandardMaterial color={color} roughness={0.9} />
+            <meshPhysicalMaterial color="#ff4757" roughness={0.2} transmission={0.6} thickness={0.5} />
+            <Edges scale={1.05} threshold={15} color="#ff4757" />
           </mesh>
           
           {/* Protection Radius Area */}
           <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
             <circleGeometry args={[radius, 32]} />
-            <meshBasicMaterial color="#2ecc71" transparent opacity={0.1} depthWrite={false} />
+            <meshBasicMaterial color="#ff4757" transparent opacity={0.05} depthWrite={false} />
           </mesh>
           
           {/* Protection Radius Border */}
           <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
             <ringGeometry args={[radius - 0.1, radius, 64]} />
-            <meshBasicMaterial color="#2ecc71" transparent opacity={0.3} depthWrite={false} />
+            <meshBasicMaterial color="#ff4757" transparent opacity={0.5} depthWrite={false} />
           </mesh>
         </group>
       </RigidBody>
@@ -104,7 +108,16 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[posX, height / 2 + heightOffset, posZ]} rotation={[0, rotY, 0]} castShadow receiveShadow>
           <boxGeometry args={[width, height, length]} />
-          <meshStandardMaterial color={color} roughness={def.materialClass === 'structure' ? 0.3 : 0.8} metalness={def.materialClass === 'structure' ? 0.7 : 0.1} />
+          <meshPhysicalMaterial 
+            color={color} 
+            transmission={0.9} 
+            opacity={1} 
+            roughness={0.1} 
+            ior={1.5} 
+            thickness={2} 
+            transparent 
+          />
+          <Edges scale={1.0} threshold={15} color={color} opacity={0.8} transparent />
         </mesh>
       </RigidBody>
     );
@@ -131,7 +144,16 @@ const Item3D = ({ item, def }: { item: PlacedItem, def: BuildItem }) => {
         <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
             <extrudeGeometry args={[shape, extrudeSettings]} />
-            <meshStandardMaterial color={color} roughness={def.materialClass === 'structure' ? 0.3 : 0.8} metalness={def.materialClass === 'structure' ? 0.7 : 0.1} />
+            <meshPhysicalMaterial 
+              color={color} 
+              transmission={0.9} 
+              opacity={1} 
+              roughness={0.1} 
+              ior={1.5} 
+              thickness={2} 
+              transparent 
+            />
+            <Edges scale={1.0} threshold={15} color={color} opacity={0.8} transparent />
           </mesh>
         </group>
       </RigidBody>
@@ -150,37 +172,63 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
   }, [placedItems]);
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', background: '#0f0f14' }}>
-      <Canvas shadows camera={{ position: [center[0], 15, center[2] + 15] as [number, number, number], fov: 45 }}>
-        <color attach="background" args={['#0f0f14']} />
-        <ambientLight intensity={0.4} />
+    <div style={{ width: '100%', height: '100%', position: 'relative', background: '#030705' }}>
+      <Canvas shadows camera={{ position: [center[0], 12, center[2] + 15] as [number, number, number], fov: 45 }}>
+        <color attach="background" args={['#030705']} />
+        
+        <ambientLight intensity={0.5} />
         <directionalLight 
           position={[10, 20, 10]} 
-          intensity={1} 
+          intensity={1.5} 
           castShadow 
-          shadow-mapSize={[1024, 1024]}
+          shadow-mapSize={[2048, 2048]}
+          color="#a7f3d0"
         />
         <Environment preset="city" />
 
-        <OrbitControls target={[center[0], center[1], center[2]] as [number, number, number]} maxPolarAngle={Math.PI / 2 - 0.05} />
+        <OrbitControls 
+          target={[center[0], center[1], center[2]] as [number, number, number]} 
+          maxPolarAngle={Math.PI / 2 - 0.05} 
+          dampingFactor={0.05} 
+          makeDefault 
+        />
+
+        <Sparkles count={300} scale={40} size={1.5} speed={0.4} color="#10b981" opacity={0.5} />
 
         <Grid 
           position={[0, -0.01, 0]} 
           args={[200, 200]} 
           cellSize={0.6} 
-          cellThickness={1} 
-          cellColor="#2ecc71" 
+          cellThickness={1.5} 
+          cellColor="#042f1b" 
           sectionSize={3} 
-          sectionThickness={1.5} 
-          sectionColor="#1a4a2c" 
-          fadeDistance={100} 
+          sectionThickness={2} 
+          sectionColor="#065f46" 
+          fadeDistance={60} 
           fadeStrength={1}
         />
+        
+        <mesh position={[0, -0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[200, 200]} />
+          <MeshReflectorMaterial
+            blur={[400, 100]}
+            resolution={1024}
+            mixBlur={1}
+            mixStrength={15}
+            roughness={0.8}
+            depthScale={1.2}
+            minDepthThreshold={0.4}
+            maxDepthThreshold={1.4}
+            color="#030705"
+            metalness={0.5}
+            mirror={1}
+          />
+        </mesh>
 
         <Suspense fallback={null}>
           <Physics>
-            {/* Ground Plane to catch beds that fall off structures */}
-            <RigidBody type="fixed" position={[0, -0.05, 0]}>
+            {/* Ground Plane to catch items that fall off structures */}
+            <RigidBody type="fixed" position={[0, -0.1, 0]}>
               <CuboidCollider args={[1000, 0.05, 1000]} />
             </RigidBody>
             <group>
@@ -193,9 +241,16 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
           </Physics>
         </Suspense>
       </Canvas>
-      <div style={{ position: 'absolute', bottom: '20px', right: '20px', color: '#fff', background: 'rgba(0,0,0,0.5)', padding: '10px', borderRadius: '8px', fontSize: '0.9rem', backdropFilter: 'blur(4px)' }}>
-        <p style={{ margin: 0, fontWeight: 'bold', color: '#2ecc71' }}>Testowy Widok 3D</p>
-        <p style={{ margin: '5px 0 0 0', opacity: 0.8 }}>Złap i przeciągnij, by obrócić kamerę.<br/>Scroll, by przybliżyć.</p>
+      <div style={{ position: 'absolute', bottom: '20px', right: '20px', color: '#fff', background: 'var(--bg-card)', padding: '15px', borderRadius: '12px', fontSize: '0.9rem', backdropFilter: 'blur(10px)', border: '1px solid var(--border-color)', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
+        <p style={{ margin: 0, fontWeight: 'bold', color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-green)', boxShadow: '0 0 10px var(--accent-green)' }} />
+          Holographic 3D Engine
+        </p>
+        <p style={{ margin: '8px 0 0 0', opacity: 0.8, lineHeight: '1.5' }}>
+          <b style={{ color: 'white' }}>LMB:</b> Obracanie kamery<br/>
+          <b style={{ color: 'white' }}>RMB:</b> Przesuwanie<br/>
+          <b style={{ color: 'white' }}>Scroll:</b> Przybliżanie
+        </p>
       </div>
     </div>
   );
