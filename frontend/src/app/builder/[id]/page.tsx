@@ -795,6 +795,26 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     return totals;
   }, [placedItems]);
 
+  const memoizedPlacedItems = useMemo(() => {
+    return placedItems.map(item => {
+      const def = BUILD_ITEMS.find(d => d.id === item.itemId);
+      if (!def) return null;
+      const isSelected = selectedItemId === item.id || selectedItemIds.includes(item.id);
+      
+      return (
+        <RenderedItem 
+          key={item.id}
+          item={item}
+          def={def}
+          currentFloor={currentFloor}
+          showBedAreas={showBedAreas}
+          isSelected={isSelected}
+          onPointerDown={stableHandleItemPointerDown}
+        />
+      );
+    });
+  }, [placedItems, selectedItemId, selectedItemIds, currentFloor, showBedAreas, stableHandleItemPointerDown]);
+
   return (
     <div className={styles.container}>
       <div className={styles.sidebar}>
@@ -1007,23 +1027,8 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
               style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})` }}
             >
               {/* Draw Placed Items */}
-            {placedItems.map(item => {
-              const def = BUILD_ITEMS.find(d => d.id === item.itemId);
-              if (!def) return null;
-              const isSelected = selectedItemId === item.id || selectedItemIds.includes(item.id);
-              
-              return (
-                <RenderedItem 
-                  key={item.id}
-                  item={item}
-                  def={def}
-                  currentFloor={currentFloor}
-                  showBedAreas={showBedAreas}
-                  isSelected={isSelected}
-                  onPointerDown={stableHandleItemPointerDown}
-                />
-              );
-            })}
+              {memoizedPlacedItems}
+
 
             {/* Draw Preview Item */}
             {activeItem && previewItem && (() => {
