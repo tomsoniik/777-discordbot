@@ -191,6 +191,9 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const [isSyncing, setIsSyncing] = useState(false);
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [selectionBox, setSelectionBox] = useState<{startX: number, startY: number, endX: number, endY: number} | null>(null);
+  const [clipboard, setClipboard] = useState<PlacedItem[]>([]);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
   const [selectedColor, setSelectedColor] = useState<string>(''); // empty means default
   const lastSyncRef = useRef<string>('');
@@ -311,6 +314,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   
   // Placement State
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const mousePosRef = useRef({ x: 0, y: 0 });
   const [activeEdgeIndex, setActiveEdgeIndex] = useState(0); // for rotating the active item during placement
   const [freeRotation, setFreeRotation] = useState(0); // for placing freely
 
@@ -335,11 +339,40 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
       if (e.key === 'Escape') {
         setActiveItem(null);
         setSelectedItemId(null);
+        setSelectedItemIds([]);
       }
       if (e.key === 'Delete') {
-        if (selectedItemId) {
+        if (selectedItemIds.length > 0) {
+          setPlacedItems(prev => prev.filter(i => !selectedItemIds.includes(i.id)));
+          setSelectedItemIds([]);
+        } else if (selectedItemId) {
           setPlacedItems(prev => prev.filter(i => i.id !== selectedItemId));
           setSelectedItemId(null);
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        const itemsToCopy = placedItems.filter(i => selectedItemIds.includes(i.id));
+        setClipboard(itemsToCopy);
+        if (itemsToCopy.length > 0) addNotification(t('copied_items') || `Skopiowano ${itemsToCopy.length} elementów`, "success");
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        if (clipboard.length > 0) {
+          let minX = Infinity, minY = Infinity;
+          clipboard.forEach(i => {
+            if (i.x < minX) minX = i.x;
+            if (i.y < minY) minY = i.y;
+          });
+          
+          const newItems = clipboard.map(item => ({
+            ...item,
+            id: `${Date.now()}-${Math.random()}`,
+            x: mousePosRef.current.x + (item.x - minX),
+            y: mousePosRef.current.y + (item.y - minY),
+            floor: currentFloor
+          }));
+          setPlacedItems(prev => [...prev, ...newItems]);
+          setSelectedItemIds(newItems.map(i => i.id));
+          addNotification(t('pasted_items') || `Wklejono ${newItems.length} elementów`, "success");
         }
       }
       if (e.key === 'r' || e.key === 'R') {
@@ -355,7 +388,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeItem, selectedItemId]);
+  }, [activeItem, selectedItemId, selectedItemIds, placedItems, clipboard, currentFloor]);
 
   const selectedItemDef = BUILD_ITEMS.find(i => i.id === activeItem);
 
@@ -462,6 +495,10 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
       return;
     }
 
+    if (e.button === 0 && !activeItem) {
+      setSelectionBox({ startX: mousePos.x, startY: mousePos.y, endX: mousePos.x, endY: mousePos.y });
+    }
+
     if (e.button === 0 && selectedItemId) {
       setSelectedItemId(null);
     }
@@ -489,10 +526,14 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     } else {
       const rect = containerRef.current?.getBoundingClientRect();
       if (rect) {
-        setMousePos({
-          x: (e.clientX - rect.left - pan.x) / scale,
-          y: (e.clientY - rect.top - pan.y) / scale
-        });
+        const mx = (e.clientX - rect.left - pan.x) / scale;
+        const my = (e.clientY - rect.top - pan.y) / scale;
+        setMousePos({ x: mx, y: my });
+        mousePosRef.current = { x: mx, y: my };
+        
+        if (selectionBox) {
+          setSelectionBox(prev => prev ? { ...prev, endX: mx, endY: my } : null);
+        }
       }
     }
   };
@@ -500,6 +541,25 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const handlePointerUpCanvas = (e: React.PointerEvent) => {
     setIsPanning(false);
     containerRef.current?.releasePointerCapture(e.pointerId);
+    
+    if (selectionBox) {
+      const minX = Math.min(selectionBox.startX, selectionBox.endX);
+      const maxX = Math.max(selectionBox.startX, selectionBox.endX);
+      const minY = Math.min(selectionBox.startY, selectionBox.endY);
+      const maxY = Math.max(selectionBox.startY, selectionBox.endY);
+      
+      if (maxX - minX > 5 || maxY - minY > 5) {
+        const newSelected = placedItems.filter(item => {
+          const itemFloor = item.floor || 0;
+          if (itemFloor !== currentFloor) return false;
+          return item.x >= minX && item.x <= maxX && item.y >= minY && item.y <= maxY;
+        }).map(i => i.id);
+        setSelectedItemIds(newSelected);
+      } else {
+        setSelectedItemIds([]);
+      }
+      setSelectionBox(null);
+    }
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -527,13 +587,25 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     e.stopPropagation();
 
     if (selectedColor !== '') {
-      setPlacedItems(prev => prev.map(item => 
-        item.id === id ? { ...item, customColor: selectedColor === 'clear' ? undefined : selectedColor } : item
-      ));
+      if (selectedItemIds.includes(id)) {
+        // Apply color to all selected
+        setPlacedItems(prev => prev.map(item => 
+          selectedItemIds.includes(item.id) ? { ...item, customColor: selectedColor === 'clear' ? undefined : selectedColor } : item
+        ));
+      } else {
+        setPlacedItems(prev => prev.map(item => 
+          item.id === id ? { ...item, customColor: selectedColor === 'clear' ? undefined : selectedColor } : item
+        ));
+      }
       return;
     }
 
-    setSelectedItemId(id);
+    if (!e.shiftKey) {
+      setSelectedItemIds([id]);
+    } else {
+      setSelectedItemIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    }
+    setSelectedItemId(id); // Keep single select logic working for old features if any
   };
 
   // Calculate Materials
@@ -775,7 +847,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                                  isWall ? styles.shapeWall : 
                                  isPillar ? styles.shapePillar : 
                                  (def.shape === 'triangle' ? styles.shapeTriangleTextured : styles.shapeSquare);
-              const isSelected = selectedItemId === item.id;
+              const isSelected = selectedItemId === item.id || selectedItemIds.includes(item.id);
               
               const isLowerFloor = itemFloor < currentFloor;
               const opacity = isLowerFloor ? 0.3 : 1.0;
@@ -871,6 +943,21 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
               </React.Fragment>
               );
             })()}
+
+            {/* Draw Selection Box */}
+            {selectionBox && (
+              <div style={{
+                position: 'absolute',
+                left: Math.min(selectionBox.startX, selectionBox.endX),
+                top: Math.min(selectionBox.startY, selectionBox.endY),
+                width: Math.abs(selectionBox.endX - selectionBox.startX),
+                height: Math.abs(selectionBox.endY - selectionBox.startY),
+                border: '1px solid #3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                pointerEvents: 'none',
+                zIndex: 2000
+              }} />
+            )}
 
             {/* Draw Snap Point Debug */}
             {snappedEdgeLine && (
