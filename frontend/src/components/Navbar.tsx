@@ -51,9 +51,6 @@ export default function Navbar() {
         <div className="navbar-nav" style={{ alignItems: 'center', position: 'relative' }}>
           <Link href="/about" className="nav-link">{t("about")}</Link>
           <Link href="/builder" className="nav-link">Builder</Link>
-          {session && (
-            <Link href="/apply" className="nav-link">{t("recruitment")}</Link>
-          )}
 
           {!session && (
             <button
@@ -123,16 +120,6 @@ export default function Navbar() {
                       <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Signed in as</p>
                       <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.user?.email || session.user?.name}</p>
                     </div>
-
-                    <Link 
-                      href="/music" 
-                      onClick={() => setIsMenuOpen(false)}
-                      style={{ padding: '10px 12px', color: '#fff', textDecoration: 'none', borderRadius: '10px', display: 'block', transition: '0.2s', fontSize: '0.95rem' }}
-                      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                      onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                      Playlist
-                    </Link>
 
                     { (session.user as any)?.role === 'ADMIN' && (
                       <Link 
