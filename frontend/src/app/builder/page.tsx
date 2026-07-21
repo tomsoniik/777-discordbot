@@ -129,20 +129,32 @@ export default function BuilderDashboard() {
       });
       if (res.ok) {
         const p = await res.json();
-        router.push(`/builder/${p.id}`);
-        return;
+        if (p && p.id) {
+          router.push(`/builder/${p.id}`);
+          return;
+        }
       }
     } catch (e) {
       console.error(e);
     }
 
     const localList = getLocalProjects();
-    const found = localList.find((p) => p.joinCode === targetCode);
-    if (found) {
-      router.push(`/builder/${found.id}`);
-    } else {
-      alert(t('prompt_join_error') || 'Nie znaleziono projektu o tym kodzie.');
+    let found = localList.find((p) => p.joinCode === targetCode || p.id === targetCode);
+    if (!found) {
+      found = {
+        id: 'local-' + targetCode,
+        name: `Projekt ${targetCode}`,
+        description: '',
+        data: '[]',
+        joinCode: targetCode,
+        updatedAt: new Date().toISOString(),
+        owner: { name: session?.user?.name || 'Gość' },
+        collaborators: []
+      };
+      localList.unshift(found);
+      saveLocalProjects(localList);
     }
+    router.push(`/builder/${found.id}`);
   };
 
   if (isLoading) {
