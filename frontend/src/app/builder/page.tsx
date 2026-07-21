@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import Link from 'next/link';
-import { Add, FolderOpen, User, Link as LinkIcon } from 'iconsax-react';
+import { Add, FolderOpen, User, Link as LinkIcon, Trash } from 'iconsax-react';
 import { motion, Variants } from 'framer-motion';
 
 export default function BuilderDashboard() {
@@ -157,6 +157,25 @@ export default function BuilderDashboard() {
     router.push(`/builder/${found.id}`);
   };
 
+  const deleteProject = async (e: React.MouseEvent, projId: string, name: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!window.confirm(`Czy na pewno chcesz usunąć/opuścić projekt "${name}"?`)) return;
+
+    try {
+      if (!projId.startsWith('local-')) {
+        await fetch(`/api/builder/projects/${projId}`, { method: 'DELETE' });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
+    const localList = getLocalProjects().filter((p) => p.id !== projId && p.joinCode !== projId);
+    saveLocalProjects(localList);
+    setProjects((prev) => prev.filter((p) => p.id !== projId));
+  };
+
   if (isLoading) {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'white' }}>Ładowanie...</div>;
   }
@@ -223,9 +242,32 @@ export default function BuilderDashboard() {
             {projects.map((p) => (
               <motion.div variants={itemVariants} key={p.id}>
                 <Link href={`/builder/${p.id}`} style={{ textDecoration: 'none' }}>
-                  <div className="bento-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '1.5rem' }}>
+                  <div className="bento-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '1.5rem', position: 'relative' }}>
                     <div style={{ flex: 1 }}>
-                      <h3 style={{ color: 'white', fontSize: '1.3rem', fontWeight: 600, marginBottom: '0.4rem' }}>{p.name}</h3>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <h3 style={{ color: 'white', fontSize: '1.3rem', fontWeight: 600, marginBottom: '0.4rem' }}>{p.name}</h3>
+                        <button
+                          onClick={(e) => deleteProject(e, p.id, p.name)}
+                          title="Usuń / Opuść projekt"
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            color: '#ef4444',
+                            padding: '6px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s',
+                            zIndex: 10
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)'}
+                          onMouseOut={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                        >
+                          <Trash size="16" />
+                        </button>
+                      </div>
                       {p.description && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem', fontStyle: 'italic' }}>{p.description}</p>}
                       <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>{t('builder_updated')} {new Date(p.updatedAt).toLocaleString()}</p>
                     </div>
@@ -235,7 +277,7 @@ export default function BuilderDashboard() {
                         <div style={{ background: 'var(--bg-card)', padding: '6px', borderRadius: '50%' }}>
                           <User size="16" />
                         </div>
-                        {p.owner.name}
+                        {p.owner?.name || 'Gość'}
                       </div>
                       
                       {p.collaborators?.length > 0 && (
