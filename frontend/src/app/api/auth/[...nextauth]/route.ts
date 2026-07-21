@@ -7,17 +7,23 @@ import { NextRequest } from "next/server"
 const prisma = new PrismaClient()
 
 export function getAuthOptions(req?: Request): NextAuthOptions {
-  const dummyReq = req || new Request(process.env.NEXTAUTH_URL || "http://localhost:3000");
-  const host = req?.headers.get("host") || "localhost:3000";
-  const protocol = req?.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
-  const origin = `${protocol}://${host}`;
+  let origin = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  if (req) {
+    const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+    const protocol = req.headers.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
+    if (host) {
+      origin = `${protocol}://${host}`;
+    }
+  }
+
+  const requestForSteam = req || new Request(`${origin}/api/auth`);
 
   return {
     adapter: PrismaAdapter(prisma) as any,
     providers: [
-      SteamProvider(dummyReq, {
+      SteamProvider(requestForSteam, {
         clientSecret: process.env.STEAM_API_KEY || "5764EDE15ADAFAEC248568A1F11B59CE",
-        callbackUrl: `${origin}/api/auth/callback/steam`,
+        callbackUrl: `${origin}/api/auth/callback`,
       }),
     ],
     callbacks: {
