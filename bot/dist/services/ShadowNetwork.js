@@ -41,11 +41,12 @@ class ShadowNetwork {
         if (!apiKey)
             return;
         try {
+            // Zawsze utwórz główny węzeł dla śledzonego gracza, nawet jeśli profil jest prywatny
+            await db_1.prisma.playerNode.upsert({ where: { steamId }, update: { lastSeenAt: new Date() }, create: { steamId } });
             const res = await fetch(`https://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=${apiKey}&steamid=${steamId}&relationship=friend`);
             const data = await res.json();
             if (data.friendslist && data.friendslist.friends) {
                 const friends = data.friendslist.friends;
-                await db_1.prisma.playerNode.upsert({ where: { steamId }, update: { lastSeenAt: new Date() }, create: { steamId } });
                 let addedCount = 0;
                 for (const f of friends) {
                     const friendId = f.steamid;

@@ -2,13 +2,11 @@
 
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
-import { useSession, signIn } from 'next-auth/react';
-import { Crown, ShieldTick, Radar, ArrowRight, Musicnote } from 'iconsax-react';
+import { Crown, ShieldTick, Radar, ArrowRight } from 'iconsax-react';
 import { motion, Variants } from 'framer-motion';
 
 export default function Home() {
-  const { t, language } = useLanguage();
-  const { data: session, status } = useSession();
+  const { t } = useLanguage();
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -53,28 +51,12 @@ export default function Home() {
           </motion.p>
           
           <motion.div variants={itemVariants} className="hero-actions">
-            {status === "loading" ? (
-              <div className="btn-cinematic secondary" style={{ opacity: 0.5 }}>Loading...</div>
-            ) : session ? (
-              <>
-                <Link href="/apply" className="btn-cinematic primary">
-                  {t("startApp")} <ArrowRight size="20" />
-                </Link>
-                <Link href="/music" className="btn-cinematic secondary">
-                  <Musicnote size="20" variant="Bulk" color="#10b981" /> 
-                  {language === 'pl' ? 'Zarządzaj Playlistą' : 'Manage Playlist'}
-                </Link>
-              </>
-            ) : (
-              <button 
-                onClick={() => signIn('discord')} 
-                className="btn-cinematic secondary" 
-                style={{ background: 'rgba(88, 101, 242, 0.1)', borderColor: 'rgba(88, 101, 242, 0.3)' }}
-              >
-                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/discord.svg" alt="Discord" style={{ width: '22px', filter: 'invert(1)' }} />
-                {language === 'pl' ? 'Zaloguj przez Discord' : 'Sign in with Discord'}
-              </button>
-            )}
+            <Link href="/builder" className="btn-cinematic primary" style={{ fontSize: '1.1rem', padding: '14px 28px' }}>
+              {t("builder_projects_title") || "Otwórz Builder 2D & 3D"} <ArrowRight size="20" />
+            </Link>
+            <Link href="/about" className="btn-cinematic secondary">
+              {t("about") || "O Nas"}
+            </Link>
           </motion.div>
         </motion.div>
       </section>

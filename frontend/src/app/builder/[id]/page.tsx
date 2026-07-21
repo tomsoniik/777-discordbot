@@ -312,12 +312,30 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   const [currentFloor, setCurrentFloor] = useState(0);
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.push('/api/auth/signin');
-  }, [status, router]);
+    fetchProject();
+  }, [id]);
 
-  useEffect(() => {
-    if (status === 'authenticated') fetchProject();
-  }, [status]);
+  const getLocalProjects = (): any[] => {
+    try {
+      const stored = localStorage.getItem('builder_local_projects');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const updateLocalProject = (projId: string, updates: Partial<any>) => {
+    try {
+      const list = getLocalProjects();
+      const idx = list.findIndex((p) => p.id === projId);
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], ...updates, updatedAt: new Date().toISOString() };
+      } else {
+        list.unshift({ id: projId, name: 'Projekt', data: '[]', ...updates, updatedAt: new Date().toISOString() });
+      }
+      localStorage.setItem('builder_local_projects', JSON.stringify(list));
+    } catch (e) {}
+  };
 
   const fetchProject = async () => {
     try {
@@ -326,35 +344,52 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         const data = await res.json();
         setProject(data);
         if (data.data) {
-          const parsed = JSON.parse(data.data);
+          const parsed = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
           setPlacedItems(parsed);
           lastSyncRef.current = JSON.stringify(parsed);
         }
-      } else {
-        router.push('/builder');
+        return;
       }
     } catch (e) {
       console.error(e);
+    }
+
+    // Fallback to localStorage
+    const localList = getLocalProjects();
+    const found = localList.find((p) => p.id === id);
+    if (found) {
+      setProject(found);
+      const parsed = typeof found.data === 'string' ? JSON.parse(found.data) : (found.data || []);
+      setPlacedItems(parsed);
+      lastSyncRef.current = JSON.stringify(parsed);
+    } else {
+      const fallbackProject = {
+        id,
+        name: 'Projekt ' + id.substring(0, 6),
+        description: '',
+        data: '[]',
+        joinCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
+        owner: { name: session?.user?.name || 'Gość' },
+        collaborators: []
+      };
+      setProject(fallbackProject);
+      setPlacedItems([]);
+      lastSyncRef.current = '[]';
     }
   };
 
   const saveProjectInfo = async (name: string, description: string) => {
+    setProject((p: any) => ({ ...p, name, description }));
+    updateLocalProject(id, { name, description });
+    addNotification(t('successSubmit') || "Zapisano pomyślnie!", "success");
+
     try {
-      const res = await fetch(`/api/builder/projects/${id}`, {
+      await fetch(`/api/builder/projects/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, description })
       });
-      if (res.ok) {
-        setProject((p: any) => ({ ...p, name, description }));
-        addNotification(t('successSubmit') || "Zapisano pomyślnie!", "success");
-      } else {
-        addNotification(t('errorOccurred') || "Wystąpił błąd", "error");
-      }
-    } catch (e) {
-      console.error(e);
-      addNotification(t('errorSending') || "Błąd wysyłania", "error");
-    }
+    } catch (e) {}
   };
 
   const saveProject = async (newItems: PlacedItem[]) => {
@@ -362,6 +397,8 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     if (dataStr === lastSyncRef.current) return;
     
     setIsSyncing(true);
+    updateLocalProject(id, { data: dataStr });
+
     try {
       await fetch(`/api/builder/projects/${id}`, {
         method: 'PUT',
@@ -387,24 +424,25 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
     }
   }, [placedItems, project]);
 
-  // Group collaboration polling (every 3 seconds)
+  // Group collaboration polling (every 5 seconds, silent fallback)
   useEffect(() => {
-    if (!project) return;
+    if (!project || id.startsWith('local-')) return;
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/builder/projects/${id}`);
         if (res.ok) {
           const data = await res.json();
           if (data.data) {
-            if (data.data !== lastSyncRef.current) {
-               const parsed = JSON.parse(data.data);
+            const raw = typeof data.data === 'string' ? data.data : JSON.stringify(data.data);
+            if (raw !== lastSyncRef.current) {
+               const parsed = JSON.parse(raw);
                setPlacedItems(parsed);
-               lastSyncRef.current = data.data;
+               lastSyncRef.current = raw;
             }
           }
         }
       } catch (e) {}
-    }, 3000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [project, id]);
 
@@ -599,7 +637,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
           itemId: selectedItemDef.id,
           x: targetEdge.x,
           y: targetEdge.y,
-          rotation: normalizeAngle(targetEdge.angle + 90 + (activeEdgeIndex % 2 === 1 ? 180 : 0))
+          rotation: normalizeAngle(targetEdge.angle + 90 + activeEdgeIndex * 45)
         };
         snappedEdgeLine = targetEdge;
       } else {
@@ -646,6 +684,9 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
 
     if (previewItem) {
       placedItems.forEach(item => {
+        const itemFloor = item.floor || 0;
+        if (itemFloor !== currentFloor) return;
+        
         const dist = Math.hypot(item.x - previewItem!.x, item.y - previewItem!.y);
         
         const itemDef = BUILD_ITEMS.find(d => d.id === item.itemId);
@@ -654,7 +695,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
         const shape1 = selectedItemDef.shape;
         const shape2 = itemDef.shape;
         
-        if (shape1 === 'bed' || shape2 === 'bed') {
+        if (shape1 === 'bed' && shape2 === 'bed') {
           if (dist < 15) isValidPlacement = false;
         } else if (
           (shape1 === 'wall' && shape2 === 'wall') ||

@@ -34,32 +34,55 @@ export default function BuilderDashboard() {
   };
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/api/auth/signin');
-    } else if (status === 'authenticated') {
-      fetchProjects();
-    }
-  }, [status, router]);
+    fetchProjects();
+  }, []);
 
-  const fetchProjects = async () => {
+  const getLocalProjects = (): any[] => {
     try {
-      const res = await fetch('/api/builder/projects');
-      if (res.ok) {
-        const data = await res.json();
-        setProjects(data);
-      }
+      const stored = localStorage.getItem('builder_local_projects');
+      return stored ? JSON.parse(stored) : [];
     } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
+      return [];
     }
   };
 
+  const saveLocalProjects = (list: any[]) => {
+    try {
+      localStorage.setItem('builder_local_projects', JSON.stringify(list));
+    } catch (e) {}
+  };
+
+  const fetchProjects = async () => {
+    setIsLoading(true);
+    let apiProjects: any[] = [];
+    try {
+      const res = await fetch('/api/builder/projects');
+      if (res.ok) {
+        apiProjects = await res.json();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    const localProjects = getLocalProjects();
+    const merged = [...apiProjects];
+    localProjects.forEach((lp) => {
+      if (!merged.some((p) => p.id === lp.id)) {
+        merged.push(lp);
+      }
+    });
+
+    setProjects(merged);
+    setIsLoading(false);
+  };
+
   const createProject = async () => {
-    const name = window.prompt(t('prompt_new_name'), t('builder_new_project') + ' ' + new Date().toLocaleTimeString());
+    const defaultName = (t('builder_new_project') || 'Nowy Projekt') + ' ' + new Date().toLocaleTimeString();
+    const name = window.prompt(t('prompt_new_name') || 'Podaj nazwę projektu:', defaultName);
     if (!name) return; // cancelled
-    const description = window.prompt(t('prompt_new_desc'), '');
+    const description = window.prompt(t('prompt_new_desc') || 'Podaj opis projektu:', '') || '';
     
+    let createdProject: any = null;
     try {
       const res = await fetch('/api/builder/projects', {
         method: 'POST',
@@ -67,34 +90,62 @@ export default function BuilderDashboard() {
         body: JSON.stringify({ name, description })
       });
       if (res.ok) {
-        const p = await res.json();
-        router.push(`/builder/${p.id}`);
+        createdProject = await res.json();
       }
     } catch (e) {
       console.error(e);
     }
+
+    if (!createdProject) {
+      const localId = 'local-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+      const joinCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+      createdProject = {
+        id: localId,
+        name,
+        description,
+        data: '[]',
+        joinCode,
+        updatedAt: new Date().toISOString(),
+        owner: { name: session?.user?.name || 'Gość' },
+        collaborators: []
+      };
+
+      const localList = getLocalProjects();
+      localList.unshift(createdProject);
+      saveLocalProjects(localList);
+    }
+
+    router.push(`/builder/${createdProject.id}`);
   };
 
   const joinProject = async () => {
     if (!joinCode.trim()) return;
+    const targetCode = joinCode.trim().toUpperCase();
     try {
       const res = await fetch(`/api/builder/projects/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ joinCode: joinCode.trim().toUpperCase() })
+        body: JSON.stringify({ joinCode: targetCode })
       });
       if (res.ok) {
         const p = await res.json();
         router.push(`/builder/${p.id}`);
-      } else {
-        alert(t('prompt_join_error'));
+        return;
       }
     } catch (e) {
       console.error(e);
     }
+
+    const localList = getLocalProjects();
+    const found = localList.find((p) => p.joinCode === targetCode);
+    if (found) {
+      router.push(`/builder/${found.id}`);
+    } else {
+      alert(t('prompt_join_error') || 'Nie znaleziono projektu o tym kodzie.');
+    }
   };
 
-  if (status === 'loading' || isLoading) {
+  if (isLoading) {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'white' }}>Ładowanie...</div>;
   }
 
