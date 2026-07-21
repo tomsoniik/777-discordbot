@@ -1,73 +1,62 @@
 import NextAuth, { NextAuthOptions } from "next-auth"
-import DiscordProvider from "next-auth/providers/discord"
+import SteamProvider from "next-auth-steam"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { PrismaClient } from "@prisma/client"
 import { NextRequest } from "next/server"
 
 const prisma = new PrismaClient()
 
+export function getAuthOptions(req?: Request): NextAuthOptions {
+  const dummyReq = req || new Request(process.env.NEXTAUTH_URL || "http://localhost:3000");
+  const host = req?.headers.get("host") || "localhost:3000";
+  const protocol = req?.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
+  const origin = `${protocol}://${host}`;
 
-
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
-  providers: [
-    DiscordProvider({
-      clientId: process.env.DISCORD_CLIENT_ID || "missing_discord_client_id",
-      clientSecret: process.env.DISCORD_CLIENT_SECRET || "missing_discord_client_secret",
-      allowDangerousEmailAccountLinking: true,
-      authorization: { params: { scope: 'identify email' } },
-      profile(profile) {
-        if (profile.avatar === null) {
-          const defaultAvatarNumber = parseInt(profile.discriminator || "0") % 5
-          profile.image_url = `https://cdn.discordapp.com/embed/avatars/${defaultAvatarNumber}.png`
-        } else {
-          const format = profile.avatar.startsWith("a_") ? "gif" : "png"
-          profile.image_url = `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.${format}`
-        }
-
-        return {
-          id: profile.id,
-          name: profile.username,
-          email: profile.email,
-          image: profile.image_url,
-          discordId: profile.id,
-        }
-      },
-    })
-  ],
-  callbacks: {
-    async signIn({ user, profile }) {
-      if (user && user.id) {
-        try {
-          let newImage = user.image;
-          if (profile && (profile as any).avatar) {
+  return {
+    adapter: PrismaAdapter(prisma) as any,
+    providers: [
+      SteamProvider(dummyReq, {
+        clientSecret: process.env.STEAM_API_KEY || "5764EDE15ADAFAEC248568A1F11B59CE",
+        callbackUrl: `${origin}/api/auth/callback/steam`,
+      }),
+    ],
+    callbacks: {
+      async signIn({ user, profile }) {
+        if (user && user.id) {
+          try {
             const p = profile as any;
-            const format = p.avatar.startsWith("a_") ? "gif" : "png";
-            newImage = `https://cdn.discordapp.com/avatars/${p.id}/${p.avatar}.${format}`;
+            const steamId = p?.steamid || p?.id || user?.id;
+            const name = p?.personaname || user?.name || "Gracz Steam";
+            const image = p?.avatarfull || p?.avatarmedium || user?.image;
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { steamId: String(steamId), name, image }
+            });
+          } catch (e) {
+            console.error("Failed to sync Steam user data:", e);
           }
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { image: newImage, name: user.name }
-          });
-        } catch (e) {
-          console.error("Failed to sync avatar:", e);
         }
+        return true;
+      },
+      async session({ session, user }) {
+        if (session.user) {
+          (session.user as any).id = user?.id;
+          (session.user as any).role = (user as any)?.role;
+          (session.user as any).steamId = (user as any)?.steamId;
+        }
+        return session;
       }
-      return true;
     },
-    async session({ session, user }) {
-      if (session.user) {
-        // @ts-ignore
-        session.user.id = user?.id;
-        // @ts-ignore
-        session.user.role = (user as any)?.role;
-      }
-      return session;
-    }
-  },
-  secret: process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only_change_me",
-};
+    secret: process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only_change_me",
+  };
+}
 
-const handler = NextAuth(authOptions);
+export const authOptions: NextAuthOptions = getAuthOptions();
 
-export { handler as GET, handler as POST }
+export async function GET(req: NextRequest, ctx: any) {
+  return NextAuth(req, ctx, getAuthOptions(req));
+}
+
+export async function POST(req: NextRequest, ctx: any) {
+  return NextAuth(req, ctx, getAuthOptions(req));
+}

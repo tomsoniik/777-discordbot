@@ -5,8 +5,11 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Crown, ShieldTick, Radar, ArrowRight } from 'iconsax-react';
 import { motion, Variants } from 'framer-motion';
 
+import { useSession, signIn } from 'next-auth/react';
+
 export default function Home() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { data: session } = useSession();
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -54,9 +57,16 @@ export default function Home() {
             <Link href="/builder" className="btn-cinematic primary" style={{ fontSize: '1.1rem', padding: '14px 28px' }}>
               {t("builder_projects_title") || "Otwórz Builder 2D & 3D"} <ArrowRight size="20" />
             </Link>
-            <Link href="/about" className="btn-cinematic secondary">
-              {t("about") || "O Nas"}
-            </Link>
+            {!session && (
+              <button 
+                onClick={() => signIn('steam')} 
+                className="btn-cinematic secondary" 
+                style={{ background: 'rgba(0, 0, 0, 0.4)', borderColor: 'rgba(255, 255, 255, 0.2)' }}
+              >
+                <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/steam.svg" alt="Steam" style={{ width: '20px', filter: 'invert(1)', marginRight: '8px' }} />
+                {language === 'pl' ? 'Zaloguj przez Steam' : 'Sign in with Steam'}
+              </button>
+            )}
           </motion.div>
         </motion.div>
       </section>

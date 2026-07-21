@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import { ArrowDown2 } from 'iconsax-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -53,6 +53,17 @@ export default function Navbar() {
           <Link href="/builder" className="nav-link">Builder</Link>
           {session && (
             <Link href="/apply" className="nav-link">{t("recruitment")}</Link>
+          )}
+
+          {!session && (
+            <button
+              onClick={() => signIn("steam")}
+              className="btn-cinematic secondary"
+              style={{ marginLeft: '1rem', padding: '6px 14px', fontSize: '0.85rem', background: 'rgba(0, 0, 0, 0.4)', borderColor: 'rgba(255,255,255,0.2)', display: 'inline-flex', alignItems: 'center' }}
+            >
+              <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/steam.svg" alt="Steam" style={{ width: '16px', filter: 'invert(1)', marginRight: '6px' }} />
+              {language === 'pl' ? 'Zaloguj przez Steam' : 'Sign in with Steam'}
+            </button>
           )}
 
           {session && (
