@@ -1,6 +1,5 @@
 import NextAuth, { NextAuthOptions } from "next-auth"
 import SteamProvider from "next-auth-steam"
-import { PrismaAdapter } from "@auth/prisma-adapter"
 import { PrismaClient } from "@prisma/client"
 import { NextRequest } from "next/server"
 
@@ -19,7 +18,9 @@ export function getAuthOptions(req?: Request): NextAuthOptions {
   const requestForSteam = req || new Request(`${origin}/api/auth`);
 
   return {
-    adapter: PrismaAdapter(prisma) as any,
+    session: {
+      strategy: "jwt",
+    },
     providers: [
       SteamProvider(requestForSteam, {
         clientSecret: process.env.STEAM_API_KEY || "5764EDE15ADAFAEC248568A1F11B59CE",
@@ -28,27 +29,56 @@ export function getAuthOptions(req?: Request): NextAuthOptions {
     ],
     callbacks: {
       async signIn({ user, profile }) {
-        if (user && user.id) {
-          try {
-            const p = profile as any;
-            const steamId = p?.steamid || p?.id || user?.id;
+        try {
+          const p = profile as any;
+          const steamId = String(p?.steamid || user?.id || "");
+          if (steamId) {
             const name = p?.personaname || user?.name || "Gracz Steam";
-            const image = p?.avatarfull || p?.avatarmedium || user?.image;
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { steamId: String(steamId), name, image }
+            const image = p?.avatarfull || p?.avatarmedium || user?.image || "";
+            const email = user?.email || `${steamId}@steamcommunity.com`;
+
+            const existing = await prisma.user.findFirst({
+              where: {
+                OR: [
+                  { steamId: steamId },
+                  { id: user.id }
+                ]
+              }
             });
-          } catch (e) {
-            console.error("Failed to sync Steam user data:", e);
+
+            if (existing) {
+              await prisma.user.update({
+                where: { id: existing.id },
+                data: { steamId, name, image }
+              });
+            } else {
+              await prisma.user.create({
+                data: {
+                  id: user.id || steamId,
+                  steamId,
+                  name,
+                  image,
+                  email
+                }
+              });
+            }
           }
+        } catch (e) {
+          console.error("Steam signin database sync error (non-fatal):", e);
         }
         return true;
       },
-      async session({ session, user }) {
+      async jwt({ token, profile }) {
+        if (profile) {
+          const p = profile as any;
+          token.steamId = p?.steamid || token.sub;
+        }
+        return token;
+      },
+      async session({ session, token }) {
         if (session.user) {
-          (session.user as any).id = user?.id;
-          (session.user as any).role = (user as any)?.role;
-          (session.user as any).steamId = (user as any)?.steamId;
+          (session.user as any).id = token.sub || token.steamId;
+          (session.user as any).steamId = token.steamId;
         }
         return session;
       }
