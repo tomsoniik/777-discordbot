@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import Link from 'next/link';
-import { Add, FolderOpen, User, Link as LinkIcon, Trash } from 'iconsax-react';
+import { Add, FolderOpen, User, Link as LinkIcon, Trash, Clock, Folder } from 'iconsax-react';
 import { motion, Variants } from 'framer-motion';
 
 export default function BuilderDashboard() {
@@ -245,7 +245,9 @@ export default function BuilderDashboard() {
                   <div className="bento-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '1.5rem', position: 'relative' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <h3 style={{ color: 'white', fontSize: '1.3rem', fontWeight: 600, marginBottom: '0.4rem' }}>{p.name}</h3>
+                        <h3 style={{ color: 'white', fontSize: '1.3rem', fontWeight: 600, marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Folder variant="Bulk" size="22" color="#10b981" /> {p.name}
+                        </h3>
                         <button
                           onClick={(e) => deleteProject(e, p.id, p.name)}
                           title="Usuń / Opuść projekt"
@@ -265,30 +267,32 @@ export default function BuilderDashboard() {
                           onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)'}
                           onMouseOut={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
                         >
-                          <Trash size="16" />
+                          <Trash variant="Bulk" size="18" />
                         </button>
                       </div>
                       {p.description && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem', fontStyle: 'italic' }}>{p.description}</p>}
-                      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>{t('builder_updated')} {new Date(p.updatedAt).toLocaleString()}</p>
+                      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Clock size="14" color="rgba(255,255,255,0.4)" /> {t('builder_updated')} {new Date(p.updatedAt).toLocaleString()}
+                      </p>
                     </div>
                     
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                        <div style={{ background: 'var(--bg-card)', padding: '6px', borderRadius: '50%' }}>
-                          <User size="16" />
+                        <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '6px', borderRadius: '50%', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <User variant="Bulk" size="16" />
                         </div>
-                        {p.owner?.name || 'Gość'}
+                        <span style={{ fontWeight: 500, color: 'white' }}>{p.owner?.name || 'Gość'}</span>
                       </div>
                       
                       {p.collaborators?.length > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-card)', padding: '4px 8px', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          <User size="14" /> +{p.collaborators.length}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          <User variant="Bulk" size="14" /> +{p.collaborators.length}
                         </div>
                       )}
                     </div>
                     
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.1)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--accent-green)', marginTop: '1rem', fontWeight: 500 }}>
-                      <LinkIcon size="14" /> {t('builder_code')} {p.joinCode}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.1)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--accent-green)', marginTop: '1rem', fontWeight: 500, border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                      <LinkIcon variant="Bulk" size="16" /> {t('builder_code')} <span style={{ letterSpacing: '1px', fontWeight: 700 }}>{p.joinCode}</span>
                     </div>
                   </div>
                 </Link>

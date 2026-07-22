@@ -67,7 +67,7 @@ const translations: Translations = {
   builder_instructions_5: { en: "- To delete an object, hold [Left Click] on it for 2 seconds (when no item is selected).", pl: "- Aby usunąć obiekt, przytrzymaj na nim Lewy Przycisk Myszy (LPM) przez 2 sekundy (gdy nie masz wybranego klocka w ręce).", ru: "- Чтобы удалить объект, удерживайте на нем Левую кнопку мыши (ЛКМ) 2 секунды (когда не выбран элемент)." },
   builder_instructions_6: { en: "- Scroll wheel to zoom in/out.", pl: "- Kółko myszy przybliża/oddala widok.", ru: "- Колесико мыши для приближения/отдаления." },
   clear_project_confirm: { en: "Are you sure you want to clear the entire project?", pl: "Czy na pewno chcesz wyczyścić cały projekt?", ru: "Вы уверены, что хотите очистить весь проект?" },
-  builder_projects_title: { en: "Base Projects (Planner)", pl: "Projekty Baz (Planner)", ru: "Проекты Баз (Планировщик)" },
+  builder_projects_title: { en: "Base Projects", pl: "Projekty Baz", ru: "Проекты Баз" },
   builder_new_project: { en: "New Project", pl: "Nowy Projekt", ru: "Новый проект" },
   builder_join_group: { en: "Join group project", pl: "Dołącz do projektu grupowego", ru: "Присоединиться к групповому проекту" },
   builder_join_desc: { en: "Enter the access code to co-create with friends.", pl: "Wpisz kod dostępu, aby współtworzyć bazę ze znajomymi.", ru: "Введите код доступа, чтобы создавать базу с друзьями." },
