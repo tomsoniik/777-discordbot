@@ -206,30 +206,30 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
   }, [placedItems]);
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', background: '#e0f2fe' }}>
+    <div style={{ width: '100%', height: '100%', position: 'relative', background: '#202428' }}>
       <Canvas shadows camera={{ position: [center[0], 25, center[2] + 25] as [number, number, number], fov: 40 }}>
-        <color attach="background" args={['#e0f2fe']} />
+        <color attach="background" args={['#202428']} />
         
         {/* Soft shadows for premium look */}
-        <SoftShadows size={15} samples={16} focus={0.5} />
+        <SoftShadows size={10} samples={16} focus={0.5} />
 
-        <ambientLight intensity={1.5} color="#ffffff" />
+        <ambientLight intensity={0.6} color="#ffffff" />
         <directionalLight 
           position={[30, 50, 20]} 
-          intensity={2.0} 
+          intensity={1.2} 
           castShadow 
           shadow-mapSize={[2048, 2048]}
           shadow-camera-left={-40}
           shadow-camera-right={40}
           shadow-camera-top={40}
           shadow-camera-bottom={-40}
-          color="#fffaf0"
+          color="#ffffff"
           shadow-bias={-0.0001}
         />
-        <pointLight position={[-20, 20, -20]} intensity={0.5} color="#ffffff" />
+        <pointLight position={[-20, 20, -20]} intensity={0.3} color="#ffffff" />
 
-        {/* Use a bright daytime environment preset */}
-        <Environment preset="city" />
+        {/* Use a softer environment preset */}
+        <Environment preset="dawn" />
 
         <OrbitControls 
           target={[center[0], center[1], center[2]] as [number, number, number]} 
@@ -243,17 +243,18 @@ export default function Builder3D({ placedItems, buildItems }: Builder3DProps) {
           args={[200, 200]} 
           cellSize={0.6} 
           cellThickness={1} 
-          cellColor="#94a3b8" 
+          cellColor="#3a4048" 
           sectionSize={3} 
           sectionThickness={1.5} 
-          sectionColor="#475569" 
-          fadeDistance={80} 
-          fadeStrength={1}
+          sectionColor="#4b5563" 
+          fadeDistance={100} 
+          fadeStrength={2}
         />
-        
+
+        {/* Ground Plane */}
         <mesh position={[0, -0.05, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <planeGeometry args={[300, 300]} />
-          <meshStandardMaterial color="#f8fafc" roughness={0.8} metalness={0.2} />
+          <meshStandardMaterial color="#1a1d21" roughness={0.8} metalness={0.2} />
         </mesh>
 
         {/* Adds realistic soft ground shadows */}
