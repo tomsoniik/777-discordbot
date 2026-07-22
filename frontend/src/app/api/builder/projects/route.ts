@@ -40,9 +40,10 @@ export async function GET(request: Request) {
       });
     }
 
-    // If user has no projects or is not logged in, return all projects in DB as fallback
+    // If user has no projects or is not logged in, return only public projects as fallback
     if (!projects || projects.length === 0) {
       projects = await (prisma as any).baseProject.findMany({
+        where: { isPublic: true },
         include: {
           owner: { select: { name: true, image: true } },
           collaborators: { select: { id: true, name: true, image: true } }

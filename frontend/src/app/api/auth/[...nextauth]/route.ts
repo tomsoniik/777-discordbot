@@ -68,10 +68,17 @@ export function getAuthOptions(req?: Request): NextAuthOptions {
         }
         return true;
       },
-      async jwt({ token, profile }) {
+      async jwt({ token, profile, user }) {
         if (profile) {
           const p = profile as any;
           token.steamId = p?.steamid || token.sub;
+        }
+        if (user) {
+          // Fetch role from DB on sign in
+          const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+          if (dbUser) {
+            token.role = dbUser.role;
+          }
         }
         return token;
       },
@@ -79,6 +86,7 @@ export function getAuthOptions(req?: Request): NextAuthOptions {
         if (session.user) {
           (session.user as any).id = token.sub || token.steamId;
           (session.user as any).steamId = token.steamId;
+          (session.user as any).role = token.role || "USER";
         }
         return session;
       }
