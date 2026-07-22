@@ -110,6 +110,7 @@ const RenderedItem = React.memo(({
           transform: def.shape === 'triangle' 
             ? `translate(-50%, -66.666%) rotate(${item.rotation}deg)` 
             : `translate(-50%, -50%) rotate(${item.rotation}deg)`,
+          transformOrigin: def.shape === 'triangle' ? '50% 66.666%' : '50% 50%',
           backgroundColor: item.customColor || def.color,
           opacity: opacity,
           pointerEvents: pointerEvents as any
@@ -567,34 +568,51 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   if (selectedItemDef) {
     let closestEdge = null;
     let closestVertex = null;
+    let closestCenter = null;
     let minDist = 30; // snap threshold
+    let minDistCenter = 20;
 
-    // Find closest placed edge or vertex
+    // Find closest placed edge or vertex or center
     if (selectedItemDef.shape !== 'bed') {
       placedItems.forEach(item => {
+        const itemFloor = item.floor || 0;
+        
+        // Only consider current floor for edge snapping, and lower floor for center snapping
+        if (itemFloor !== currentFloor && itemFloor !== currentFloor - 1) return;
+
         const def = BUILD_ITEMS.find(d => d.id === item.itemId);
         if (!def) return;
-        
-        if (selectedItemDef.shape === 'pillar') {
-          // Snap to vertices of square/triangle
-          if (def.shape === 'square' || def.shape === 'triangle') {
-            const vertices = getPolygonVertices(def.shape, item.x, item.y, item.rotation);
-            vertices.forEach(v => {
-              const dist = Math.hypot(v.x - mousePos.x, v.y - mousePos.y);
-              if (dist < minDist) {
-                minDist = dist;
-                closestVertex = v;
-              }
-            });
+
+        // Center snapping for stacking (placing directly above)
+        if (itemFloor === currentFloor - 1 && (def.shape === 'square' || def.shape === 'triangle') && (selectedItemDef.shape === 'square' || selectedItemDef.shape === 'triangle')) {
+          const distToCenter = Math.hypot(item.x - mousePos.x, item.y - mousePos.y);
+          if (distToCenter < minDistCenter) {
+            minDistCenter = distToCenter;
+            closestCenter = item;
           }
-        } else {
-          // Snap to edges using line segment distance
-          if (def.shape === 'square' || def.shape === 'triangle') {
-            const vertices = getPolygonVertices(def.shape, item.x, item.y, item.rotation);
-            const edges = getEdges(def.shape, item.x, item.y, item.rotation);
-            
-            if (vertices.length >= 3) {
-              edges.forEach((edge, i) => {
+        }
+        
+        if (itemFloor === currentFloor) {
+          if (selectedItemDef.shape === 'pillar') {
+            // Snap to vertices of square/triangle
+            if (def.shape === 'square' || def.shape === 'triangle') {
+              const vertices = getPolygonVertices(def.shape, item.x, item.y, item.rotation);
+              vertices.forEach(v => {
+                const dist = Math.hypot(v.x - mousePos.x, v.y - mousePos.y);
+                if (dist < minDist) {
+                  minDist = dist;
+                  closestVertex = v;
+                }
+              });
+            }
+          } else {
+            // Snap to edges using line segment distance
+            if (def.shape === 'square' || def.shape === 'triangle') {
+              const vertices = getPolygonVertices(def.shape, item.x, item.y, item.rotation);
+              const edges = getEdges(def.shape, item.x, item.y, item.rotation);
+              
+              if (vertices.length >= 3) {
+                edges.forEach((edge, i) => {
                 const p1 = vertices[i];
                 const p2 = vertices[(i + 1) % vertices.length];
                 
@@ -619,7 +637,16 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
       });
     }
 
-    if (selectedItemDef.shape === 'pillar' && closestVertex) {
+    if (closestCenter) {
+      // Snap exactly on top of lower floor item
+      previewItem = {
+        id: 'preview',
+        itemId: selectedItemDef.id,
+        x: closestCenter.x,
+        y: closestCenter.y,
+        rotation: selectedItemDef.shape === BUILD_ITEMS.find(d => d.id === closestCenter!.itemId)?.shape ? closestCenter.rotation : freeRotation
+      };
+    } else if (selectedItemDef.shape === 'pillar' && closestVertex) {
       previewItem = {
         id: 'preview',
         itemId: selectedItemDef.id,
@@ -1210,6 +1237,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                     transform: def.shape === 'triangle' 
                       ? `translate(-50%, -66.666%) rotate(${previewItem.rotation}deg)` 
                       : `translate(-50%, -50%) rotate(${previewItem.rotation}deg)`,
+                    transformOrigin: def.shape === 'triangle' ? '50% 66.666%' : '50% 50%',
                     backgroundColor: isValidPlacement ? ((selectedColor && selectedColor !== 'clear') ? selectedColor : def.color) : '#ff4757',
                     opacity: 0.6,
                     zIndex: 1000,
