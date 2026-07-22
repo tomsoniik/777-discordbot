@@ -48,8 +48,11 @@ export default function Navbar() {
             <span style={{ fontSize: '1.5rem', fontWeight: '800', background: 'linear-gradient(to right, #fff, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.5px' }}>777</span>
           </Link>
         </div>
-        <div className="navbar-center" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '1.5rem' }}>
-          <Link href="/builder" className="nav-link">Builder</Link>
+        <div className="navbar-center" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Link href="/builder" className="nav-link">Builder</Link>
+            <span style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', borderRadius: '4px', fontWeight: 700, letterSpacing: '0.5px', userSelect: 'none', border: '1px solid rgba(16, 185, 129, 0.3)' }}>ALPHA</span>
+          </div>
         </div>
 
         <div className="navbar-nav" style={{ alignItems: 'center', position: 'relative' }}>
