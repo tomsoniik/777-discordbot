@@ -49,7 +49,6 @@ export default function Navbar() {
           </Link>
         </div>
         <div className="navbar-nav" style={{ alignItems: 'center', position: 'relative' }}>
-          <Link href="/about" className="nav-link">{t("about")}</Link>
           <Link href="/builder" className="nav-link">Builder</Link>
 
           {!session && (
@@ -59,7 +58,7 @@ export default function Navbar() {
               style={{ marginLeft: '1rem', padding: '6px 14px', fontSize: '0.85rem', background: 'rgba(0, 0, 0, 0.4)', borderColor: 'rgba(255,255,255,0.2)', display: 'inline-flex', alignItems: 'center' }}
             >
               <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/steam.svg" alt="Steam" style={{ width: '16px', filter: 'invert(1)', marginRight: '6px' }} />
-              {language === 'pl' ? 'Zaloguj przez Steam' : 'Sign in with Steam'}
+              {t("signInSteam")}
             </button>
           )}
 
@@ -117,7 +116,7 @@ export default function Navbar() {
                     }}
                   >
                     <div style={{ padding: '8px 12px', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Signed in as</p>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t("signedInAs")}</p>
                       <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.user?.email || session.user?.name}</p>
                     </div>
 
@@ -129,7 +128,7 @@ export default function Navbar() {
                         onMouseOver={(e) => e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'}
                         onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                       >
-                        Admin Panel
+                        {t("adminPanel")}
                       </Link>
                     )}
 
@@ -141,7 +140,7 @@ export default function Navbar() {
                       onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
                       onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                     >
-                      Sign Out
+                      {t("signOut")}
                     </button>
                   </motion.div>
                 )}

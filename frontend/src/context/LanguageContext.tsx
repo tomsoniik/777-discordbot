@@ -46,6 +46,10 @@ const translations: Translations = {
   connectDiscord: { en: "Connect with Discord", pl: "Połącz z Discord", ru: "Подключить Discord" },
   connectSteam: { en: "Connect with Steam", pl: "Połącz ze Steam", ru: "Подключить Steam" },
   logOut: { en: "LOG OUT", pl: "WYLOGUJ SIĘ", ru: "ВЫЙТИ" },
+  signedInAs: { en: "Signed in as", pl: "Zalogowano jako", ru: "Вы вошли как" },
+  adminPanel: { en: "Admin Panel", pl: "Panel Administratora", ru: "Панель администратора" },
+  signOut: { en: "Sign Out", pl: "Wyloguj się", ru: "Выйти" },
+  signInSteam: { en: "Sign in with Steam", pl: "Zaloguj przez Steam", ru: "Войти через Steam" },
   aboutStory: { 
     en: "We are a group of friends who met in Unturned and founded the 777 clan in 2022. Since then, we've been regularly terrorizing the servers we play on.", 
     pl: "Jesteśmy grupką znajomych, którzy poznali się właśnie w Unturned i założyli w 2022 clan 777. Od tego czasu regularnie terroryzujemy serwery, na których gramy.",
