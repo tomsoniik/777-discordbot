@@ -634,6 +634,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
             }
           }
         }
+        }
       });
     }
 
