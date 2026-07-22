@@ -82,8 +82,6 @@ const translations: Translations = {
   builder_delete_project: { en: "Delete / Leave project", pl: "Usuń / Opuść projekt", ru: "Удалить / Покинуть проект" },
   builder_guest: { en: "Guest", pl: "Gość", ru: "Гость" },
   builder_confirm_delete: { en: "Are you sure you want to delete/leave project", pl: "Czy na pewno chcesz usunąć/opuścić projekt", ru: "Вы уверены, что хотите удалить/покинуть проект" },
-  prompt_new_name: { en: "Enter project name:", pl: "Podaj nazwę projektu:", ru: "Введите название проекта:" },
-  prompt_new_desc: { en: "Enter project description:", pl: "Podaj opis projektu:", ru: "Введите описание проекта:" },
   builder_painting: { en: "PAINTING (COLORING)", pl: "KOLOROWANIE (MALOWANIE)", ru: "РАСКРАСКА (ОКРАШИВАНИЕ)" },
   builder_clear_project: { en: "Clear project", pl: "Wyczyść projekt", ru: "Очистить проект" },
   builder_saving: { en: "Saving...", pl: "Zapisywanie...", ru: "Сохранение..." },
