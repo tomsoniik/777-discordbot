@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import Link from 'next/link';
-import { Add, FolderOpen, User, Link as LinkIcon, Trash, Clock, Folder } from 'iconsax-react';
+import { Add, FolderOpen, User, Link as LinkIcon, Trash, Clock, Folder, CloseCircle } from 'iconsax-react';
 import { motion, Variants } from 'framer-motion';
 
 export default function BuilderDashboard() {
@@ -148,7 +148,7 @@ export default function BuilderDashboard() {
         data: '[]',
         joinCode: targetCode,
         updatedAt: new Date().toISOString(),
-        owner: { name: session?.user?.name || 'Gość' },
+        owner: { name: session?.user?.name || t('builder_guest') },
         collaborators: []
       };
       localList.unshift(found);
@@ -161,7 +161,7 @@ export default function BuilderDashboard() {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!window.confirm(`Czy na pewno chcesz usunąć/opuścić projekt "${name}"?`)) return;
+    if (!window.confirm(`${t('builder_confirm_delete')} "${name}"?`)) return;
 
     try {
       if (!projId.startsWith('local-')) {
@@ -192,7 +192,7 @@ export default function BuilderDashboard() {
             <h1 style={{ fontSize: '3rem', fontWeight: 800, letterSpacing: '-1.5px', marginBottom: '0.5rem' }}>
               {t('builder_projects_title')}
             </h1>
-            <p style={{ color: 'var(--text-muted)' }}>Zarządzaj swoimi projektami i bazami 2D/3D</p>
+            <p style={{ color: 'var(--text-muted)' }}>{t('builder_projects_desc')}</p>
           </div>
           
           <button 
@@ -250,7 +250,7 @@ export default function BuilderDashboard() {
                         </h3>
                         <button
                           onClick={(e) => deleteProject(e, p.id, p.name)}
-                          title="Usuń / Opuść projekt"
+                          title={t('builder_delete_project') || "Delete"}
                           style={{
                             background: 'rgba(239, 68, 68, 0.1)',
                             border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -267,7 +267,7 @@ export default function BuilderDashboard() {
                           onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)'}
                           onMouseOut={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
                         >
-                          <Trash variant="Bulk" size="18" />
+                          <CloseCircle variant="Bulk" size="22" color="#ef4444" />
                         </button>
                       </div>
                       {p.description && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem', fontStyle: 'italic' }}>{p.description}</p>}
@@ -281,7 +281,7 @@ export default function BuilderDashboard() {
                         <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '6px', borderRadius: '50%', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <User variant="Bulk" size="16" />
                         </div>
-                        <span style={{ fontWeight: 500, color: 'white' }}>{p.owner?.name || 'Gość'}</span>
+                        <span style={{ fontWeight: 500, color: 'white' }}>{p.owner?.name || t('builder_guest')}</span>
                       </div>
                       
                       {p.collaborators?.length > 0 && (
