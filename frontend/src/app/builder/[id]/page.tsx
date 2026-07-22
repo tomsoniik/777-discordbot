@@ -568,7 +568,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
   if (selectedItemDef) {
     let closestEdge = null;
     let closestVertex = null;
-    let closestCenter = null;
+    let closestCenter: PlacedItem | null = null;
     let minDist = 30; // snap threshold
     let minDistCenter = 20;
 
