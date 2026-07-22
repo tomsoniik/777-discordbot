@@ -643,9 +643,9 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
       previewItem = {
         id: 'preview',
         itemId: selectedItemDef.id,
-        x: closestCenter.x,
-        y: closestCenter.y,
-        rotation: selectedItemDef.shape === BUILD_ITEMS.find(d => d.id === closestCenter!.itemId)?.shape ? closestCenter.rotation : freeRotation
+        x: (closestCenter as any).x,
+        y: (closestCenter as any).y,
+        rotation: selectedItemDef.shape === BUILD_ITEMS.find(d => d.id === (closestCenter as any).itemId)?.shape ? (closestCenter as any).rotation : freeRotation
       };
     } else if (selectedItemDef.shape === 'pillar' && closestVertex) {
       previewItem = {
