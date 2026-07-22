@@ -48,9 +48,11 @@ export default function Navbar() {
             <span style={{ fontSize: '1.5rem', fontWeight: '800', background: 'linear-gradient(to right, #fff, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.5px' }}>777</span>
           </Link>
         </div>
-        <div className="navbar-nav" style={{ alignItems: 'center', position: 'relative' }}>
+        <div className="navbar-center" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '1.5rem' }}>
           <Link href="/builder" className="nav-link">Builder</Link>
+        </div>
 
+        <div className="navbar-nav" style={{ alignItems: 'center', position: 'relative' }}>
           {!session && (
             <button
               onClick={() => signIn("steam")}
