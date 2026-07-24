@@ -2,7 +2,8 @@ import { ChatInputCommandInteraction, SlashCommandBuilder, GuildMember } from 'd
 import { createAudioPlayer, NoSubscriberBehavior, joinVoiceChannel, AudioPlayerStatus } from '@discordjs/voice';
 import { Command } from '../../types';
 import { musicManager, ServerQueue, Song } from '../../services/MusicManager';
-import ytdlExec from 'yt-dlp-exec';
+import ytdl from '@distube/ytdl-core';
+import ytSearch from 'yt-search';
 
 export const playCommand: Command = {
     data: new SlashCommandBuilder()
@@ -33,25 +34,20 @@ export const playCommand: Command = {
         let songUrl = '';
 
         try {
-            const searchTarget = (queryStr.startsWith('http://') || queryStr.startsWith('https://'))
-                ? queryStr
-                : `ytsearch1:${queryStr}`;
-
-            const data = await ytdlExec(searchTarget, {
-                dumpSingleJson: true,
-                noWarnings: true,
-                preferFreeFormats: true,
-            }) as any;
-
-            const entry = (data.entries && data.entries.length > 0) ? data.entries[0] : data;
-
-            if (!entry || (!entry.url && !entry.webpage_url)) {
-                await interaction.editReply(`❌ Nie znaleziono utworu dla zapytania: \`${queryStr}\` na YouTube.`);
-                return;
+            if (queryStr.includes('youtube.com') || queryStr.includes('youtu.be')) {
+                const info = await ytdl.getBasicInfo(queryStr);
+                songTitle = info.videoDetails.title;
+                songUrl = info.videoDetails.video_url;
+            } else {
+                const searchResult = await ytSearch(queryStr);
+                const video = searchResult.videos[0];
+                if (!video) {
+                    await interaction.editReply(`❌ Nie znaleziono utworu dla zapytania: \`${queryStr}\` na YouTube.`);
+                    return;
+                }
+                songTitle = video.title;
+                songUrl = video.url;
             }
-
-            songTitle = entry.title || 'Nieznany tytuł';
-            songUrl = entry.webpage_url || entry.url || queryStr;
         } catch (error: any) {
             console.error('Błąd podczas wyszukiwania w YouTube:', error);
             await interaction.editReply(`❌ Wystąpił błąd podczas pobierania utworu z YouTube: \`${error.message || 'Nieznany błąd'}\``);

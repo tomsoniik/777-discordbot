@@ -1,9 +1,12 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.musicManager = void 0;
 const voice_1 = require("@discordjs/voice");
 const discord_js_1 = require("discord.js");
-const yt_dlp_exec_1 = require("yt-dlp-exec");
+const ytdl_core_1 = __importDefault(require("@distube/ytdl-core"));
 class MusicManager {
     queue = new Map();
     constructor() { }
@@ -28,17 +31,14 @@ class MusicManager {
             return;
         }
         try {
-            const subProcess = (0, yt_dlp_exec_1.exec)(song.url, {
-                output: '-',
-                format: 'bestaudio[ext=webm]/bestaudio',
-                quiet: true,
-            }, {
-                stdio: ['ignore', 'pipe', 'ignore']
+            const stream = (0, ytdl_core_1.default)(song.url, {
+                filter: 'audioonly',
+                quality: 'highestaudio',
+                highWaterMark: 1 << 25,
+                liveBuffer: 40000,
+                dlChunkSize: 0,
             });
-            if (!subProcess.stdout) {
-                throw new Error('Nie udało się utworzyć strumienia audio z YouTube.');
-            }
-            const resource = (0, voice_1.createAudioResource)(subProcess.stdout, {
+            const resource = (0, voice_1.createAudioResource)(stream, {
                 inputType: voice_1.StreamType.Arbitrary,
                 inlineVolume: true
             });

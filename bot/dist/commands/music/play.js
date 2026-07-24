@@ -7,7 +7,8 @@ exports.playCommand = void 0;
 const discord_js_1 = require("discord.js");
 const voice_1 = require("@discordjs/voice");
 const MusicManager_1 = require("../../services/MusicManager");
-const yt_dlp_exec_1 = __importDefault(require("yt-dlp-exec"));
+const ytdl_core_1 = __importDefault(require("@distube/ytdl-core"));
+const yt_search_1 = __importDefault(require("yt-search"));
 exports.playCommand = {
     data: new discord_js_1.SlashCommandBuilder()
         .setName('play')
@@ -33,21 +34,21 @@ exports.playCommand = {
         let songTitle = '';
         let songUrl = '';
         try {
-            const searchTarget = (queryStr.startsWith('http://') || queryStr.startsWith('https://'))
-                ? queryStr
-                : `ytsearch1:${queryStr}`;
-            const data = await (0, yt_dlp_exec_1.default)(searchTarget, {
-                dumpSingleJson: true,
-                noWarnings: true,
-                preferFreeFormats: true,
-            });
-            const entry = (data.entries && data.entries.length > 0) ? data.entries[0] : data;
-            if (!entry || (!entry.url && !entry.webpage_url)) {
-                await interaction.editReply(`❌ Nie znaleziono utworu dla zapytania: \`${queryStr}\` na YouTube.`);
-                return;
+            if (queryStr.includes('youtube.com') || queryStr.includes('youtu.be')) {
+                const info = await ytdl_core_1.default.getBasicInfo(queryStr);
+                songTitle = info.videoDetails.title;
+                songUrl = info.videoDetails.video_url;
             }
-            songTitle = entry.title || 'Nieznany tytuł';
-            songUrl = entry.webpage_url || entry.url || queryStr;
+            else {
+                const searchResult = await (0, yt_search_1.default)(queryStr);
+                const video = searchResult.videos[0];
+                if (!video) {
+                    await interaction.editReply(`❌ Nie znaleziono utworu dla zapytania: \`${queryStr}\` na YouTube.`);
+                    return;
+                }
+                songTitle = video.title;
+                songUrl = video.url;
+            }
         }
         catch (error) {
             console.error('Błąd podczas wyszukiwania w YouTube:', error);

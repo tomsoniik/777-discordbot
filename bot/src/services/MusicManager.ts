@@ -1,6 +1,6 @@
 import { VoiceConnection, AudioPlayer, AudioResource, createAudioResource, AudioPlayerStatus, StreamType } from '@discordjs/voice';
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, GuildMember } from 'discord.js';
-import { exec as execYtdl } from 'yt-dlp-exec';
+import ytdl from '@distube/ytdl-core';
 
 export interface Song {
     title: string;
@@ -50,19 +50,15 @@ class MusicManager {
         }
 
         try {
-            const subProcess = execYtdl(song.url, {
-                output: '-',
-                format: 'bestaudio[ext=webm]/bestaudio',
-                quiet: true,
-            }, {
-                stdio: ['ignore', 'pipe', 'ignore']
+            const stream = ytdl(song.url, {
+                filter: 'audioonly',
+                quality: 'highestaudio',
+                highWaterMark: 1 << 25,
+                liveBuffer: 40000,
+                dlChunkSize: 0,
             });
 
-            if (!subProcess.stdout) {
-                throw new Error('Nie udało się utworzyć strumienia audio z YouTube.');
-            }
-
-            const resource = createAudioResource(subProcess.stdout, {
+            const resource = createAudioResource(stream, {
                 inputType: StreamType.Arbitrary,
                 inlineVolume: true
             });
