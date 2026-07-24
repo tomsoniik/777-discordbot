@@ -7,11 +7,11 @@ exports.playCommand = void 0;
 const discord_js_1 = require("discord.js");
 const voice_1 = require("@discordjs/voice");
 const MusicManager_1 = require("../../services/MusicManager");
-const play_dl_1 = __importDefault(require("play-dl"));
+const yt_dlp_exec_1 = __importDefault(require("yt-dlp-exec"));
 exports.playCommand = {
     data: new discord_js_1.SlashCommandBuilder()
         .setName('play')
-        .setDescription('Odtwarza muzykę z YouTube')
+        .setDescription('Odtwarza muzykę bezpośrednio z YouTube')
         .addStringOption(option => option.setName('query')
         .setDescription('Link do YouTube lub nazwa utworu')
         .setRequired(true)),
@@ -30,52 +30,28 @@ exports.playCommand = {
             return;
         }
         const queryStr = interaction.options.getString('query', true).trim();
-        let query = queryStr;
         let songTitle = '';
         let songUrl = '';
         try {
-            if (query.includes('youtube.com') || query.includes('youtu.be')) {
-                try {
-                    const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(query)}&format=json`);
-                    if (res.ok) {
-                        const data = await res.json();
-                        query = data.title;
-                    }
-                    else {
-                        await interaction.editReply('❌ Nie udało się odczytać filmu z podanego linku YouTube. Prawdopodobnie jest to playlista, stream lub prywatny film.');
-                        return;
-                    }
-                }
-                catch (err) {
-                    await interaction.editReply('❌ Wystąpił błąd podczas pobierania tytułu z YouTube.');
-                    return;
-                }
+            const searchTarget = (queryStr.startsWith('http://') || queryStr.startsWith('https://'))
+                ? queryStr
+                : `ytsearch1:${queryStr}`;
+            const data = await (0, yt_dlp_exec_1.default)(searchTarget, {
+                dumpSingleJson: true,
+                noWarnings: true,
+                preferFreeFormats: true,
+            });
+            const entry = (data.entries && data.entries.length > 0) ? data.entries[0] : data;
+            if (!entry || (!entry.url && !entry.webpage_url)) {
+                await interaction.editReply(`❌ Nie znaleziono utworu dla zapytania: \`${queryStr}\` na YouTube.`);
+                return;
             }
-            if (query.startsWith('http') && query.includes('soundcloud.com')) {
-                const soInfo = await play_dl_1.default.soundcloud(query);
-                if (!soInfo || !soInfo.name) {
-                    await interaction.editReply('❌ Nie udało się odczytać utworu z podanego linku SoundCloud.');
-                    return;
-                }
-                songTitle = soInfo.name;
-                songUrl = soInfo.url;
-            }
-            else {
-                const searchResults = await play_dl_1.default.search(query, {
-                    limit: 1,
-                    source: { soundcloud: 'tracks' }
-                });
-                if (searchResults.length === 0) {
-                    await interaction.editReply(`❌ Nie znaleziono utworu dla zapytania: \`${query}\` na SoundCloud.`);
-                    return;
-                }
-                songTitle = searchResults[0].name || 'Nieznany tytuł';
-                songUrl = searchResults[0].url;
-            }
+            songTitle = entry.title || 'Nieznany tytuł';
+            songUrl = entry.webpage_url || entry.url || queryStr;
         }
         catch (error) {
-            console.error('Błąd podczas wyszukiwania:', error);
-            await interaction.editReply(`❌ Wystąpił błąd podczas wyszukiwania utworu: \`${error.message || 'Nieznany błąd'}\``);
+            console.error('Błąd podczas wyszukiwania w YouTube:', error);
+            await interaction.editReply(`❌ Wystąpił błąd podczas pobierania utworu z YouTube: \`${error.message || 'Nieznany błąd'}\``);
             return;
         }
         const song = { title: songTitle, url: songUrl };

@@ -2,12 +2,12 @@ import { ChatInputCommandInteraction, SlashCommandBuilder, GuildMember } from 'd
 import { createAudioPlayer, NoSubscriberBehavior, joinVoiceChannel, AudioPlayerStatus } from '@discordjs/voice';
 import { Command } from '../../types';
 import { musicManager, ServerQueue, Song } from '../../services/MusicManager';
-import play from 'play-dl';
+import ytdlExec from 'yt-dlp-exec';
 
 export const playCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('play')
-        .setDescription('Odtwarza muzykę z YouTube')
+        .setDescription('Odtwarza muzykę bezpośrednio z YouTube')
         .addStringOption(option => 
             option.setName('query')
                 .setDescription('Link do YouTube lub nazwa utworu')
@@ -29,52 +29,32 @@ export const playCommand: Command = {
         }
 
         const queryStr = interaction.options.getString('query', true).trim();
-        let query = queryStr;
         let songTitle = '';
         let songUrl = '';
 
         try {
-            if (query.includes('youtube.com') || query.includes('youtu.be')) {
-                try {
-                    const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(query)}&format=json`);
-                    if (res.ok) {
-                        const data = await res.json() as any;
-                        query = data.title; 
-                    } else {
-                        await interaction.editReply('❌ Nie udało się odczytać filmu z podanego linku YouTube. Prawdopodobnie jest to playlista, stream lub prywatny film.');
-                        return;
-                    }
-                } catch (err) {
-                    await interaction.editReply('❌ Wystąpił błąd podczas pobierania tytułu z YouTube.');
-                    return;
-                }
+            const searchTarget = (queryStr.startsWith('http://') || queryStr.startsWith('https://'))
+                ? queryStr
+                : `ytsearch1:${queryStr}`;
+
+            const data = await ytdlExec(searchTarget, {
+                dumpSingleJson: true,
+                noWarnings: true,
+                preferFreeFormats: true,
+            }) as any;
+
+            const entry = (data.entries && data.entries.length > 0) ? data.entries[0] : data;
+
+            if (!entry || (!entry.url && !entry.webpage_url)) {
+                await interaction.editReply(`❌ Nie znaleziono utworu dla zapytania: \`${queryStr}\` na YouTube.`);
+                return;
             }
 
-            if (query.startsWith('http') && query.includes('soundcloud.com')) {
-                const soInfo = await play.soundcloud(query) as any;
-                if (!soInfo || !soInfo.name) {
-                    await interaction.editReply('❌ Nie udało się odczytać utworu z podanego linku SoundCloud.');
-                    return;
-                }
-                songTitle = soInfo.name;
-                songUrl = soInfo.url;
-            } else {
-                const searchResults = await play.search(query, {
-                    limit: 1,
-                    source: { soundcloud: 'tracks' }
-                });
-
-                if (searchResults.length === 0) {
-                    await interaction.editReply(`❌ Nie znaleziono utworu dla zapytania: \`${query}\` na SoundCloud.`);
-                    return;
-                }
-
-                songTitle = searchResults[0].name || 'Nieznany tytuł';
-                songUrl = searchResults[0].url;
-            }
+            songTitle = entry.title || 'Nieznany tytuł';
+            songUrl = entry.webpage_url || entry.url || queryStr;
         } catch (error: any) {
-            console.error('Błąd podczas wyszukiwania:', error);
-            await interaction.editReply(`❌ Wystąpił błąd podczas wyszukiwania utworu: \`${error.message || 'Nieznany błąd'}\``);
+            console.error('Błąd podczas wyszukiwania w YouTube:', error);
+            await interaction.editReply(`❌ Wystąpił błąd podczas pobierania utworu z YouTube: \`${error.message || 'Nieznany błąd'}\``);
             return;
         }
 

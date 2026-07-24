@@ -1,23 +1,12 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.musicManager = void 0;
 const voice_1 = require("@discordjs/voice");
 const discord_js_1 = require("discord.js");
-const play_dl_1 = __importDefault(require("play-dl"));
+const yt_dlp_exec_1 = require("yt-dlp-exec");
 class MusicManager {
     queue = new Map();
-    constructor() {
-        play_dl_1.default.getFreeClientID().then((clientID) => {
-            play_dl_1.default.setToken({
-                soundcloud: {
-                    client_id: clientID
-                }
-            });
-        }).catch(console.error);
-    }
+    constructor() { }
     getQueue(guildId) {
         return this.queue.get(guildId);
     }
@@ -39,9 +28,18 @@ class MusicManager {
             return;
         }
         try {
-            const stream = await play_dl_1.default.stream(song.url);
-            const resource = (0, voice_1.createAudioResource)(stream.stream, {
-                inputType: stream.type,
+            const subProcess = (0, yt_dlp_exec_1.exec)(song.url, {
+                output: '-',
+                format: 'bestaudio[ext=webm]/bestaudio',
+                quiet: true,
+            }, {
+                stdio: ['ignore', 'pipe', 'ignore']
+            });
+            if (!subProcess.stdout) {
+                throw new Error('Nie udało się utworzyć strumienia audio z YouTube.');
+            }
+            const resource = (0, voice_1.createAudioResource)(subProcess.stdout, {
+                inputType: voice_1.StreamType.Arbitrary,
                 inlineVolume: true
             });
             resource.volume?.setVolume(serverQueue.volume / 100);

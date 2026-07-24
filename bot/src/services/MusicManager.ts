@@ -1,6 +1,6 @@
-import { VoiceConnection, AudioPlayer, AudioResource, createAudioResource, AudioPlayerStatus } from '@discordjs/voice';
+import { VoiceConnection, AudioPlayer, AudioResource, createAudioResource, AudioPlayerStatus, StreamType } from '@discordjs/voice';
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, GuildMember } from 'discord.js';
-import play from 'play-dl';
+import { exec as execYtdl } from 'yt-dlp-exec';
 
 export interface Song {
     title: string;
@@ -23,15 +23,7 @@ export interface ServerQueue {
 class MusicManager {
     public queue = new Map<string, ServerQueue>();
 
-    constructor() {
-        play.getFreeClientID().then((clientID) => {
-            play.setToken({
-                soundcloud : {
-                    client_id : clientID
-                }
-            })
-        }).catch(console.error);
-    }
+    constructor() {}
 
     getQueue(guildId: string): ServerQueue | undefined {
         return this.queue.get(guildId);
@@ -58,9 +50,20 @@ class MusicManager {
         }
 
         try {
-            const stream = await play.stream(song.url);
-            const resource = createAudioResource(stream.stream, {
-                inputType: stream.type,
+            const subProcess = execYtdl(song.url, {
+                output: '-',
+                format: 'bestaudio[ext=webm]/bestaudio',
+                quiet: true,
+            }, {
+                stdio: ['ignore', 'pipe', 'ignore']
+            });
+
+            if (!subProcess.stdout) {
+                throw new Error('Nie udało się utworzyć strumienia audio z YouTube.');
+            }
+
+            const resource = createAudioResource(subProcess.stdout, {
+                inputType: StreamType.Arbitrary,
                 inlineVolume: true
             });
             resource.volume?.setVolume(serverQueue.volume / 100);
