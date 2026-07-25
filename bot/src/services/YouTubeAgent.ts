@@ -10,36 +10,19 @@ const YT_DLP_PATH = path.join(process.cwd(), 'yt-dlp_linux');
 export async function ensureYtDlpBinary() {
     if (process.platform === 'win32') return; // Windows works with default youtube-dl-exec
     
-    if (!fs.existsSync(YT_DLP_PATH)) {
+    if (!fs.existsSync(YT_DLP_PATH) || fs.statSync(YT_DLP_PATH).size === 0) {
         console.log('[YouTubeAgent] Pobieranie samodzielnego pliku binarnego yt-dlp_linux (nie wymaga Pythona)...');
-        return new Promise<void>((resolve, reject) => {
-            const file = fs.createWriteStream(YT_DLP_PATH);
-            https.get('https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux', (response) => {
-                if (response.statusCode === 302 || response.statusCode === 301) {
-                    https.get(response.headers.location!, (res2) => {
-                        res2.pipe(file);
-                        file.on('finish', () => {
-                            file.close();
-                            fs.chmodSync(YT_DLP_PATH, 0o755);
-                            console.log('[YouTubeAgent] yt-dlp_linux pobrany i gotowy.');
-                            resolve();
-                        });
-                    }).on('error', (err) => {
-                        fs.unlink(YT_DLP_PATH, () => reject(err));
-                    });
-                } else {
-                    response.pipe(file);
-                    file.on('finish', () => {
-                        file.close();
-                        fs.chmodSync(YT_DLP_PATH, 0o755);
-                        console.log('[YouTubeAgent] yt-dlp_linux pobrany i gotowy.');
-                        resolve();
-                    });
-                }
-            }).on('error', (err) => {
-                fs.unlink(YT_DLP_PATH, () => reject(err));
-            });
-        });
+        try {
+            const response = await fetch('https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux');
+            if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
+            
+            const buffer = await response.arrayBuffer();
+            fs.writeFileSync(YT_DLP_PATH, Buffer.from(buffer));
+            fs.chmodSync(YT_DLP_PATH, 0o755);
+            console.log(`[YouTubeAgent] yt-dlp_linux pobrany pomyślnie. Rozmiar: ${buffer.byteLength} bajtów.`);
+        } catch (err: any) {
+            console.error('[YouTubeAgent] Błąd pobierania yt-dlp_linux:', err.message);
+        }
     }
 }
 
