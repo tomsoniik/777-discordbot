@@ -28,6 +28,24 @@ client.once(discord_js_1.Events.ClientReady, async () => {
     await player.extractors.loadMulti(DefaultExtractors);
     // Zarejestruj nowoczesny i stabilny YoutubeiExtractor
     await player.extractors.register(discord_player_youtubei_1.YoutubeiExtractor, {});
+    // Nasłuchiwanie błędów odtwarzacza, aby wiedzieć, dlaczego nie gra
+    player.events.on('error', (queue, error) => {
+        console.error(`[Player Error] Zgłoszono błąd: ${error.message}`);
+        if (queue.metadata) {
+            queue.metadata.channel?.send(`❌ Wystąpił błąd odtwarzacza: \`${error.message}\``).catch(() => { });
+        }
+    });
+    player.events.on('playerError', (queue, error) => {
+        console.error(`[Player Error] Błąd strumienia audio: ${error.message}`);
+        if (queue.metadata) {
+            queue.metadata.channel?.send(`❌ Błąd odtwarzania audio: \`${error.message}\``).catch(() => { });
+        }
+    });
+    player.events.on('playerStart', (queue, track) => {
+        if (queue.metadata) {
+            queue.metadata.channel?.send(`🎶 Odtwarzanie: **${track.title}**`).catch(() => { });
+        }
+    });
     await (0, ready_1.onReady)(client);
 });
 client.on(discord_js_1.Events.InteractionCreate, async (interaction) => {

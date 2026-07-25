@@ -32,6 +32,27 @@ client.once(Events.ClientReady, async () => {
     // Zarejestruj nowoczesny i stabilny YoutubeiExtractor
     await player.extractors.register(YoutubeiExtractor, {});
 
+    // Nasłuchiwanie błędów odtwarzacza, aby wiedzieć, dlaczego nie gra
+    player.events.on('error', (queue, error) => {
+        console.error(`[Player Error] Zgłoszono błąd: ${error.message}`);
+        if (queue.metadata) {
+            (queue.metadata as any).channel?.send(`❌ Wystąpił błąd odtwarzacza: \`${error.message}\``).catch(() => {});
+        }
+    });
+
+    player.events.on('playerError', (queue, error) => {
+        console.error(`[Player Error] Błąd strumienia audio: ${error.message}`);
+        if (queue.metadata) {
+            (queue.metadata as any).channel?.send(`❌ Błąd odtwarzania audio: \`${error.message}\``).catch(() => {});
+        }
+    });
+
+    player.events.on('playerStart', (queue, track) => {
+        if (queue.metadata) {
+            (queue.metadata as any).channel?.send(`🎶 Odtwarzanie: **${track.title}**`).catch(() => {});
+        }
+    });
+
     await onReady(client);
 });
 
