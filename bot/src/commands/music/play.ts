@@ -26,9 +26,26 @@ export const playCommand: Command = {
             return;
         }
 
-        const queryStr = interaction.options.getString('query', true).trim();
+        let queryStr = interaction.options.getString('query', true).trim();
 
         try {
+            // Clever workaround for YouTube search bans on datacenters
+            if (queryStr.includes('youtube.com') || queryStr.includes('youtu.be')) {
+                try {
+                    const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(queryStr)}&format=json`;
+                    const response = await fetch(oembedUrl);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.title) {
+                            console.log(`YouTube link translated to: ${data.title} - ${data.author_name}`);
+                            queryStr = `${data.title} ${data.author_name || ''}`.trim();
+                        }
+                    }
+                } catch (e) {
+                    console.log('oEmbed fetch failed', e);
+                }
+            }
+
             const { track } = await player.play(voiceChannel, queryStr, {
                 nodeOptions: {
                     metadata: interaction,
