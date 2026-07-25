@@ -54,8 +54,12 @@ export async function getYouTubeInfo(query: string): Promise<YouTubeVideoInfo> {
                 f: 'bestaudio/best',
                 noPlaylist: true
             };
-            if (fs.existsSync(cookieFile)) {
+            const cookieStr = process.env.YOUTUBE_COOKIE?.trim() || '';
+            const isNetscape = cookieStr.includes('# Netscape HTTP Cookie File');
+            if (isNetscape && fs.existsSync(cookieFile)) {
                 options.cookies = cookieFile;
+            } else if (cookieStr) {
+                options.addHeader = [`Cookie: ${cookieStr}`];
             }
             let ytdlInstance = youtubedl;
             if (process.platform !== 'win32' && fs.existsSync(YT_DLP_PATH)) {
@@ -97,8 +101,12 @@ export async function getYouTubeStream(url: string): Promise<Readable> {
         noWarnings: true,
         noPlaylist: true
     };
-    if (fs.existsSync(cookieFile)) {
+    const cookieStr = process.env.YOUTUBE_COOKIE?.trim() || '';
+    const isNetscape = cookieStr.includes('# Netscape HTTP Cookie File');
+    if (isNetscape && fs.existsSync(cookieFile)) {
         options.cookies = cookieFile;
+    } else if (cookieStr) {
+        options.addHeader = [`Cookie: ${cookieStr}`];
     }
     let ytdlInstance = youtubedl;
     if (process.platform !== 'win32' && fs.existsSync(YT_DLP_PATH)) {

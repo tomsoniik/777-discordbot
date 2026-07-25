@@ -51,8 +51,13 @@ async function getYouTubeInfo(query) {
                 f: 'bestaudio/best',
                 noPlaylist: true
             };
-            if (fs_1.default.existsSync(cookieFile)) {
+            const cookieStr = process.env.YOUTUBE_COOKIE?.trim() || '';
+            const isNetscape = cookieStr.includes('# Netscape HTTP Cookie File');
+            if (isNetscape && fs_1.default.existsSync(cookieFile)) {
                 options.cookies = cookieFile;
+            }
+            else if (cookieStr) {
+                options.addHeader = [`Cookie: ${cookieStr}`];
             }
             let ytdlInstance = youtube_dl_exec_1.default;
             if (process.platform !== 'win32' && fs_1.default.existsSync(YT_DLP_PATH)) {
@@ -94,8 +99,13 @@ async function getYouTubeStream(url) {
         noWarnings: true,
         noPlaylist: true
     };
-    if (fs_1.default.existsSync(cookieFile)) {
+    const cookieStr = process.env.YOUTUBE_COOKIE?.trim() || '';
+    const isNetscape = cookieStr.includes('# Netscape HTTP Cookie File');
+    if (isNetscape && fs_1.default.existsSync(cookieFile)) {
         options.cookies = cookieFile;
+    }
+    else if (cookieStr) {
+        options.addHeader = [`Cookie: ${cookieStr}`];
     }
     let ytdlInstance = youtube_dl_exec_1.default;
     if (process.platform !== 'win32' && fs_1.default.existsSync(YT_DLP_PATH)) {
