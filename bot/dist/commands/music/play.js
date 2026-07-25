@@ -33,11 +33,13 @@ exports.playCommand = {
         const queryStr = interaction.options.getString('query', true).trim();
         let songTitle = '';
         let songUrl = '';
+        let songStreamUrl = undefined;
         try {
             // Pierwszeństwo ma yt-dlp - całkowicie odporne na błąd HTTP 429 i 403 z ytdl-core
             const info = await (0, YouTubeAgent_1.getYtDlpInfo)(queryStr);
             songTitle = info.title;
             songUrl = info.url;
+            songStreamUrl = info.streamUrl;
         }
         catch (error) {
             console.warn('[PlayCommand] Błąd getYtDlpInfo, próba awaryjna ytSearch:', error);
@@ -57,7 +59,7 @@ exports.playCommand = {
                 return;
             }
         }
-        const song = { title: songTitle, url: songUrl };
+        const song = { title: songTitle, url: songUrl, streamUrl: songStreamUrl };
         let serverQueue = MusicManager_1.musicManager.getQueue(interaction.guild.id);
         if (!serverQueue) {
             const player = (0, voice_1.createAudioPlayer)({

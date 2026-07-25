@@ -32,12 +32,14 @@ export const playCommand: Command = {
         const queryStr = interaction.options.getString('query', true).trim();
         let songTitle = '';
         let songUrl = '';
+        let songStreamUrl: string | undefined = undefined;
 
         try {
             // Pierwszeństwo ma yt-dlp - całkowicie odporne na błąd HTTP 429 i 403 z ytdl-core
             const info = await getYtDlpInfo(queryStr);
             songTitle = info.title;
             songUrl = info.url;
+            songStreamUrl = info.streamUrl;
         } catch (error: any) {
             console.warn('[PlayCommand] Błąd getYtDlpInfo, próba awaryjna ytSearch:', error);
             try {
@@ -56,7 +58,7 @@ export const playCommand: Command = {
             }
         }
 
-        const song: Song = { title: songTitle, url: songUrl };
+        const song: Song = { title: songTitle, url: songUrl, streamUrl: songStreamUrl };
         let serverQueue = musicManager.getQueue(interaction.guild.id);
 
         if (!serverQueue) {

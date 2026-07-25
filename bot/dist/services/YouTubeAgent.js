@@ -85,29 +85,49 @@ function getYtDlpInfo(query) {
         let binToUse = 'yt-dlp';
         if (fs_1.default.existsSync(localBin)) {
             binToUse = localBin;
+            if (!isWin) {
+                try {
+                    fs_1.default.chmodSync(localBin, '755');
+                }
+                catch (e) { }
+            }
         }
         else {
             const altBin = path_1.default.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', isWin ? 'yt-dlp' : 'yt-dlp.exe');
             if (fs_1.default.existsSync(altBin)) {
                 binToUse = altBin;
+                if (!isWin) {
+                    try {
+                        fs_1.default.chmodSync(altBin, '755');
+                    }
+                    catch (e) { }
+                }
             }
         }
         const isUrl = query.includes('youtube.com') || query.includes('youtu.be');
         const targetStr = isUrl ? query : `ytsearch1:${query}`;
-        const args = ['-j', '--no-warnings', targetStr];
+        const args = ['-j', '--no-warnings', '--no-playlist', '-f', 'bestaudio/best', targetStr];
         if (process.env.YOUTUBE_COOKIE) {
             args.push('--add-header', `Cookie:${process.env.YOUTUBE_COOKIE}`);
         }
-        (0, child_process_1.execFile)(binToUse, args, (error, stdout, stderr) => {
+        (0, child_process_1.execFile)(binToUse, args, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
             if (error) {
                 console.error('[YtDlpInfo] Błąd pobierania informacji:', error, stderr);
                 return reject(error);
             }
             try {
                 const json = JSON.parse(stdout.trim().split('\n')[0]);
+                let streamUrl = json.url;
+                if (!streamUrl && json.formats && Array.isArray(json.formats)) {
+                    const audioFormat = json.formats.filter((f) => f.acodec !== 'none' && f.vcodec === 'none').pop()
+                        || json.formats.filter((f) => f.url).pop();
+                    if (audioFormat)
+                        streamUrl = audioFormat.url;
+                }
                 resolve({
                     title: json.title || 'Nieznany utwór',
-                    url: json.webpage_url || json.url || query,
+                    url: json.webpage_url || query,
+                    streamUrl: streamUrl,
                 });
             }
             catch (parseErr) {
@@ -124,11 +144,23 @@ function getYtDlpStreamUrl(url) {
         let binToUse = 'yt-dlp';
         if (fs_1.default.existsSync(localBin)) {
             binToUse = localBin;
+            if (!isWin) {
+                try {
+                    fs_1.default.chmodSync(localBin, '755');
+                }
+                catch (e) { }
+            }
         }
         else {
             const altBin = path_1.default.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', isWin ? 'yt-dlp' : 'yt-dlp.exe');
             if (fs_1.default.existsSync(altBin)) {
                 binToUse = altBin;
+                if (!isWin) {
+                    try {
+                        fs_1.default.chmodSync(altBin, '755');
+                    }
+                    catch (e) { }
+                }
             }
         }
         const args = ['-g', '-f', 'bestaudio/best', url];

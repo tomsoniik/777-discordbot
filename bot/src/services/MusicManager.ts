@@ -7,6 +7,7 @@ import { Readable } from 'stream';
 export interface Song {
     title: string;
     url: string;
+    streamUrl?: string;
 }
 
 export interface ServerQueue {
@@ -54,28 +55,32 @@ class MusicManager {
         try {
             let streamInput: string | Readable;
 
-            try {
-                // Pobież bezpośredni URL strumienia audio z yt-dlp
-                streamInput = await getYtDlpStreamUrl(song.url);
-            } catch (ytDlpErr) {
-                console.warn('[MusicManager] Wyjątek yt-dlp, próba użycia ytdl-core fallback:', ytDlpErr);
-                const agent = getYouTubeAgent();
-                const ytdlOptions: ytdl.downloadOptions = {
-                    filter: 'audioonly',
-                    quality: 'highestaudio',
-                    highWaterMark: 1 << 25,
-                    liveBuffer: 40000,
-                    dlChunkSize: 0,
-                    ...(agent ? { agent } : {})
-                };
-                const stream = ytdl(song.url, ytdlOptions);
-                stream.on('error', (err: any) => {
-                    console.error('Błąd strumienia ytdl:', err);
-                    (serverQueue.textChannel as any)?.send(`Błąd strumienia podczas odtwarzania **${song.title}**: \`${err.message || 'Błąd strumienia'}\``);
-                    serverQueue.songs.shift();
-                    this.playSong(guildId, serverQueue.songs[0]);
-                });
-                streamInput = stream;
+            if (song.streamUrl && song.streamUrl.startsWith('http')) {
+                streamInput = song.streamUrl;
+            } else {
+                try {
+                    // Pobież bezpośredni URL strumienia audio z yt-dlp
+                    streamInput = await getYtDlpStreamUrl(song.url);
+                } catch (ytDlpErr) {
+                    console.warn('[MusicManager] Wyjątek yt-dlp, próba użycia ytdl-core fallback:', ytDlpErr);
+                    const agent = getYouTubeAgent();
+                    const ytdlOptions: ytdl.downloadOptions = {
+                        filter: 'audioonly',
+                        quality: 'highestaudio',
+                        highWaterMark: 1 << 25,
+                        liveBuffer: 40000,
+                        dlChunkSize: 0,
+                        ...(agent ? { agent } : {})
+                    };
+                    const stream = ytdl(song.url, ytdlOptions);
+                    stream.on('error', (err: any) => {
+                        console.error('Błąd strumienia ytdl:', err);
+                        (serverQueue.textChannel as any)?.send(`Błąd strumienia podczas odtwarzania **${song.title}**: \`${err.message || 'Błąd strumienia'}\``);
+                        serverQueue.songs.shift();
+                        this.playSong(guildId, serverQueue.songs[0]);
+                    });
+                    streamInput = stream;
+                }
             }
 
             const resource = createAudioResource(streamInput, {

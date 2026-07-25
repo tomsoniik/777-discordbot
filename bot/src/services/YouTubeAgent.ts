@@ -75,6 +75,7 @@ export function getYouTubeAgent(): any {
 export interface YtDlpVideoInfo {
     title: string;
     url: string;
+    streamUrl?: string;
 }
 
 export function getYtDlpInfo(query: string): Promise<YtDlpVideoInfo> {
@@ -86,32 +87,46 @@ export function getYtDlpInfo(query: string): Promise<YtDlpVideoInfo> {
         let binToUse = 'yt-dlp';
         if (fs.existsSync(localBin)) {
             binToUse = localBin;
+            if (!isWin) {
+                try { fs.chmodSync(localBin, '755'); } catch (e) {}
+            }
         } else {
             const altBin = path.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', isWin ? 'yt-dlp' : 'yt-dlp.exe');
             if (fs.existsSync(altBin)) {
                 binToUse = altBin;
+                if (!isWin) {
+                    try { fs.chmodSync(altBin, '755'); } catch (e) {}
+                }
             }
         }
 
         const isUrl = query.includes('youtube.com') || query.includes('youtu.be');
         const targetStr = isUrl ? query : `ytsearch1:${query}`;
 
-        const args = ['-j', '--no-warnings', targetStr];
+        const args = ['-j', '--no-warnings', '--no-playlist', '-f', 'bestaudio/best', targetStr];
 
         if (process.env.YOUTUBE_COOKIE) {
             args.push('--add-header', `Cookie:${process.env.YOUTUBE_COOKIE}`);
         }
 
-        execFile(binToUse, args, (error, stdout, stderr) => {
+        execFile(binToUse, args, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
             if (error) {
                 console.error('[YtDlpInfo] Błąd pobierania informacji:', error, stderr);
                 return reject(error);
             }
             try {
                 const json = JSON.parse(stdout.trim().split('\n')[0]);
+                let streamUrl = json.url;
+                if (!streamUrl && json.formats && Array.isArray(json.formats)) {
+                    const audioFormat = json.formats.filter((f: any) => f.acodec !== 'none' && f.vcodec === 'none').pop()
+                        || json.formats.filter((f: any) => f.url).pop();
+                    if (audioFormat) streamUrl = audioFormat.url;
+                }
+
                 resolve({
                     title: json.title || 'Nieznany utwór',
-                    url: json.webpage_url || json.url || query,
+                    url: json.webpage_url || query,
+                    streamUrl: streamUrl,
                 });
             } catch (parseErr) {
                 reject(new Error('Nie udało się przetworzyć danych utworu z yt-dlp'));
@@ -129,10 +144,16 @@ export function getYtDlpStreamUrl(url: string): Promise<string> {
         let binToUse = 'yt-dlp';
         if (fs.existsSync(localBin)) {
             binToUse = localBin;
+            if (!isWin) {
+                try { fs.chmodSync(localBin, '755'); } catch (e) {}
+            }
         } else {
             const altBin = path.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', isWin ? 'yt-dlp' : 'yt-dlp.exe');
             if (fs.existsSync(altBin)) {
                 binToUse = altBin;
+                if (!isWin) {
+                    try { fs.chmodSync(altBin, '755'); } catch (e) {}
+                }
             }
         }
 
