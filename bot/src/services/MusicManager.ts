@@ -75,7 +75,8 @@ class MusicManager {
                     const stream = ytdl(song.url, ytdlOptions);
                     stream.on('error', (err: any) => {
                         console.error('Błąd strumienia ytdl:', err);
-                        (serverQueue.textChannel as any)?.send(`Błąd strumienia podczas odtwarzania **${song.title}**: \`${err.message || 'Błąd strumienia'}\``);
+                        const ytDlpErrorMsg = ytDlpErr instanceof Error ? ytDlpErr.message : String(ytDlpErr);
+                        (serverQueue.textChannel as any)?.send(`Błąd strumienia podczas odtwarzania **${song.title}**.\n**yt-dlp error:** \`${ytDlpErrorMsg.slice(0, 200)}\`\n**ytdl-core error:** \`${err.message || 'Błąd'}\`\n👉 **Musisz dodać YOUTUBE_COOKIE w Railway jako pełny plik Netscape (z zachowaniem nowych linii)!**`);
                         serverQueue.songs.shift();
                         this.playSong(guildId, serverQueue.songs[0]);
                     });
@@ -93,7 +94,7 @@ class MusicManager {
             await this.sendMusicDashboard(guildId, song, serverQueue.textChannel);
         } catch (error: any) {
             console.error('Błąd w playSong:', error);
-            (serverQueue.textChannel as any)?.send(`Błąd podczas odtwarzania **${song.title}**: \`${error.message || 'Nieznany błąd'}\``);
+            (serverQueue.textChannel as any)?.send(`Błąd podczas odtwarzania **${song.title}**.\n\`ytdl-core/yt-dlp fallback error:\` ${error.message || 'Nieznany błąd'}\n*Sprawdź zmienną YOUTUBE_COOKIE w Railway, czy jest poprawnie dodana!*`);
             serverQueue.songs.shift();
             this.playSong(guildId, serverQueue.songs[0]);
         }
