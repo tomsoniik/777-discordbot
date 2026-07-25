@@ -80,9 +80,10 @@ export const playCommand: Command = {
                     musicManager.playSong(interaction.guild!.id, queueConstruct.songs[0]);
                 });
 
-                player.on('error', error => {
+                player.on('error', (error: any) => {
                     console.error('Audio Player Error:', error);
-                    (queueConstruct.textChannel as any)?.send(`Błąd odtwarzania.`);
+                    const msg = error.message || String(error);
+                    (queueConstruct.textChannel as any)?.send(`Błąd odtwarzania utworu. Szczegóły: \`${msg}\``);
                     if (!queueConstruct.loop) queueConstruct.songs.shift();
                     musicManager.playSong(interaction.guild!.id, queueConstruct.songs[0]);
                 });

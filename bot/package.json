@@ -24,7 +24,8 @@
     "gamedig": "^5.3.3",
     "libsodium-wrappers": "^0.8.4",
     "opusscript": "^0.0.8",
-    "youtube-dl-exec": "^3.1.9"
+    "youtube-dl-exec": "^3.1.9",
+    "yt-search": "^2.13.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
