@@ -4,10 +4,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getYouTubeAgent = getYouTubeAgent;
+exports.getYtDlpStreamUrl = getYtDlpStreamUrl;
 exports.reloadYouTubeAgent = reloadYouTubeAgent;
 const ytdl_core_1 = __importDefault(require("@distube/ytdl-core"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const child_process_1 = require("child_process");
 let cachedAgent = null;
 let agentInitialized = false;
 function getYouTubeAgent() {
@@ -72,8 +74,28 @@ function getYouTubeAgent() {
             console.error('[YouTubeAgent] Błąd podczas parsowania YOUTUBE_COOKIE:', error);
         }
     }
-    console.warn('[YouTubeAgent] Brak ciasteczek YouTube. Jeśli wystąpi błąd "Sign in to confirm you\'re not a bot", dodaj plik cookies.json lub zmienną YOUTUBE_COOKIE w .env.');
     return undefined;
+}
+function getYtDlpStreamUrl(url) {
+    return new Promise((resolve, reject) => {
+        const ytdlpBin = path_1.default.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', 'yt-dlp.exe');
+        const fallbackBin = 'yt-dlp';
+        const binToUse = fs_1.default.existsSync(ytdlpBin) ? ytdlpBin : fallbackBin;
+        const args = ['-g', '-f', 'bestaudio/best', url];
+        (0, child_process_1.execFile)(binToUse, args, (error, stdout, stderr) => {
+            if (error) {
+                console.error('[YtDlp] Błąd pobierania linku ze strumienia:', error, stderr);
+                return reject(error);
+            }
+            const streamUrl = stdout.trim().split('\n')[0];
+            if (streamUrl && streamUrl.startsWith('http')) {
+                resolve(streamUrl);
+            }
+            else {
+                reject(new Error('Nie odnaleziono prawidłowego adresu URL strumienia wytworzonego przez yt-dlp'));
+            }
+        });
+    });
 }
 function reloadYouTubeAgent() {
     agentInitialized = false;

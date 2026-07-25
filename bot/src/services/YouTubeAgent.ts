@@ -1,6 +1,7 @@
 import ytdl from '@distube/ytdl-core';
 import fs from 'fs';
 import path from 'path';
+import { execFile } from 'child_process';
 
 let cachedAgent: any = null;
 let agentInitialized = false;
@@ -68,8 +69,29 @@ export function getYouTubeAgent(): any {
         }
     }
 
-    console.warn('[YouTubeAgent] Brak ciasteczek YouTube. Jeśli wystąpi błąd "Sign in to confirm you\'re not a bot", dodaj plik cookies.json lub zmienną YOUTUBE_COOKIE w .env.');
     return undefined;
+}
+
+export function getYtDlpStreamUrl(url: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const ytdlpBin = path.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', 'yt-dlp.exe');
+        const fallbackBin = 'yt-dlp';
+        const binToUse = fs.existsSync(ytdlpBin) ? ytdlpBin : fallbackBin;
+
+        const args = ['-g', '-f', 'bestaudio/best', url];
+        execFile(binToUse, args, (error, stdout, stderr) => {
+            if (error) {
+                console.error('[YtDlp] Błąd pobierania linku ze strumienia:', error, stderr);
+                return reject(error);
+            }
+            const streamUrl = stdout.trim().split('\n')[0];
+            if (streamUrl && streamUrl.startsWith('http')) {
+                resolve(streamUrl);
+            } else {
+                reject(new Error('Nie odnaleziono prawidłowego adresu URL strumienia wytworzonego przez yt-dlp'));
+            }
+        });
+    });
 }
 
 export function reloadYouTubeAgent(): any {

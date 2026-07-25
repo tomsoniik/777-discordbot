@@ -1,7 +1,8 @@
 import { VoiceConnection, AudioPlayer, AudioResource, createAudioResource, AudioPlayerStatus, StreamType } from '@discordjs/voice';
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, GuildMember } from 'discord.js';
 import ytdl from '@distube/ytdl-core';
-import { getYouTubeAgent } from './YouTubeAgent';
+import { getYouTubeAgent, getYtDlpStreamUrl } from './YouTubeAgent';
+import { Readable } from 'stream';
 
 export interface Song {
     title: string;
@@ -51,32 +52,33 @@ class MusicManager {
         }
 
         try {
-            const agent = getYouTubeAgent();
-            const ytdlOptions: ytdl.downloadOptions = {
-                filter: 'audioonly',
-                quality: 'highestaudio',
-                highWaterMark: 1 << 25,
-                liveBuffer: 40000,
-                dlChunkSize: 0,
-                ...(agent ? { agent } : {})
-            };
+            let streamInput: string | Readable;
 
-            const stream = ytdl(song.url, ytdlOptions);
-
-            stream.on('error', (err: any) => {
-                console.error('Błąd strumienia ytdl:', err);
-                if (err.message && err.message.includes("Sign in to confirm")) {
-                    (serverQueue.textChannel as any)?.send(
-                        `❌ **Błąd YouTube (Bot Block)** podczas odtwarzania **${song.title}**.\nYouTube wymaga ciasteczek sesji w \`cookies.json\` lub \`YOUTUBE_COOKIE\` w \`.env\`.`
-                    );
-                } else {
+            try {
+                // Pobież bezpośredni URL strumienia audio z yt-dlp
+                streamInput = await getYtDlpStreamUrl(song.url);
+            } catch (ytDlpErr) {
+                console.warn('[MusicManager] Wyjątek yt-dlp, próba użycia ytdl-core fallback:', ytDlpErr);
+                const agent = getYouTubeAgent();
+                const ytdlOptions: ytdl.downloadOptions = {
+                    filter: 'audioonly',
+                    quality: 'highestaudio',
+                    highWaterMark: 1 << 25,
+                    liveBuffer: 40000,
+                    dlChunkSize: 0,
+                    ...(agent ? { agent } : {})
+                };
+                const stream = ytdl(song.url, ytdlOptions);
+                stream.on('error', (err: any) => {
+                    console.error('Błąd strumienia ytdl:', err);
                     (serverQueue.textChannel as any)?.send(`Błąd strumienia podczas odtwarzania **${song.title}**: \`${err.message || 'Błąd strumienia'}\``);
-                }
-                serverQueue.songs.shift();
-                this.playSong(guildId, serverQueue.songs[0]);
-            });
+                    serverQueue.songs.shift();
+                    this.playSong(guildId, serverQueue.songs[0]);
+                });
+                streamInput = stream;
+            }
 
-            const resource = createAudioResource(stream, {
+            const resource = createAudioResource(streamInput, {
                 inputType: StreamType.Arbitrary,
                 inlineVolume: true
             });

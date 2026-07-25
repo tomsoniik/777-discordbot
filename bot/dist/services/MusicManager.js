@@ -32,28 +32,32 @@ class MusicManager {
             return;
         }
         try {
-            const agent = (0, YouTubeAgent_1.getYouTubeAgent)();
-            const ytdlOptions = {
-                filter: 'audioonly',
-                quality: 'highestaudio',
-                highWaterMark: 1 << 25,
-                liveBuffer: 40000,
-                dlChunkSize: 0,
-                ...(agent ? { agent } : {})
-            };
-            const stream = (0, ytdl_core_1.default)(song.url, ytdlOptions);
-            stream.on('error', (err) => {
-                console.error('Błąd strumienia ytdl:', err);
-                if (err.message && err.message.includes("Sign in to confirm")) {
-                    serverQueue.textChannel?.send(`❌ **Błąd YouTube (Bot Block)** podczas odtwarzania **${song.title}**.\nYouTube wymaga ciasteczek sesji w \`cookies.json\` lub \`YOUTUBE_COOKIE\` w \`.env\`.`);
-                }
-                else {
+            let streamInput;
+            try {
+                // Pobież bezpośredni URL strumienia audio z yt-dlp
+                streamInput = await (0, YouTubeAgent_1.getYtDlpStreamUrl)(song.url);
+            }
+            catch (ytDlpErr) {
+                console.warn('[MusicManager] Wyjątek yt-dlp, próba użycia ytdl-core fallback:', ytDlpErr);
+                const agent = (0, YouTubeAgent_1.getYouTubeAgent)();
+                const ytdlOptions = {
+                    filter: 'audioonly',
+                    quality: 'highestaudio',
+                    highWaterMark: 1 << 25,
+                    liveBuffer: 40000,
+                    dlChunkSize: 0,
+                    ...(agent ? { agent } : {})
+                };
+                const stream = (0, ytdl_core_1.default)(song.url, ytdlOptions);
+                stream.on('error', (err) => {
+                    console.error('Błąd strumienia ytdl:', err);
                     serverQueue.textChannel?.send(`Błąd strumienia podczas odtwarzania **${song.title}**: \`${err.message || 'Błąd strumienia'}\``);
-                }
-                serverQueue.songs.shift();
-                this.playSong(guildId, serverQueue.songs[0]);
-            });
-            const resource = (0, voice_1.createAudioResource)(stream, {
+                    serverQueue.songs.shift();
+                    this.playSong(guildId, serverQueue.songs[0]);
+                });
+                streamInput = stream;
+            }
+            const resource = (0, voice_1.createAudioResource)(streamInput, {
                 inputType: voice_1.StreamType.Arbitrary,
                 inlineVolume: true
             });
