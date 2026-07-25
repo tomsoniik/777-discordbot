@@ -40,7 +40,7 @@ class MusicManager {
         }
         catch (error) {
             console.error('Błąd w playSong:', error);
-            serverQueue.textChannel?.send(`Błąd podczas odtwarzania **${song.title}**.\n\`youtube-ext error:\` ${error.message || 'Nieznany błąd'}\n*Sprawdź zmienną YOUTUBE_COOKIE w Railway, czy jest poprawnie dodana!*`);
+            serverQueue.textChannel?.send(`Błąd podczas odtwarzania **${song.title}**.\n\`youtube-dl-exec error:\` ${error.message || 'Nieznany błąd'}\n*Sprawdź zmienną YOUTUBE_COOKIE w Railway, czy jest poprawnie dodana!*`);
             serverQueue.songs.shift();
             this.playSong(guildId, serverQueue.songs[0]);
         }
