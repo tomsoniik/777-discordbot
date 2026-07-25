@@ -2,8 +2,7 @@ import { ChatInputCommandInteraction, SlashCommandBuilder, GuildMember } from 'd
 import { createAudioPlayer, NoSubscriberBehavior, joinVoiceChannel, AudioPlayerStatus } from '@discordjs/voice';
 import { Command } from '../../types';
 import { musicManager, ServerQueue, Song } from '../../services/MusicManager';
-import ytSearch from 'yt-search';
-import { getYouTubeAgent, getYtDlpInfo } from '../../services/YouTubeAgent';
+import { getYouTubeInfo } from '../../services/YouTubeAgent';
 
 export const playCommand: Command = {
     data: new SlashCommandBuilder()
@@ -35,27 +34,14 @@ export const playCommand: Command = {
         let songStreamUrl: string | undefined = undefined;
 
         try {
-            // Pierwszeństwo ma yt-dlp - całkowicie odporne na błąd HTTP 429 i 403 z ytdl-core
-            const info = await getYtDlpInfo(queryStr);
+            const info = await getYouTubeInfo(queryStr);
             songTitle = info.title;
             songUrl = info.url;
             songStreamUrl = info.streamUrl;
         } catch (error: any) {
-            console.warn('[PlayCommand] Błąd getYtDlpInfo, próba awaryjna ytSearch:', error);
-            try {
-                const searchResult = await ytSearch(queryStr);
-                const video = searchResult.videos[0];
-                if (!video) {
-                    await interaction.editReply(`❌ Nie znaleziono utworu dla zapytania: \`${queryStr}\` na YouTube.`);
-                    return;
-                }
-                songTitle = video.title;
-                songUrl = video.url;
-            } catch (err2: any) {
-                console.error('Błąd podczas wyszukiwania w YouTube:', err2);
-                await interaction.editReply(`❌ Wystąpił błąd podczas pobierania utworu z YouTube: \`${err2.message || error.message || 'Błąd połączenia'}\``);
-                return;
-            }
+            console.error('Błąd podczas wyszukiwania w YouTube:', error);
+            await interaction.editReply(`❌ Wystąpił błąd podczas pobierania utworu z YouTube: \`${error.message || 'Błąd połączenia'}\``);
+            return;
         }
 
         const song: Song = { title: songTitle, url: songUrl, streamUrl: songStreamUrl };

@@ -15,8 +15,6 @@
   "dependencies": {
     "@discordjs/opus": "^0.10.0",
     "@discordjs/voice": "^0.19.2",
-    "@distube/yt-dlp": "^2.0.1",
-    "@distube/ytdl-core": "^4.16.12",
     "@prisma/client": "^5.22.0",
     "cors": "^2.8.6",
     "discord.js": "^14.26.4",
@@ -26,8 +24,7 @@
     "gamedig": "^5.3.3",
     "libsodium-wrappers": "^0.8.4",
     "opusscript": "^0.0.8",
-    "play-dl": "^1.9.7",
-    "yt-search": "^2.13.1"
+    "youtube-ext": "^1.1.25"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
@@ -35,7 +32,6 @@
     "@types/gamedig": "^5.0.3",
     "@types/libsodium-wrappers": "^0.7.14",
     "@types/node": "^26.1.0",
-    "@types/yt-search": "^2.10.3",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"

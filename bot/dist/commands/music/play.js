@@ -1,13 +1,9 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.playCommand = void 0;
 const discord_js_1 = require("discord.js");
 const voice_1 = require("@discordjs/voice");
 const MusicManager_1 = require("../../services/MusicManager");
-const yt_search_1 = __importDefault(require("yt-search"));
 const YouTubeAgent_1 = require("../../services/YouTubeAgent");
 exports.playCommand = {
     data: new discord_js_1.SlashCommandBuilder()
@@ -35,29 +31,15 @@ exports.playCommand = {
         let songUrl = '';
         let songStreamUrl = undefined;
         try {
-            // Pierwszeństwo ma yt-dlp - całkowicie odporne na błąd HTTP 429 i 403 z ytdl-core
-            const info = await (0, YouTubeAgent_1.getYtDlpInfo)(queryStr);
+            const info = await (0, YouTubeAgent_1.getYouTubeInfo)(queryStr);
             songTitle = info.title;
             songUrl = info.url;
             songStreamUrl = info.streamUrl;
         }
         catch (error) {
-            console.warn('[PlayCommand] Błąd getYtDlpInfo, próba awaryjna ytSearch:', error);
-            try {
-                const searchResult = await (0, yt_search_1.default)(queryStr);
-                const video = searchResult.videos[0];
-                if (!video) {
-                    await interaction.editReply(`❌ Nie znaleziono utworu dla zapytania: \`${queryStr}\` na YouTube.`);
-                    return;
-                }
-                songTitle = video.title;
-                songUrl = video.url;
-            }
-            catch (err2) {
-                console.error('Błąd podczas wyszukiwania w YouTube:', err2);
-                await interaction.editReply(`❌ Wystąpił błąd podczas pobierania utworu z YouTube: \`${err2.message || error.message || 'Błąd połączenia'}\``);
-                return;
-            }
+            console.error('Błąd podczas wyszukiwania w YouTube:', error);
+            await interaction.editReply(`❌ Wystąpił błąd podczas pobierania utworu z YouTube: \`${error.message || 'Błąd połączenia'}\``);
+            return;
         }
         const song = { title: songTitle, url: songUrl, streamUrl: songStreamUrl };
         let serverQueue = MusicManager_1.musicManager.getQueue(interaction.guild.id);

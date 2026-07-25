@@ -1,12 +1,8 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.musicManager = void 0;
 const voice_1 = require("@discordjs/voice");
 const discord_js_1 = require("discord.js");
-const ytdl_core_1 = __importDefault(require("@distube/ytdl-core"));
 const YouTubeAgent_1 = require("./YouTubeAgent");
 class MusicManager {
     queue = new Map();
@@ -32,37 +28,7 @@ class MusicManager {
             return;
         }
         try {
-            let streamInput;
-            if (false) {
-                // streamInput = song.streamUrl;
-            }
-            else {
-                try {
-                    // Pobierz strumień bezpośrednio z yt-dlp zamiast URL-a (aby ominąć blokady FFmpeg 403)
-                    streamInput = (0, YouTubeAgent_1.getYtDlpStream)(song.url);
-                }
-                catch (ytDlpErr) {
-                    console.warn('[MusicManager] Wyjątek yt-dlp, próba użycia ytdl-core fallback:', ytDlpErr);
-                    const agent = (0, YouTubeAgent_1.getYouTubeAgent)();
-                    const ytdlOptions = {
-                        filter: 'audioonly',
-                        quality: 'highestaudio',
-                        highWaterMark: 1 << 25,
-                        liveBuffer: 40000,
-                        dlChunkSize: 0,
-                        ...(agent ? { agent } : {})
-                    };
-                    const stream = (0, ytdl_core_1.default)(song.url, ytdlOptions);
-                    stream.on('error', (err) => {
-                        console.error('Błąd strumienia ytdl:', err);
-                        const ytDlpErrorMsg = ytDlpErr instanceof Error ? ytDlpErr.message : String(ytDlpErr);
-                        serverQueue.textChannel?.send(`Błąd strumienia podczas odtwarzania **${song.title}**.\n**yt-dlp error:** \`${ytDlpErrorMsg.slice(0, 200)}\`\n**ytdl-core error:** \`${err.message || 'Błąd'}\`\n👉 **Musisz dodać YOUTUBE_COOKIE w Railway jako pełny plik Netscape (z zachowaniem nowych linii)!**`);
-                        serverQueue.songs.shift();
-                        this.playSong(guildId, serverQueue.songs[0]);
-                    });
-                    streamInput = stream;
-                }
-            }
+            const streamInput = await (0, YouTubeAgent_1.getYouTubeStream)(song.url);
             const resource = (0, voice_1.createAudioResource)(streamInput, {
                 inputType: voice_1.StreamType.Arbitrary,
                 inlineVolume: true
@@ -74,7 +40,7 @@ class MusicManager {
         }
         catch (error) {
             console.error('Błąd w playSong:', error);
-            serverQueue.textChannel?.send(`Błąd podczas odtwarzania **${song.title}**.\n\`ytdl-core/yt-dlp fallback error:\` ${error.message || 'Nieznany błąd'}\n*Sprawdź zmienną YOUTUBE_COOKIE w Railway, czy jest poprawnie dodana!*`);
+            serverQueue.textChannel?.send(`Błąd podczas odtwarzania **${song.title}**.\n\`youtube-ext error:\` ${error.message || 'Nieznany błąd'}\n*Sprawdź zmienną YOUTUBE_COOKIE w Railway, czy jest poprawnie dodana!*`);
             serverQueue.songs.shift();
             this.playSong(guildId, serverQueue.songs[0]);
         }

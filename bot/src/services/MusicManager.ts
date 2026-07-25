@@ -1,7 +1,6 @@
 import { VoiceConnection, AudioPlayer, AudioResource, createAudioResource, AudioPlayerStatus, StreamType } from '@discordjs/voice';
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, GuildMember } from 'discord.js';
-import ytdl from '@distube/ytdl-core';
-import { getYouTubeAgent, getYtDlpStreamUrl, getYtDlpStream } from './YouTubeAgent';
+import { getYouTubeStream } from './YouTubeAgent';
 import { Readable } from 'stream';
 
 export interface Song {
@@ -53,36 +52,7 @@ class MusicManager {
         }
 
         try {
-            let streamInput: string | Readable;
-
-            if (false) {
-                // streamInput = song.streamUrl;
-            } else {
-                try {
-                    // Pobierz strumień bezpośrednio z yt-dlp zamiast URL-a (aby ominąć blokady FFmpeg 403)
-                    streamInput = getYtDlpStream(song.url);
-                } catch (ytDlpErr) {
-                    console.warn('[MusicManager] Wyjątek yt-dlp, próba użycia ytdl-core fallback:', ytDlpErr);
-                    const agent = getYouTubeAgent();
-                    const ytdlOptions: ytdl.downloadOptions = {
-                        filter: 'audioonly',
-                        quality: 'highestaudio',
-                        highWaterMark: 1 << 25,
-                        liveBuffer: 40000,
-                        dlChunkSize: 0,
-                        ...(agent ? { agent } : {})
-                    };
-                    const stream = ytdl(song.url, ytdlOptions);
-                    stream.on('error', (err: any) => {
-                        console.error('Błąd strumienia ytdl:', err);
-                        const ytDlpErrorMsg = ytDlpErr instanceof Error ? ytDlpErr.message : String(ytDlpErr);
-                        (serverQueue.textChannel as any)?.send(`Błąd strumienia podczas odtwarzania **${song.title}**.\n**yt-dlp error:** \`${ytDlpErrorMsg.slice(0, 200)}\`\n**ytdl-core error:** \`${err.message || 'Błąd'}\`\n👉 **Musisz dodać YOUTUBE_COOKIE w Railway jako pełny plik Netscape (z zachowaniem nowych linii)!**`);
-                        serverQueue.songs.shift();
-                        this.playSong(guildId, serverQueue.songs[0]);
-                    });
-                    streamInput = stream;
-                }
-            }
+            const streamInput = await getYouTubeStream(song.url);
 
             const resource = createAudioResource(streamInput, {
                 inputType: StreamType.Arbitrary,
@@ -94,7 +64,7 @@ class MusicManager {
             await this.sendMusicDashboard(guildId, song, serverQueue.textChannel);
         } catch (error: any) {
             console.error('Błąd w playSong:', error);
-            (serverQueue.textChannel as any)?.send(`Błąd podczas odtwarzania **${song.title}**.\n\`ytdl-core/yt-dlp fallback error:\` ${error.message || 'Nieznany błąd'}\n*Sprawdź zmienną YOUTUBE_COOKIE w Railway, czy jest poprawnie dodana!*`);
+            (serverQueue.textChannel as any)?.send(`Błąd podczas odtwarzania **${song.title}**.\n\`youtube-ext error:\` ${error.message || 'Nieznany błąd'}\n*Sprawdź zmienną YOUTUBE_COOKIE w Railway, czy jest poprawnie dodana!*`);
             serverQueue.songs.shift();
             this.playSong(guildId, serverQueue.songs[0]);
         }
