@@ -35,7 +35,22 @@ async function ensureYtDlpBinary() {
 function initYouTubeAgent() {
     const cookieFile = path_1.default.join(process.cwd(), 'cookies.txt');
     if (process.env.YOUTUBE_COOKIE) {
-        fs_1.default.writeFileSync(cookieFile, process.env.YOUTUBE_COOKIE);
+        const raw = process.env.YOUTUBE_COOKIE.trim();
+        if (raw.includes('# Netscape HTTP Cookie File')) {
+            fs_1.default.writeFileSync(cookieFile, raw);
+        }
+        else {
+            let netscape = "# Netscape HTTP Cookie File\n";
+            const pairs = raw.split(';').map(c => c.trim()).filter(Boolean);
+            for (const pair of pairs) {
+                const [key, ...rest] = pair.split('=');
+                const value = rest.join('=');
+                if (key && value) {
+                    netscape += `.youtube.com\tTRUE\t/\tTRUE\t2147483647\t${key}\t${value}\n`;
+                }
+            }
+            fs_1.default.writeFileSync(cookieFile, netscape);
+        }
     }
 }
 async function getYouTubeInfo(query) {
@@ -51,13 +66,8 @@ async function getYouTubeInfo(query) {
                 f: 'bestaudio/best',
                 noPlaylist: true
             };
-            const cookieStr = process.env.YOUTUBE_COOKIE?.trim() || '';
-            const isNetscape = cookieStr.includes('# Netscape HTTP Cookie File');
-            if (isNetscape && fs_1.default.existsSync(cookieFile)) {
+            if (fs_1.default.existsSync(cookieFile)) {
                 options.cookies = cookieFile;
-            }
-            else if (cookieStr) {
-                options.addHeader = [`Cookie: ${cookieStr}`];
             }
             let ytdlInstance = youtube_dl_exec_1.default;
             if (process.platform !== 'win32' && fs_1.default.existsSync(YT_DLP_PATH)) {
@@ -99,13 +109,8 @@ async function getYouTubeStream(url) {
         noWarnings: true,
         noPlaylist: true
     };
-    const cookieStr = process.env.YOUTUBE_COOKIE?.trim() || '';
-    const isNetscape = cookieStr.includes('# Netscape HTTP Cookie File');
-    if (isNetscape && fs_1.default.existsSync(cookieFile)) {
+    if (fs_1.default.existsSync(cookieFile)) {
         options.cookies = cookieFile;
-    }
-    else if (cookieStr) {
-        options.addHeader = [`Cookie: ${cookieStr}`];
     }
     let ytdlInstance = youtube_dl_exec_1.default;
     if (process.platform !== 'win32' && fs_1.default.existsSync(YT_DLP_PATH)) {
