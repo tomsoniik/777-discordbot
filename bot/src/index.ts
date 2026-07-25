@@ -17,8 +17,20 @@ const client = new Client({
     partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.GuildMember],
 });
 
+import { Player } from 'discord-player';
+import { YoutubeiExtractor } from 'discord-player-youtubei';
+
 // Zdarzenia
 client.once(Events.ClientReady, async () => {
+    // Inicjalizacja discord-player
+    const player = new Player(client);
+    
+    // Załaduj domyślne ekstraktory (np. Spotify, SoundCloud)
+    await player.extractors.loadDefault();
+    
+    // Zarejestruj nowoczesny i stabilny YoutubeiExtractor
+    await player.extractors.register(YoutubeiExtractor, {});
+
     await onReady(client);
 });
 

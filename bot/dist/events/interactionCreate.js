@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onInteractionCreate = onInteractionCreate;
 const commands_1 = require("../commands");
-const MusicManager_1 = require("../services/MusicManager");
 async function onInteractionCreate(interaction) {
     if (interaction.isChatInputCommand()) {
         try {
@@ -26,71 +25,7 @@ async function onInteractionCreate(interaction) {
     }
     else if (interaction.isButton()) {
         if (interaction.customId.startsWith('music_')) {
-            const guildId = interaction.guildId;
-            if (!guildId)
-                return;
-            const serverQueue = MusicManager_1.musicManager.getQueue(guildId);
-            if (!serverQueue) {
-                await interaction.reply({ content: 'Obecnie nie jest odtwarzana żadna muzyka!', flags: 64 });
-                return;
-            }
-            const member = await interaction.guild?.members.fetch(interaction.user.id);
-            const voiceChannel = member?.voice.channel;
-            if (!voiceChannel || voiceChannel.id !== serverQueue.voiceChannel.id) {
-                await interaction.reply({ content: 'Musisz być na tym samym kanale głosowym co bot, aby sterować muzyką!', flags: 64 });
-                return;
-            }
-            try {
-                if (interaction.customId === 'music_pause_resume') {
-                    if (serverQueue.player.state.status === 'playing')
-                        serverQueue.player.pause();
-                    else
-                        serverQueue.player.unpause();
-                    await MusicManager_1.musicManager.sendMusicDashboard(guildId, serverQueue.songs[0], serverQueue.textChannel, interaction);
-                }
-                else if (interaction.customId === 'music_skip') {
-                    serverQueue.player.stop();
-                    await interaction.reply({ content: '⏭️ Pominięto utwór.', flags: 64 });
-                }
-                else if (interaction.customId === 'music_stop') {
-                    serverQueue.songs = [];
-                    serverQueue.player.stop();
-                    await interaction.reply({ content: '⏹️ Zatrzymano odtwarzanie i wyczyszczono kolejkę.', flags: 64 });
-                }
-                else if (interaction.customId === 'music_queue') {
-                    if (serverQueue.songs.length === 0) {
-                        await interaction.reply({ content: 'Kolejka jest pusta!', flags: 64 });
-                        return;
-                    }
-                    const queueString = serverQueue.songs.map((song, index) => `${index === 0 ? '**Teraz gram:**' : `**${index}.**`} ${song.title}`).join('\n');
-                    await interaction.reply({ content: `**Kolejka:**\n${queueString.substring(0, 1900)}`, flags: 64 });
-                }
-                else if (interaction.customId === 'music_loop') {
-                    serverQueue.loop = !serverQueue.loop;
-                    await MusicManager_1.musicManager.sendMusicDashboard(guildId, serverQueue.songs[0], serverQueue.textChannel, interaction);
-                }
-                else if (interaction.customId === 'music_vol_up') {
-                    if (serverQueue.volume >= 200) {
-                        await interaction.reply({ content: 'Głośność jest już na maksymalnym poziomie!', flags: 64 });
-                        return;
-                    }
-                    serverQueue.volume += 10;
-                    serverQueue.resource?.volume?.setVolume(serverQueue.volume / 100);
-                    await MusicManager_1.musicManager.sendMusicDashboard(guildId, serverQueue.songs[0], serverQueue.textChannel, interaction);
-                }
-                else if (interaction.customId === 'music_vol_down') {
-                    if (serverQueue.volume <= 10) {
-                        await interaction.reply({ content: 'Głośność jest na minimalnym poziomie!', flags: 64 });
-                        return;
-                    }
-                    serverQueue.volume -= 10;
-                    serverQueue.resource?.volume?.setVolume(serverQueue.volume / 100);
-                    await MusicManager_1.musicManager.sendMusicDashboard(guildId, serverQueue.songs[0], serverQueue.textChannel, interaction);
-                }
-            }
-            catch (err) {
-                console.error(err);
-            }
+            await interaction.reply({ content: 'Panel sterowania został wyłączony w nowej wersji systemu.', flags: 64 });
         }
     }
 }

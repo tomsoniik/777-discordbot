@@ -6,9 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.setupApi = setupApi;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
-const voice_1 = require("@discordjs/voice");
 const env_1 = require("../config/env");
-const MusicManager_1 = require("../services/MusicManager");
 function setupApi(client) {
     const app = (0, express_1.default)();
     app.use((0, cors_1.default)());
@@ -46,16 +44,17 @@ function setupApi(client) {
         const guildId = req.query.guildId || env_1.ENV.GUILD_ID;
         if (!guildId)
             return res.json({ error: 'No guild id provided' });
-        const serverQueue = MusicManager_1.musicManager.getQueue(guildId);
+        const { useQueue } = require('discord-player');
+        const serverQueue = useQueue(guildId);
         if (!serverQueue) {
             return res.json({ playing: false, songs: [], volume: 100, loop: false });
         }
         res.json({
-            playing: serverQueue.player.state.status === voice_1.AudioPlayerStatus.Playing,
-            songs: serverQueue.songs,
-            volume: serverQueue.volume,
-            loop: serverQueue.loop,
-            channelId: serverQueue.voiceChannel?.id
+            playing: serverQueue.isPlaying(),
+            songs: serverQueue.tracks.toArray().map((t) => ({ title: t.title, url: t.url, author: t.author })),
+            volume: serverQueue.node.volume,
+            loop: serverQueue.repeatMode !== 0,
+            channelId: serverQueue.channel?.id
         });
     });
     app.post('/api/music/control', async (req, res) => {
@@ -63,28 +62,25 @@ function setupApi(client) {
         const targetGuildId = guildId || env_1.ENV.GUILD_ID;
         if (!targetGuildId)
             return res.json({ error: 'No guild id provided' });
-        const serverQueue = MusicManager_1.musicManager.getQueue(targetGuildId);
+        const { useQueue } = require('discord-player');
+        const serverQueue = useQueue(targetGuildId);
         if (!serverQueue)
             return res.json({ success: false, error: 'Brak aktywnej kolejki' });
         try {
             if (action === 'pause')
-                serverQueue.player.pause();
+                serverQueue.node.pause();
             else if (action === 'resume')
-                serverQueue.player.unpause();
+                serverQueue.node.resume();
             else if (action === 'skip')
-                serverQueue.player.stop();
-            else if (action === 'stop') {
-                serverQueue.songs = [];
-                serverQueue.player.stop();
+                serverQueue.node.skip();
+            else if (action === 'stop')
+                serverQueue.delete();
+            else if (action === 'loop') {
+                serverQueue.setRepeatMode(serverQueue.repeatMode === 0 ? 1 : 0);
             }
-            else if (action === 'loop')
-                serverQueue.loop = !serverQueue.loop;
             else if (action === 'volume' && typeof value === 'number') {
-                let vol = Math.max(10, Math.min(200, value));
-                serverQueue.volume = vol;
-                if (serverQueue.resource && serverQueue.resource.volume) {
-                    serverQueue.resource.volume.setVolume(vol / 100);
-                }
+                let vol = Math.max(0, Math.min(200, value));
+                serverQueue.node.setVolume(vol);
             }
             res.json({ success: true });
         }

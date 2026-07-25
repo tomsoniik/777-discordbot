@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.queueCommand = void 0;
 const discord_js_1 = require("discord.js");
-const MusicManager_1 = require("../../services/MusicManager");
+const discord_player_1 = require("discord-player");
 exports.queueCommand = {
     data: new discord_js_1.SlashCommandBuilder()
         .setName('queue')
@@ -10,12 +10,30 @@ exports.queueCommand = {
     execute: async (interaction) => {
         if (!interaction.guild)
             return;
-        const serverQueue = MusicManager_1.musicManager.getQueue(interaction.guild.id);
-        if (!serverQueue || serverQueue.songs.length === 0) {
-            await interaction.reply({ content: 'Kolejka jest pusta!', flags: discord_js_1.MessageFlags.Ephemeral });
+        const queue = (0, discord_player_1.useQueue)(interaction.guild.id);
+        if (!queue || !queue.isPlaying()) {
+            await interaction.reply('Aktualnie nic nie jest odtwarzane!');
             return;
         }
-        const queueString = serverQueue.songs.map((song, index) => `${index === 0 ? '**Teraz gram:**' : `**${index}.**`} ${song.title}`).join('\n');
-        await interaction.reply(`**Kolejka:**\n${queueString}`);
+        const currentTrack = queue.currentTrack;
+        const tracks = queue.tracks.toArray();
+        let description = `**Teraz odtwarzane:**\n🎵 ${currentTrack?.title} - ${currentTrack?.author}\n\n**Następne w kolejce:**\n`;
+        if (tracks.length === 0) {
+            description += 'Brak utworów w kolejce.';
+        }
+        else {
+            const nextSongs = tracks.slice(0, 10);
+            nextSongs.forEach((song, index) => {
+                description += `${index + 1}. ${song.title} - ${song.author}\n`;
+            });
+            if (tracks.length > 10) {
+                description += `...i ${tracks.length - 10} innych utworów.`;
+            }
+        }
+        const embed = new discord_js_1.EmbedBuilder()
+            .setTitle('Kolejka odtwarzania')
+            .setDescription(description)
+            .setColor('#7289da');
+        await interaction.reply({ embeds: [embed] });
     }
 };

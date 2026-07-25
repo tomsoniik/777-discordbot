@@ -17,8 +17,16 @@ const client = new discord_js_1.Client({
     ],
     partials: [discord_js_1.Partials.Message, discord_js_1.Partials.Channel, discord_js_1.Partials.Reaction, discord_js_1.Partials.GuildMember],
 });
+const discord_player_1 = require("discord-player");
+const discord_player_youtubei_1 = require("discord-player-youtubei");
 // Zdarzenia
 client.once(discord_js_1.Events.ClientReady, async () => {
+    // Inicjalizacja discord-player
+    const player = new discord_player_1.Player(client);
+    // Załaduj domyślne ekstraktory (np. Spotify, SoundCloud)
+    await player.extractors.loadDefault();
+    // Zarejestruj nowoczesny i stabilny YoutubeiExtractor
+    await player.extractors.register(discord_player_youtubei_1.YoutubeiExtractor, {});
     await (0, ready_1.onReady)(client);
 });
 client.on(discord_js_1.Events.InteractionCreate, async (interaction) => {
