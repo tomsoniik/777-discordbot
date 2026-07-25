@@ -105,8 +105,13 @@ export function getYtDlpInfo(query: string): Promise<YtDlpVideoInfo> {
 
         const args = ['-j', '--no-warnings', '--no-playlist', '-f', 'bestaudio/best', targetStr];
 
+        const cookieFile = path.join(process.cwd(), 'cookies.txt');
         if (process.env.YOUTUBE_COOKIE) {
-            args.push('--add-header', `Cookie:${process.env.YOUTUBE_COOKIE}`);
+            fs.writeFileSync(cookieFile, process.env.YOUTUBE_COOKIE);
+        }
+        
+        if (fs.existsSync(cookieFile)) {
+            args.push('--cookies', cookieFile);
         }
 
         execFile(binToUse, args, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
@@ -159,8 +164,13 @@ export function getYtDlpStreamUrl(url: string): Promise<string> {
 
         const args = ['-g', '-f', 'bestaudio/best', url];
 
+        const cookieFile = path.join(process.cwd(), 'cookies.txt');
         if (process.env.YOUTUBE_COOKIE) {
-            args.push('--add-header', `Cookie:${process.env.YOUTUBE_COOKIE}`);
+            fs.writeFileSync(cookieFile, process.env.YOUTUBE_COOKIE);
+        }
+        
+        if (fs.existsSync(cookieFile)) {
+            args.push('--cookies', cookieFile);
         }
 
         execFile(binToUse, args, (error, stdout, stderr) => {

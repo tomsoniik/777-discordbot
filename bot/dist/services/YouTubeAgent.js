@@ -107,8 +107,12 @@ function getYtDlpInfo(query) {
         const isUrl = query.includes('youtube.com') || query.includes('youtu.be');
         const targetStr = isUrl ? query : `ytsearch1:${query}`;
         const args = ['-j', '--no-warnings', '--no-playlist', '-f', 'bestaudio/best', targetStr];
+        const cookieFile = path_1.default.join(process.cwd(), 'cookies.txt');
         if (process.env.YOUTUBE_COOKIE) {
-            args.push('--add-header', `Cookie:${process.env.YOUTUBE_COOKIE}`);
+            fs_1.default.writeFileSync(cookieFile, process.env.YOUTUBE_COOKIE);
+        }
+        if (fs_1.default.existsSync(cookieFile)) {
+            args.push('--cookies', cookieFile);
         }
         (0, child_process_1.execFile)(binToUse, args, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
             if (error) {
@@ -164,8 +168,12 @@ function getYtDlpStreamUrl(url) {
             }
         }
         const args = ['-g', '-f', 'bestaudio/best', url];
+        const cookieFile = path_1.default.join(process.cwd(), 'cookies.txt');
         if (process.env.YOUTUBE_COOKIE) {
-            args.push('--add-header', `Cookie:${process.env.YOUTUBE_COOKIE}`);
+            fs_1.default.writeFileSync(cookieFile, process.env.YOUTUBE_COOKIE);
+        }
+        if (fs_1.default.existsSync(cookieFile)) {
+            args.push('--cookies', cookieFile);
         }
         (0, child_process_1.execFile)(binToUse, args, (error, stdout, stderr) => {
             if (error) {
