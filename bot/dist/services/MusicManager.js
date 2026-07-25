@@ -7,6 +7,7 @@ exports.musicManager = void 0;
 const voice_1 = require("@discordjs/voice");
 const discord_js_1 = require("discord.js");
 const ytdl_core_1 = __importDefault(require("@distube/ytdl-core"));
+const YouTubeAgent_1 = require("./YouTubeAgent");
 class MusicManager {
     queue = new Map();
     constructor() { }
@@ -31,12 +32,26 @@ class MusicManager {
             return;
         }
         try {
-            const stream = (0, ytdl_core_1.default)(song.url, {
+            const agent = (0, YouTubeAgent_1.getYouTubeAgent)();
+            const ytdlOptions = {
                 filter: 'audioonly',
                 quality: 'highestaudio',
                 highWaterMark: 1 << 25,
                 liveBuffer: 40000,
                 dlChunkSize: 0,
+                ...(agent ? { agent } : {})
+            };
+            const stream = (0, ytdl_core_1.default)(song.url, ytdlOptions);
+            stream.on('error', (err) => {
+                console.error('Błąd strumienia ytdl:', err);
+                if (err.message && err.message.includes("Sign in to confirm")) {
+                    serverQueue.textChannel?.send(`❌ **Błąd YouTube (Bot Block)** podczas odtwarzania **${song.title}**.\nYouTube wymaga ciasteczek sesji w \`cookies.json\` lub \`YOUTUBE_COOKIE\` w \`.env\`.`);
+                }
+                else {
+                    serverQueue.textChannel?.send(`Błąd strumienia podczas odtwarzania **${song.title}**: \`${err.message || 'Błąd strumienia'}\``);
+                }
+                serverQueue.songs.shift();
+                this.playSong(guildId, serverQueue.songs[0]);
             });
             const resource = (0, voice_1.createAudioResource)(stream, {
                 inputType: voice_1.StreamType.Arbitrary,
@@ -48,8 +63,8 @@ class MusicManager {
             await this.sendMusicDashboard(guildId, song, serverQueue.textChannel);
         }
         catch (error) {
-            console.error(error);
-            serverQueue.textChannel?.send(`Błąd podczas odtwarzania **${song.title}**`);
+            console.error('Błąd w playSong:', error);
+            serverQueue.textChannel?.send(`Błąd podczas odtwarzania **${song.title}**: \`${error.message || 'Nieznany błąd'}\``);
             serverQueue.songs.shift();
             this.playSong(guildId, serverQueue.songs[0]);
         }

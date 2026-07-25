@@ -9,6 +9,7 @@ const voice_1 = require("@discordjs/voice");
 const MusicManager_1 = require("../../services/MusicManager");
 const ytdl_core_1 = __importDefault(require("@distube/ytdl-core"));
 const yt_search_1 = __importDefault(require("yt-search"));
+const YouTubeAgent_1 = require("../../services/YouTubeAgent");
 exports.playCommand = {
     data: new discord_js_1.SlashCommandBuilder()
         .setName('play')
@@ -34,10 +35,31 @@ exports.playCommand = {
         let songTitle = '';
         let songUrl = '';
         try {
+            const agent = (0, YouTubeAgent_1.getYouTubeAgent)();
+            const ytdlOptions = agent ? { agent } : {};
             if (queryStr.includes('youtube.com') || queryStr.includes('youtu.be')) {
-                const info = await ytdl_core_1.default.getBasicInfo(queryStr);
-                songTitle = info.videoDetails.title;
-                songUrl = info.videoDetails.video_url;
+                try {
+                    const info = await ytdl_core_1.default.getBasicInfo(queryStr, ytdlOptions);
+                    songTitle = info.videoDetails.title;
+                    songUrl = info.videoDetails.video_url;
+                }
+                catch (err) {
+                    if (err.message && (err.message.includes("Sign in to confirm") || err.message.includes("bot"))) {
+                        console.warn('[PlayCommand] Weryfikacja bota na bezpośrednim linku, próba wyszukania po tytule...');
+                        const searchResult = await (0, yt_search_1.default)(queryStr);
+                        const video = searchResult.videos[0];
+                        if (video) {
+                            songTitle = video.title;
+                            songUrl = video.url;
+                        }
+                        else {
+                            throw err;
+                        }
+                    }
+                    else {
+                        throw err;
+                    }
+                }
             }
             else {
                 const searchResult = await (0, yt_search_1.default)(queryStr);
@@ -52,7 +74,11 @@ exports.playCommand = {
         }
         catch (error) {
             console.error('Błąd podczas wyszukiwania w YouTube:', error);
-            await interaction.editReply(`❌ Wystąpił błąd podczas pobierania utworu z YouTube: \`${error.message || 'Nieznany błąd'}\``);
+            const isBotBlock = error.message?.includes("Sign in to confirm you're not a bot");
+            const errorMessage = isBotBlock
+                ? '❌ **Wymagana weryfikacja YouTube (Bot Block)**\nYouTube wymaga ciasteczek sesji, aby odtworzyć ten utwór.\nDodaj ciasteczka do pliku `cookies.json` w katalogu bota lub ustaw `YOUTUBE_COOKIE` w `.env`.'
+                : `❌ Wystąpił błąd podczas pobierania utworu z YouTube: \`${error.message || 'Nieznany błąd'}\``;
+            await interaction.editReply(errorMessage);
             return;
         }
         const song = { title: songTitle, url: songUrl };

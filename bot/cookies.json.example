@@ -1,0 +1,10 @@
+[
+  {
+    "name": "COOKIE_NAME",
+    "value": "COOKIE_VALUE",
+    "domain": ".youtube.com",
+    "path": "/",
+    "secure": true,
+    "httpOnly": true
+  }
+]
