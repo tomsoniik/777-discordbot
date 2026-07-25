@@ -24,7 +24,8 @@ client.once(discord_js_1.Events.ClientReady, async () => {
     // Inicjalizacja discord-player
     const player = new discord_player_1.Player(client);
     // Załaduj domyślne ekstraktory (np. Spotify, SoundCloud)
-    await player.extractors.loadDefault();
+    const { DefaultExtractors } = require('@discord-player/extractor');
+    await player.extractors.loadMulti(DefaultExtractors);
     // Zarejestruj nowoczesny i stabilny YoutubeiExtractor
     await player.extractors.register(discord_player_youtubei_1.YoutubeiExtractor, {});
     await (0, ready_1.onReady)(client);
