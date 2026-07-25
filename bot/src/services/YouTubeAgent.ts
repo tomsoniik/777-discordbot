@@ -72,6 +72,54 @@ export function getYouTubeAgent(): any {
     return undefined;
 }
 
+export interface YtDlpVideoInfo {
+    title: string;
+    url: string;
+}
+
+export function getYtDlpInfo(query: string): Promise<YtDlpVideoInfo> {
+    return new Promise((resolve, reject) => {
+        const isWin = process.platform === 'win32';
+        const binName = isWin ? 'yt-dlp.exe' : 'yt-dlp';
+        const localBin = path.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', binName);
+        
+        let binToUse = 'yt-dlp';
+        if (fs.existsSync(localBin)) {
+            binToUse = localBin;
+        } else {
+            const altBin = path.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', isWin ? 'yt-dlp' : 'yt-dlp.exe');
+            if (fs.existsSync(altBin)) {
+                binToUse = altBin;
+            }
+        }
+
+        const isUrl = query.includes('youtube.com') || query.includes('youtu.be');
+        const targetStr = isUrl ? query : `ytsearch1:${query}`;
+
+        const args = ['-j', '--no-warnings', targetStr];
+
+        if (process.env.YOUTUBE_COOKIE) {
+            args.push('--add-header', `Cookie:${process.env.YOUTUBE_COOKIE}`);
+        }
+
+        execFile(binToUse, args, (error, stdout, stderr) => {
+            if (error) {
+                console.error('[YtDlpInfo] Błąd pobierania informacji:', error, stderr);
+                return reject(error);
+            }
+            try {
+                const json = JSON.parse(stdout.trim().split('\n')[0]);
+                resolve({
+                    title: json.title || 'Nieznany utwór',
+                    url: json.webpage_url || json.url || query,
+                });
+            } catch (parseErr) {
+                reject(new Error('Nie udało się przetworzyć danych utworu z yt-dlp'));
+            }
+        });
+    });
+}
+
 export function getYtDlpStreamUrl(url: string): Promise<string> {
     return new Promise((resolve, reject) => {
         const isWin = process.platform === 'win32';
@@ -90,7 +138,6 @@ export function getYtDlpStreamUrl(url: string): Promise<string> {
 
         const args = ['-g', '-f', 'bestaudio/best', url];
 
-        // Jeśli zmienna YOUTUBE_COOKIE jest w środowisku (np. na Railway), dodaj nagłówek Cookie do yt-dlp
         if (process.env.YOUTUBE_COOKIE) {
             args.push('--add-header', `Cookie:${process.env.YOUTUBE_COOKIE}`);
         }

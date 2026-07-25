@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getYouTubeAgent = getYouTubeAgent;
+exports.getYtDlpInfo = getYtDlpInfo;
 exports.getYtDlpStreamUrl = getYtDlpStreamUrl;
 exports.reloadYouTubeAgent = reloadYouTubeAgent;
 const ytdl_core_1 = __importDefault(require("@distube/ytdl-core"));
@@ -76,6 +77,45 @@ function getYouTubeAgent() {
     }
     return undefined;
 }
+function getYtDlpInfo(query) {
+    return new Promise((resolve, reject) => {
+        const isWin = process.platform === 'win32';
+        const binName = isWin ? 'yt-dlp.exe' : 'yt-dlp';
+        const localBin = path_1.default.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', binName);
+        let binToUse = 'yt-dlp';
+        if (fs_1.default.existsSync(localBin)) {
+            binToUse = localBin;
+        }
+        else {
+            const altBin = path_1.default.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', isWin ? 'yt-dlp' : 'yt-dlp.exe');
+            if (fs_1.default.existsSync(altBin)) {
+                binToUse = altBin;
+            }
+        }
+        const isUrl = query.includes('youtube.com') || query.includes('youtu.be');
+        const targetStr = isUrl ? query : `ytsearch1:${query}`;
+        const args = ['-j', '--no-warnings', targetStr];
+        if (process.env.YOUTUBE_COOKIE) {
+            args.push('--add-header', `Cookie:${process.env.YOUTUBE_COOKIE}`);
+        }
+        (0, child_process_1.execFile)(binToUse, args, (error, stdout, stderr) => {
+            if (error) {
+                console.error('[YtDlpInfo] Błąd pobierania informacji:', error, stderr);
+                return reject(error);
+            }
+            try {
+                const json = JSON.parse(stdout.trim().split('\n')[0]);
+                resolve({
+                    title: json.title || 'Nieznany utwór',
+                    url: json.webpage_url || json.url || query,
+                });
+            }
+            catch (parseErr) {
+                reject(new Error('Nie udało się przetworzyć danych utworu z yt-dlp'));
+            }
+        });
+    });
+}
 function getYtDlpStreamUrl(url) {
     return new Promise((resolve, reject) => {
         const isWin = process.platform === 'win32';
@@ -92,7 +132,6 @@ function getYtDlpStreamUrl(url) {
             }
         }
         const args = ['-g', '-f', 'bestaudio/best', url];
-        // Jeśli zmienna YOUTUBE_COOKIE jest w środowisku (np. na Railway), dodaj nagłówek Cookie do yt-dlp
         if (process.env.YOUTUBE_COOKIE) {
             args.push('--add-header', `Cookie:${process.env.YOUTUBE_COOKIE}`);
         }

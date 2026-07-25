@@ -2,9 +2,8 @@ import { ChatInputCommandInteraction, SlashCommandBuilder, GuildMember } from 'd
 import { createAudioPlayer, NoSubscriberBehavior, joinVoiceChannel, AudioPlayerStatus } from '@discordjs/voice';
 import { Command } from '../../types';
 import { musicManager, ServerQueue, Song } from '../../services/MusicManager';
-import ytdl from '@distube/ytdl-core';
 import ytSearch from 'yt-search';
-import { getYouTubeAgent } from '../../services/YouTubeAgent';
+import { getYouTubeAgent, getYtDlpInfo } from '../../services/YouTubeAgent';
 
 export const playCommand: Command = {
     data: new SlashCommandBuilder()
@@ -35,30 +34,13 @@ export const playCommand: Command = {
         let songUrl = '';
 
         try {
-            const agent = getYouTubeAgent();
-            const ytdlOptions = agent ? { agent } : {};
-
-            if (queryStr.includes('youtube.com') || queryStr.includes('youtu.be')) {
-                try {
-                    const info = await ytdl.getBasicInfo(queryStr, ytdlOptions);
-                    songTitle = info.videoDetails.title;
-                    songUrl = info.videoDetails.video_url;
-                } catch (err: any) {
-                    if (err.message && (err.message.includes("Sign in to confirm") || err.message.includes("bot"))) {
-                        console.warn('[PlayCommand] Weryfikacja bota na bezpośrednim linku, próba wyszukania po tytule...');
-                        const searchResult = await ytSearch(queryStr);
-                        const video = searchResult.videos[0];
-                        if (video) {
-                            songTitle = video.title;
-                            songUrl = video.url;
-                        } else {
-                            throw err;
-                        }
-                    } else {
-                        throw err;
-                    }
-                }
-            } else {
+            // Pierwszeństwo ma yt-dlp - całkowicie odporne na błąd HTTP 429 i 403 z ytdl-core
+            const info = await getYtDlpInfo(queryStr);
+            songTitle = info.title;
+            songUrl = info.url;
+        } catch (error: any) {
+            console.warn('[PlayCommand] Błąd getYtDlpInfo, próba awaryjna ytSearch:', error);
+            try {
                 const searchResult = await ytSearch(queryStr);
                 const video = searchResult.videos[0];
                 if (!video) {
@@ -67,15 +49,11 @@ export const playCommand: Command = {
                 }
                 songTitle = video.title;
                 songUrl = video.url;
+            } catch (err2: any) {
+                console.error('Błąd podczas wyszukiwania w YouTube:', err2);
+                await interaction.editReply(`❌ Wystąpił błąd podczas pobierania utworu z YouTube: \`${err2.message || error.message || 'Błąd połączenia'}\``);
+                return;
             }
-        } catch (error: any) {
-            console.error('Błąd podczas wyszukiwania w YouTube:', error);
-            const isBotBlock = error.message?.includes("Sign in to confirm you're not a bot");
-            const errorMessage = isBotBlock
-                ? '❌ **Wymagana weryfikacja YouTube (Bot Block)**\nYouTube wymaga ciasteczek sesji, aby odtworzyć ten utwór.\nDodaj ciasteczka do pliku `cookies.json` w katalogu bota lub ustaw `YOUTUBE_COOKIE` w `.env`.'
-                : `❌ Wystąpił błąd podczas pobierania utworu z YouTube: \`${error.message || 'Nieznany błąd'}\``;
-            await interaction.editReply(errorMessage);
-            return;
         }
 
         const song: Song = { title: songTitle, url: songUrl };
