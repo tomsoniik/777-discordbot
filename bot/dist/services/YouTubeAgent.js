@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ensureYtDlpBinary = ensureYtDlpBinary;
 exports.initYouTubeAgent = initYouTubeAgent;
 exports.getYouTubeInfo = getYouTubeInfo;
 exports.getYouTubeStream = getYouTubeStream;
@@ -11,6 +12,44 @@ const youtube_dl_exec_1 = __importDefault(require("youtube-dl-exec"));
 const yt_search_1 = __importDefault(require("yt-search"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const https_1 = __importDefault(require("https"));
+const YT_DLP_PATH = path_1.default.join(process.cwd(), 'yt-dlp_linux');
+async function ensureYtDlpBinary() {
+    if (process.platform === 'win32')
+        return; // Windows works with default youtube-dl-exec
+    if (!fs_1.default.existsSync(YT_DLP_PATH)) {
+        console.log('[YouTubeAgent] Pobieranie samodzielnego pliku binarnego yt-dlp_linux (nie wymaga Pythona)...');
+        return new Promise((resolve, reject) => {
+            const file = fs_1.default.createWriteStream(YT_DLP_PATH);
+            https_1.default.get('https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux', (response) => {
+                if (response.statusCode === 302 || response.statusCode === 301) {
+                    https_1.default.get(response.headers.location, (res2) => {
+                        res2.pipe(file);
+                        file.on('finish', () => {
+                            file.close();
+                            fs_1.default.chmodSync(YT_DLP_PATH, 0o755);
+                            console.log('[YouTubeAgent] yt-dlp_linux pobrany i gotowy.');
+                            resolve();
+                        });
+                    }).on('error', (err) => {
+                        fs_1.default.unlink(YT_DLP_PATH, () => reject(err));
+                    });
+                }
+                else {
+                    response.pipe(file);
+                    file.on('finish', () => {
+                        file.close();
+                        fs_1.default.chmodSync(YT_DLP_PATH, 0o755);
+                        console.log('[YouTubeAgent] yt-dlp_linux pobrany i gotowy.');
+                        resolve();
+                    });
+                }
+            }).on('error', (err) => {
+                fs_1.default.unlink(YT_DLP_PATH, () => reject(err));
+            });
+        });
+    }
+}
 function initYouTubeAgent() {
     const cookieFile = path_1.default.join(process.cwd(), 'cookies.txt');
     if (process.env.YOUTUBE_COOKIE) {
@@ -19,10 +58,10 @@ function initYouTubeAgent() {
 }
 async function getYouTubeInfo(query) {
     initYouTubeAgent();
+    await ensureYtDlpBinary();
     const isUrl = query.includes('youtube.com') || query.includes('youtu.be');
     try {
         if (isUrl) {
-            // For URL, we can use youtube-dl-exec directly to get title
             const cookieFile = path_1.default.join(process.cwd(), 'cookies.txt');
             const options = {
                 dumpJson: true,
@@ -33,6 +72,9 @@ async function getYouTubeInfo(query) {
             if (fs_1.default.existsSync(cookieFile)) {
                 options.cookies = cookieFile;
             }
+            if (process.platform !== 'win32' && fs_1.default.existsSync(YT_DLP_PATH)) {
+                options.execPath = YT_DLP_PATH;
+            }
             const info = await (0, youtube_dl_exec_1.default)(query, options);
             return {
                 title: info.title || 'Nieznany utwór',
@@ -40,7 +82,6 @@ async function getYouTubeInfo(query) {
             };
         }
         else {
-            // Search using yt-search
             const r = await (0, yt_search_1.default)(query);
             const videos = r.videos;
             if (!videos || videos.length === 0) {
@@ -61,6 +102,7 @@ async function getYouTubeInfo(query) {
 }
 async function getYouTubeStream(url) {
     initYouTubeAgent();
+    await ensureYtDlpBinary();
     const cookieFile = path_1.default.join(process.cwd(), 'cookies.txt');
     const options = {
         f: 'bestaudio/best',
@@ -71,6 +113,9 @@ async function getYouTubeStream(url) {
     };
     if (fs_1.default.existsSync(cookieFile)) {
         options.cookies = cookieFile;
+    }
+    if (process.platform !== 'win32' && fs_1.default.existsSync(YT_DLP_PATH)) {
+        options.execPath = YT_DLP_PATH;
     }
     const streamProcess = youtube_dl_exec_1.default.exec(url, options);
     const stream = streamProcess.stdout;
@@ -88,8 +133,7 @@ async function getYouTubeStream(url) {
     streamProcess.on('close', (code) => {
         if (code !== 0 && code !== null) {
             console.error(`[YtDlpStream] closed with code ${code}, error: ${errorOutput}`);
-            // Force destroy the stream with an error so the AudioPlayer handles it
-            const shortError = errorOutput.split('\n').find(l => l.includes('ERROR')) || 'Nieznany błąd';
+            const shortError = errorOutput.split('\n').find(l => l.includes('ERROR')) || errorOutput || 'Nieznany błąd';
             stream.destroy(new Error(`yt-dlp error: ${shortError}`));
         }
     });
