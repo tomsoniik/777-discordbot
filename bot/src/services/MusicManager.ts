@@ -1,7 +1,7 @@
 import { VoiceConnection, AudioPlayer, AudioResource, createAudioResource, AudioPlayerStatus, StreamType } from '@discordjs/voice';
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, GuildMember } from 'discord.js';
 import ytdl from '@distube/ytdl-core';
-import { getYouTubeAgent, getYtDlpStreamUrl } from './YouTubeAgent';
+import { getYouTubeAgent, getYtDlpStreamUrl, getYtDlpStream } from './YouTubeAgent';
 import { Readable } from 'stream';
 
 export interface Song {
@@ -55,12 +55,12 @@ class MusicManager {
         try {
             let streamInput: string | Readable;
 
-            if (song.streamUrl && song.streamUrl.startsWith('http')) {
-                streamInput = song.streamUrl;
+            if (false) {
+                // streamInput = song.streamUrl;
             } else {
                 try {
-                    // Pobież bezpośredni URL strumienia audio z yt-dlp
-                    streamInput = await getYtDlpStreamUrl(song.url);
+                    // Pobierz strumień bezpośrednio z yt-dlp zamiast URL-a (aby ominąć blokady FFmpeg 403)
+                    streamInput = getYtDlpStream(song.url);
                 } catch (ytDlpErr) {
                     console.warn('[MusicManager] Wyjątek yt-dlp, próba użycia ytdl-core fallback:', ytDlpErr);
                     const agent = getYouTubeAgent();

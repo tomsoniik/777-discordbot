@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getYouTubeAgent = getYouTubeAgent;
 exports.getYtDlpInfo = getYtDlpInfo;
 exports.getYtDlpStreamUrl = getYtDlpStreamUrl;
+exports.getYtDlpStream = getYtDlpStream;
 exports.reloadYouTubeAgent = reloadYouTubeAgent;
 const ytdl_core_1 = __importDefault(require("@distube/ytdl-core"));
 const fs_1 = __importDefault(require("fs"));
@@ -213,6 +214,37 @@ function getYtDlpStreamUrl(url) {
             }
         });
     });
+}
+function getYtDlpStream(url) {
+    const isWin = process.platform === 'win32';
+    const binName = isWin ? 'yt-dlp.exe' : 'yt-dlp';
+    const localBin = path_1.default.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', binName);
+    let binToUse = 'yt-dlp';
+    if (fs_1.default.existsSync(localBin)) {
+        binToUse = localBin;
+    }
+    else {
+        const altBin = path_1.default.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', isWin ? 'yt-dlp' : 'yt-dlp.exe');
+        if (fs_1.default.existsSync(altBin)) {
+            binToUse = altBin;
+        }
+    }
+    const args = ['-f', 'bestaudio/best', '--no-playlist', '-o', '-', url];
+    const cookieFile = path_1.default.join(process.cwd(), 'cookies.txt');
+    if (process.env.YOUTUBE_COOKIE) {
+        fs_1.default.writeFileSync(cookieFile, process.env.YOUTUBE_COOKIE);
+    }
+    if (fs_1.default.existsSync(cookieFile)) {
+        args.push('--cookies', cookieFile);
+    }
+    const child = (0, child_process_1.spawn)(binToUse, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    child.stderr.on('data', (data) => {
+        console.error('[YtDlpStream] stderr:', data.toString());
+    });
+    child.on('error', (err) => {
+        console.error('[YtDlpStream] error:', err);
+    });
+    return child.stdout;
 }
 function reloadYouTubeAgent() {
     agentInitialized = false;

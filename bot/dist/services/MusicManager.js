@@ -33,13 +33,13 @@ class MusicManager {
         }
         try {
             let streamInput;
-            if (song.streamUrl && song.streamUrl.startsWith('http')) {
-                streamInput = song.streamUrl;
+            if (false) {
+                // streamInput = song.streamUrl;
             }
             else {
                 try {
-                    // Pobież bezpośredni URL strumienia audio z yt-dlp
-                    streamInput = await (0, YouTubeAgent_1.getYtDlpStreamUrl)(song.url);
+                    // Pobierz strumień bezpośrednio z yt-dlp zamiast URL-a (aby ominąć blokady FFmpeg 403)
+                    streamInput = (0, YouTubeAgent_1.getYtDlpStream)(song.url);
                 }
                 catch (ytDlpErr) {
                     console.warn('[MusicManager] Wyjątek yt-dlp, próba użycia ytdl-core fallback:', ytDlpErr);
