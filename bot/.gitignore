@@ -3,6 +3,8 @@ node_modules
 .env
 cookies.json
 *.mp4
+*-player-script.js
 
 /src/generated/prisma
+
 
