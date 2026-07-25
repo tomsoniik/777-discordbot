@@ -29,7 +29,7 @@ export function getYouTubeAgent(): any {
         }
     }
 
-    // 2. Sprawdź zmienną środowiskową YOUTUBE_COOKIE w .env
+    // 2. Sprawdź zmienną środowiskową YOUTUBE_COOKIE w .env / Railway Variables
     if (process.env.YOUTUBE_COOKIE) {
         try {
             const cookieStr = process.env.YOUTUBE_COOKIE.trim();
@@ -59,7 +59,7 @@ export function getYouTubeAgent(): any {
                     .filter((c): c is { name: string; value: string; domain: string; path: string } => c !== null);
 
                 if (cookies.length > 0) {
-                    console.log(`[YouTubeAgent] Wczytano ${cookies.length} ciasteczek z YOUTUBE_COOKIE w .env`);
+                    console.log(`[YouTubeAgent] Wczytano ${cookies.length} ciasteczek z YOUTUBE_COOKIE w .env / Railway`);
                     cachedAgent = ytdl.createAgent(cookies);
                     return cachedAgent;
                 }
@@ -74,11 +74,27 @@ export function getYouTubeAgent(): any {
 
 export function getYtDlpStreamUrl(url: string): Promise<string> {
     return new Promise((resolve, reject) => {
-        const ytdlpBin = path.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', 'yt-dlp.exe');
-        const fallbackBin = 'yt-dlp';
-        const binToUse = fs.existsSync(ytdlpBin) ? ytdlpBin : fallbackBin;
+        const isWin = process.platform === 'win32';
+        const binName = isWin ? 'yt-dlp.exe' : 'yt-dlp';
+        const localBin = path.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', binName);
+        
+        let binToUse = 'yt-dlp';
+        if (fs.existsSync(localBin)) {
+            binToUse = localBin;
+        } else {
+            const altBin = path.join(process.cwd(), 'node_modules', '@distube', 'yt-dlp', 'bin', isWin ? 'yt-dlp' : 'yt-dlp.exe');
+            if (fs.existsSync(altBin)) {
+                binToUse = altBin;
+            }
+        }
 
         const args = ['-g', '-f', 'bestaudio/best', url];
+
+        // Jeśli zmienna YOUTUBE_COOKIE jest w środowisku (np. na Railway), dodaj nagłówek Cookie do yt-dlp
+        if (process.env.YOUTUBE_COOKIE) {
+            args.push('--add-header', `Cookie:${process.env.YOUTUBE_COOKIE}`);
+        }
+
         execFile(binToUse, args, (error, stdout, stderr) => {
             if (error) {
                 console.error('[YtDlp] Błąd pobierania linku ze strumienia:', error, stderr);
@@ -88,7 +104,7 @@ export function getYtDlpStreamUrl(url: string): Promise<string> {
             if (streamUrl && streamUrl.startsWith('http')) {
                 resolve(streamUrl);
             } else {
-                reject(new Error('Nie odnaleziono prawidłowego adresu URL strumienia wytworzonego przez yt-dlp'));
+                reject(new Error('Nie odnaleziono prawidłowego adresu URL strumienia z yt-dlp'));
             }
         });
     });
