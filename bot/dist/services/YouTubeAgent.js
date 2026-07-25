@@ -72,10 +72,11 @@ async function getYouTubeInfo(query) {
             if (fs_1.default.existsSync(cookieFile)) {
                 options.cookies = cookieFile;
             }
+            let ytdlInstance = youtube_dl_exec_1.default;
             if (process.platform !== 'win32' && fs_1.default.existsSync(YT_DLP_PATH)) {
-                options.execPath = YT_DLP_PATH;
+                ytdlInstance = youtube_dl_exec_1.default.create(YT_DLP_PATH);
             }
-            const info = await (0, youtube_dl_exec_1.default)(query, options);
+            const info = await ytdlInstance(query, options);
             return {
                 title: info.title || 'Nieznany utwór',
                 url: info.webpage_url || query
@@ -114,10 +115,11 @@ async function getYouTubeStream(url) {
     if (fs_1.default.existsSync(cookieFile)) {
         options.cookies = cookieFile;
     }
+    let ytdlInstance = youtube_dl_exec_1.default;
     if (process.platform !== 'win32' && fs_1.default.existsSync(YT_DLP_PATH)) {
-        options.execPath = YT_DLP_PATH;
+        ytdlInstance = youtube_dl_exec_1.default.create(YT_DLP_PATH);
     }
-    const streamProcess = youtube_dl_exec_1.default.exec(url, options);
+    const streamProcess = ytdlInstance.exec(url, options);
     const stream = streamProcess.stdout;
     if (!stream) {
         throw new Error('Nie udało się utworzyć strumienia yt-dlp.');
