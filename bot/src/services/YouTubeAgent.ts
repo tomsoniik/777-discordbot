@@ -40,6 +40,28 @@ export function getYouTubeAgent(): any {
                     cachedAgent = ytdl.createAgent(cookies);
                     return cachedAgent;
                 }
+            } else if (cookieStr.includes('# Netscape') || cookieStr.includes('# HTTP Cookie File')) {
+                const lines = cookieStr.split('\n');
+                const cookies: any[] = [];
+                for (const line of lines) {
+                    if (line.trim().startsWith('#') || line.trim() === '') continue;
+                    const parts = line.split('\t');
+                    if (parts.length >= 7) {
+                        cookies.push({
+                            domain: parts[0],
+                            path: parts[2],
+                            secure: parts[3] === 'TRUE',
+                            expirationDate: parseInt(parts[4], 10),
+                            name: parts[5],
+                            value: parts[6].trim()
+                        });
+                    }
+                }
+                if (cookies.length > 0) {
+                    console.log(`[YouTubeAgent] Wczytano ${cookies.length} ciasteczek w formacie Netscape z YOUTUBE_COOKIE`);
+                    cachedAgent = ytdl.createAgent(cookies);
+                    return cachedAgent;
+                }
             } else {
                 const cookies = cookieStr.split(';')
                     .map(c => c.trim())
