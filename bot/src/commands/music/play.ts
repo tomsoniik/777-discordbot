@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder, GuildMember } from 'discord.js';
-import { useMainPlayer } from 'discord-player';
+import { useMainPlayer, QueryType } from 'discord-player';
 import { Command } from '../../types';
 
 export const playCommand: Command = {
@@ -46,7 +46,15 @@ export const playCommand: Command = {
                 }
             }
 
+            // Jeśli zapytanie nie jest linkiem (np. zostało zamienione na tekst z YT, lub jest to po prostu nazwa),
+            // wymuszamy szukanie na Spotify zamiast domyślnego YouTube.
+            let searchEngine = QueryType.AUTO;
+            if (!queryStr.startsWith('http://') && !queryStr.startsWith('https://')) {
+                searchEngine = QueryType.SPOTIFY_SEARCH;
+            }
+
             const { track } = await player.play(voiceChannel, queryStr, {
+                searchEngine: searchEngine,
                 nodeOptions: {
                     metadata: interaction,
                     leaveOnEmpty: true,

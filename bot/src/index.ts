@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Partials, Events } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, Events, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { ENV } from './config/env';
 import { setupApi } from './api';
 import { onReady } from './events/ready';
@@ -49,7 +49,26 @@ client.once(Events.ClientReady, async () => {
 
     player.events.on('playerStart', (queue, track) => {
         if (queue.metadata) {
-            (queue.metadata as any).channel?.send(`🎶 Odtwarzanie: **${track.title}**`).catch(() => {});
+            const row = new ActionRowBuilder<ButtonBuilder>()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('music_pause')
+                        .setLabel('Wstrzymaj / Wznów')
+                        .setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder()
+                        .setCustomId('music_skip')
+                        .setLabel('Pomiń')
+                        .setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder()
+                        .setCustomId('music_stop')
+                        .setLabel('Zatrzymaj')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+            (queue.metadata as any).channel?.send({ 
+                content: `🎶 Odtwarzanie: **${track.title}**`, 
+                components: [row] 
+            }).catch(() => {});
         }
     });
 
