@@ -23,12 +23,7 @@ import { YoutubeiExtractor } from 'discord-player-youtubei';
 // Zdarzenia
 client.once(Events.ClientReady, async () => {
     // Inicjalizacja discord-player
-    const player = new Player(client, {
-        ytdlOptions: {
-            quality: 'highestaudio',
-            highWaterMark: 1 << 25
-        }
-    });
+    const player = new Player(client);
     
     // Załaduj domyślne ekstraktory (np. Spotify, SoundCloud)
     const { DefaultExtractors } = require('@discord-player/extractor');
