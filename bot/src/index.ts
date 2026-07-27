@@ -23,14 +23,36 @@ import { YoutubeiExtractor } from 'discord-player-youtubei';
 // Zdarzenia
 client.once(Events.ClientReady, async () => {
     // Inicjalizacja discord-player
-    const player = new Player(client);
+    const player = new Player(client, {
+        ytdlOptions: {
+            quality: 'highestaudio',
+            highWaterMark: 1 << 25
+        }
+    });
     
     // Załaduj domyślne ekstraktory (np. Spotify, SoundCloud)
     const { DefaultExtractors } = require('@discord-player/extractor');
     await player.extractors.loadMulti(DefaultExtractors);
     
-    // Zarejestruj nowoczesny i stabilny YoutubeiExtractor
-    await player.extractors.register(YoutubeiExtractor, {});
+    // Zarejestruj nowoczesny i stabilny YoutubeiExtractor z obsługą cookies
+    let youtubeiOptions = {};
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const cookiesPath = path.join(__dirname, '../../cookies.json'); // path to bot/cookies.json
+        if (fs.existsSync(cookiesPath)) {
+            const cookies = JSON.parse(fs.readFileSync(cookiesPath, 'utf8'));
+            youtubeiOptions = {
+                authentication: cookies
+            };
+            console.log('✅ Załadowano cookies.json dla YoutubeiExtractor!');
+        } else {
+            console.log('⚠️ Brak pliku cookies.json. YoutubeiExtractor działa bez logowania.');
+        }
+    } catch (e) {
+        console.error('❌ Błąd wczytywania cookies:', e);
+    }
+    await player.extractors.register(YoutubeiExtractor, youtubeiOptions);
 
     // Debugowanie audio (bardzo ważne do wyłapywania problemów z odtwarzaniem)
     player.events.on('debug', (queue, message) => {
