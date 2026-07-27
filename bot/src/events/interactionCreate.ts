@@ -24,17 +24,14 @@ export async function onInteractionCreate(interaction: Interaction) {
         if (interaction.customId.startsWith('music_')) {
             const player = useMainPlayer();
             if (!player) {
-                await interaction.reply({ content: 'Błąd: odtwarzacz nie jest załadowany.', flags: 64 });
+                await interaction.reply({ content: '❌ Błąd: Odtwarzacz nie jest załadowany.', flags: 64 });
                 return;
             }
 
             const queue = player.nodes.get(interaction.guildId!);
-            if (!queue || !queue.node.isPlaying()) {
-                // Ignore if not playing or paused
-                if (!queue) {
-                    await interaction.reply({ content: 'Obecnie nic nie jest odtwarzane.', flags: 64 });
-                    return;
-                }
+            if (!queue) {
+                await interaction.reply({ content: '❌ Obecnie nic nie jest odtwarzane.', flags: 64 });
+                return;
             }
 
             try {
@@ -44,14 +41,14 @@ export async function onInteractionCreate(interaction: Interaction) {
                     await interaction.reply({ content: `Muzyka została ${!isPaused ? 'wstrzymana' : 'wznowiona'}.` });
                 } else if (interaction.customId === 'music_skip') {
                     queue.node.skip();
-                    await interaction.reply({ content: 'Pominięto utwór.' });
+                    await interaction.reply({ content: '⏭️ Pominięto utwór.' });
                 } else if (interaction.customId === 'music_stop') {
                     queue.delete();
-                    await interaction.reply({ content: 'Odtwarzanie zatrzymane, kolejka wyczyszczona.' });
+                    await interaction.reply({ content: '⏹️ Odtwarzanie zatrzymane, kolejka wyczyszczona.' });
                 }
             } catch (e) {
                 console.error('Błąd przycisku muzyki:', e);
-                await interaction.reply({ content: 'Wystąpił błąd podczas używania tego przycisku.', flags: 64 });
+                await interaction.reply({ content: '❌ Wystąpił błąd podczas używania tego przycisku.', flags: 64 });
             }
         }
     }
