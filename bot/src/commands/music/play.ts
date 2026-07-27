@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder, GuildMember } from 'discord.js';
-import { useMainPlayer } from 'discord-player';
+import { useMainPlayer, QueryType } from 'discord-player';
 import { Command } from '../../types';
 
 export const playCommand: Command = {
@@ -26,10 +26,36 @@ export const playCommand: Command = {
             return;
         }
 
-        const queryStr = interaction.options.getString('query', true).trim();
+        let queryStr = interaction.options.getString('query', true).trim();
 
         try {
+            // Omijanie blokad YT: konwersja linku z YouTube na czysty tekst (Tytuł + Autor)
+            if (queryStr.includes('youtube.com') || queryStr.includes('youtu.be')) {
+                try {
+                    const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(queryStr)}&format=json`;
+                    const response = await fetch(oembedUrl);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.title) {
+                            console.log(`YouTube link translated to: ${data.title} - ${data.author_name}`);
+                            queryStr = `${data.title} ${data.author_name || ''}`.trim();
+                        }
+                    }
+                } catch (e) {
+                    console.log('oEmbed fetch failed', e);
+                }
+            }
+
+            // Jeśli zapytanie jest zwykłym tekstem (np. nazwa podana przez użytkownika
+            // lub zdekodowany link z YT), szukamy wyłącznie na SoundCloud.
+            // Jeśli to inny link (np. prosto ze Spotify / SC), zostawiamy AUTO.
+            let searchEngine: any = QueryType.AUTO;
+            if (!queryStr.startsWith('http://') && !queryStr.startsWith('https://')) {
+                searchEngine = QueryType.SOUNDCLOUD_SEARCH;
+            }
+
             const { track } = await player.play(voiceChannel, queryStr, {
+                searchEngine: searchEngine,
                 nodeOptions: {
                     metadata: interaction,
                     leaveOnEmpty: true,
