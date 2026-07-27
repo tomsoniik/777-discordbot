@@ -32,15 +32,22 @@ client.once(discord_js_1.Events.ClientReady, async () => {
         const fs = require('fs');
         const path = require('path');
         const cookiesPath = path.join(__dirname, '../../cookies.json'); // path to bot/cookies.json
-        if (fs.existsSync(cookiesPath)) {
-            const cookies = JSON.parse(fs.readFileSync(cookiesPath, 'utf8'));
-            youtubeiOptions = {
-                authentication: cookies
-            };
-            console.log('✅ Załadowano cookies.json dla YoutubeiExtractor!');
+        let cookies = null;
+        if (process.env.YOUTUBE_COOKIES) {
+            cookies = typeof process.env.YOUTUBE_COOKIES === 'string'
+                ? JSON.parse(process.env.YOUTUBE_COOKIES)
+                : process.env.YOUTUBE_COOKIES;
+            console.log('✅ Załadowano cookies z ENV (YOUTUBE_COOKIES) dla YoutubeiExtractor!');
+        }
+        else if (fs.existsSync(cookiesPath)) {
+            cookies = JSON.parse(fs.readFileSync(cookiesPath, 'utf8'));
+            console.log('✅ Załadowano cookies.json z pliku dla YoutubeiExtractor!');
         }
         else {
-            console.log('⚠️ Brak pliku cookies.json. YoutubeiExtractor działa bez logowania.');
+            console.log('⚠️ Brak cookies (ani pliku, ani zmiennej). YoutubeiExtractor działa bez logowania.');
+        }
+        if (cookies) {
+            youtubeiOptions = { authentication: cookies };
         }
     }
     catch (e) {
