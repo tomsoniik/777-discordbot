@@ -48,7 +48,7 @@ export const playCommand: Command = {
 
             // Jeśli zapytanie nie jest linkiem (np. zostało zamienione na tekst z YT, lub jest to po prostu nazwa),
             // wymuszamy szukanie na Spotify zamiast domyślnego YouTube.
-            let searchEngine = QueryType.AUTO;
+            let searchEngine: any = QueryType.AUTO;
             if (!queryStr.startsWith('http://') && !queryStr.startsWith('https://')) {
                 searchEngine = QueryType.SPOTIFY_SEARCH;
             }

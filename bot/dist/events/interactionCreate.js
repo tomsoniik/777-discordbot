@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onInteractionCreate = onInteractionCreate;
 const commands_1 = require("../commands");
+const discord_player_1 = require("discord-player");
 async function onInteractionCreate(interaction) {
     if (interaction.isChatInputCommand()) {
         try {
@@ -25,7 +26,38 @@ async function onInteractionCreate(interaction) {
     }
     else if (interaction.isButton()) {
         if (interaction.customId.startsWith('music_')) {
-            await interaction.reply({ content: 'Panel sterowania został wyłączony w nowej wersji systemu.', flags: 64 });
+            const player = (0, discord_player_1.useMainPlayer)();
+            if (!player) {
+                await interaction.reply({ content: 'Błąd: odtwarzacz nie jest załadowany.', flags: 64 });
+                return;
+            }
+            const queue = player.nodes.get(interaction.guildId);
+            if (!queue || !queue.node.isPlaying()) {
+                // Ignore if not playing or paused
+                if (!queue) {
+                    await interaction.reply({ content: 'Obecnie nic nie jest odtwarzane.', flags: 64 });
+                    return;
+                }
+            }
+            try {
+                if (interaction.customId === 'music_pause') {
+                    const isPaused = queue.node.isPaused();
+                    queue.node.setPaused(!isPaused);
+                    await interaction.reply({ content: `Muzyka została ${!isPaused ? 'wstrzymana' : 'wznowiona'}.` });
+                }
+                else if (interaction.customId === 'music_skip') {
+                    queue.node.skip();
+                    await interaction.reply({ content: 'Pominięto utwór.' });
+                }
+                else if (interaction.customId === 'music_stop') {
+                    queue.delete();
+                    await interaction.reply({ content: 'Odtwarzanie zatrzymane, kolejka wyczyszczona.' });
+                }
+            }
+            catch (e) {
+                console.error('Błąd przycisku muzyki:', e);
+                await interaction.reply({ content: 'Wystąpił błąd podczas używania tego przycisku.', flags: 64 });
+            }
         }
     }
 }

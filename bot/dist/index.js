@@ -43,7 +43,21 @@ client.once(discord_js_1.Events.ClientReady, async () => {
     });
     player.events.on('playerStart', (queue, track) => {
         if (queue.metadata) {
-            queue.metadata.channel?.send(`🎶 Odtwarzanie: **${track.title}**`).catch(() => { });
+            const row = new discord_js_1.ActionRowBuilder()
+                .addComponents(new discord_js_1.ButtonBuilder()
+                .setCustomId('music_pause')
+                .setLabel('Wstrzymaj / Wznów')
+                .setStyle(discord_js_1.ButtonStyle.Primary), new discord_js_1.ButtonBuilder()
+                .setCustomId('music_skip')
+                .setLabel('Pomiń')
+                .setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder()
+                .setCustomId('music_stop')
+                .setLabel('Zatrzymaj')
+                .setStyle(discord_js_1.ButtonStyle.Danger));
+            queue.metadata.channel?.send({
+                content: `🎶 Odtwarzanie: **${track.title}**`,
+                components: [row]
+            }).catch(() => { });
         }
     });
     await (0, ready_1.onReady)(client);

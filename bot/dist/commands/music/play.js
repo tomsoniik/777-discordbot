@@ -43,7 +43,14 @@ exports.playCommand = {
                     console.log('oEmbed fetch failed', e);
                 }
             }
+            // Jeśli zapytanie nie jest linkiem (np. zostało zamienione na tekst z YT, lub jest to po prostu nazwa),
+            // wymuszamy szukanie na Spotify zamiast domyślnego YouTube.
+            let searchEngine = discord_player_1.QueryType.AUTO;
+            if (!queryStr.startsWith('http://') && !queryStr.startsWith('https://')) {
+                searchEngine = discord_player_1.QueryType.SPOTIFY_SEARCH;
+            }
             const { track } = await player.play(voiceChannel, queryStr, {
+                searchEngine: searchEngine,
                 nodeOptions: {
                     metadata: interaction,
                     leaveOnEmpty: true,
