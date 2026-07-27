@@ -28,6 +28,10 @@ client.once(discord_js_1.Events.ClientReady, async () => {
     await player.extractors.loadMulti(DefaultExtractors);
     // Zarejestruj nowoczesny i stabilny YoutubeiExtractor
     await player.extractors.register(discord_player_youtubei_1.YoutubeiExtractor, {});
+    // Debugowanie audio (bardzo ważne do wyłapywania problemów z odtwarzaniem)
+    player.events.on('debug', (queue, message) => {
+        console.log(`[Player Debug] ${message}`);
+    });
     // Nasłuchiwanie błędów odtwarzacza, aby wiedzieć, dlaczego nie gra
     player.events.on('error', (queue, error) => {
         console.error(`[Player Error] Zgłoszono błąd: ${error.message}`);
@@ -43,20 +47,30 @@ client.once(discord_js_1.Events.ClientReady, async () => {
     });
     player.events.on('playerStart', (queue, track) => {
         if (queue.metadata) {
-            const row = new discord_js_1.ActionRowBuilder()
-                .addComponents(new discord_js_1.ButtonBuilder()
-                .setCustomId('music_pause')
-                .setLabel('Wstrzymaj / Wznów')
-                .setStyle(discord_js_1.ButtonStyle.Primary), new discord_js_1.ButtonBuilder()
-                .setCustomId('music_skip')
-                .setLabel('Pomiń')
-                .setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder()
-                .setCustomId('music_stop')
-                .setLabel('Zatrzymaj')
-                .setStyle(discord_js_1.ButtonStyle.Danger));
+            const embed = new discord_js_1.EmbedBuilder()
+                .setColor('#2b2d31')
+                .setAuthor({ name: '🎶 Now playing' })
+                .setTitle(`${track.title} [DOWNLOAD AVAILABLE]`) // nawiązanie do screena
+                .setURL(track.url)
+                .setDescription(`**Duration**\n${track.duration}\n\n**Source**\n${track.source}\n\n**Added by**\n${track.requestedBy?.toString() || 'Nieznany'}`)
+                .setThumbnail(track.thumbnail || null)
+                .setFooter({ text: 'SkullBot Music' })
+                .setTimestamp();
+            try {
+                const progress = queue.node.createProgressBar();
+                if (progress) {
+                    embed.addFields({ name: 'Progress', value: progress });
+                }
+            }
+            catch (e) { }
+            embed.addFields({ name: 'Status', value: `Volume: ${queue.node.volume}% | Loop: ${queue.repeatMode === 1 ? 'This song' : queue.repeatMode === 2 ? 'Queue' : 'Off'} | Autoplay: ${queue.repeatMode === 3 ? 'On' : 'Off'}` });
+            const row1 = new discord_js_1.ActionRowBuilder()
+                .addComponents(new discord_js_1.ButtonBuilder().setCustomId('music_pause').setLabel('Pause').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_resume').setLabel('Resume').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_previous').setLabel('Previous').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_skip').setLabel('Skip').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_stop').setLabel('Stop').setStyle(discord_js_1.ButtonStyle.Primary));
+            const row2 = new discord_js_1.ActionRowBuilder()
+                .addComponents(new discord_js_1.ButtonBuilder().setCustomId('music_volup').setLabel('Volume up').setStyle(discord_js_1.ButtonStyle.Success), new discord_js_1.ButtonBuilder().setCustomId('music_voldown').setLabel('Volume down').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_shuffle').setLabel('Shuffle').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_repeat').setLabel('Repeat').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_autoplay').setLabel('AutoPlay').setStyle(discord_js_1.ButtonStyle.Secondary));
             queue.metadata.channel?.send({
-                content: `🎶 Odtwarzanie: **${track.title}**`,
-                components: [row]
+                embeds: [embed],
+                components: [row1, row2]
             }).catch(() => { });
         }
     });
