@@ -46,15 +46,31 @@ export const playCommand: Command = {
                 }
             }
 
-            // Jeśli zapytanie nie jest linkiem (np. zostało zamienione na tekst z YT, lub jest to po prostu nazwa),
-            // wymuszamy szukanie na Spotify zamiast domyślnego YouTube.
-            let searchEngine: any = QueryType.AUTO;
-            if (!queryStr.startsWith('http://') && !queryStr.startsWith('https://')) {
-                searchEngine = QueryType.SPOTIFY_SEARCH;
+            // Szukamy najpierw na Spotify, jeśli nie znajdzie to na SoundCloud, a na końcu na YouTube
+            let searchResult;
+            const isLink = queryStr.startsWith('http://') || queryStr.startsWith('https://');
+            
+            if (isLink) {
+                // Jeśli to bezpośredni link, po prostu go wyszukujemy
+                searchResult = await player.search(queryStr, { searchEngine: QueryType.AUTO, requestedBy: interaction.user });
+            } else {
+                // Jeśli to tekst, próbujemy kolejno Spotify, SoundCloud, YouTube
+                searchResult = await player.search(queryStr, { searchEngine: QueryType.SPOTIFY_SEARCH, requestedBy: interaction.user });
+                
+                if (!searchResult || !searchResult.hasTracks()) {
+                    searchResult = await player.search(queryStr, { searchEngine: QueryType.SOUNDCLOUD_SEARCH, requestedBy: interaction.user });
+                }
+                if (!searchResult || !searchResult.hasTracks()) {
+                    searchResult = await player.search(queryStr, { searchEngine: QueryType.YOUTUBE_SEARCH, requestedBy: interaction.user });
+                }
             }
 
-            const { track } = await player.play(voiceChannel, queryStr, {
-                searchEngine: searchEngine,
+            if (!searchResult || !searchResult.hasTracks()) {
+                await interaction.editReply(`❌ Nie znaleziono wyników dla: **${queryStr}** (Sprawdzono Spotify, SoundCloud i YouTube).`);
+                return;
+            }
+
+            const { track } = await player.play(voiceChannel, searchResult, {
                 nodeOptions: {
                     metadata: interaction,
                     leaveOnEmpty: true,

@@ -43,14 +43,28 @@ exports.playCommand = {
                     console.log('oEmbed fetch failed', e);
                 }
             }
-            // Jeśli zapytanie nie jest linkiem (np. zostało zamienione na tekst z YT, lub jest to po prostu nazwa),
-            // wymuszamy szukanie na Spotify zamiast domyślnego YouTube.
-            let searchEngine = discord_player_1.QueryType.AUTO;
-            if (!queryStr.startsWith('http://') && !queryStr.startsWith('https://')) {
-                searchEngine = discord_player_1.QueryType.SPOTIFY_SEARCH;
+            // Szukamy najpierw na Spotify, jeśli nie znajdzie to na SoundCloud, a na końcu na YouTube
+            let searchResult;
+            const isLink = queryStr.startsWith('http://') || queryStr.startsWith('https://');
+            if (isLink) {
+                // Jeśli to bezpośredni link, po prostu go wyszukujemy
+                searchResult = await player.search(queryStr, { searchEngine: discord_player_1.QueryType.AUTO, requestedBy: interaction.user });
             }
-            const { track } = await player.play(voiceChannel, queryStr, {
-                searchEngine: searchEngine,
+            else {
+                // Jeśli to tekst, próbujemy kolejno Spotify, SoundCloud, YouTube
+                searchResult = await player.search(queryStr, { searchEngine: discord_player_1.QueryType.SPOTIFY_SEARCH, requestedBy: interaction.user });
+                if (!searchResult || !searchResult.hasTracks()) {
+                    searchResult = await player.search(queryStr, { searchEngine: discord_player_1.QueryType.SOUNDCLOUD_SEARCH, requestedBy: interaction.user });
+                }
+                if (!searchResult || !searchResult.hasTracks()) {
+                    searchResult = await player.search(queryStr, { searchEngine: discord_player_1.QueryType.YOUTUBE_SEARCH, requestedBy: interaction.user });
+                }
+            }
+            if (!searchResult || !searchResult.hasTracks()) {
+                await interaction.editReply(`❌ Nie znaleziono wyników dla: **${queryStr}** (Sprawdzono Spotify, SoundCloud i YouTube).`);
+                return;
+            }
+            const { track } = await player.play(voiceChannel, searchResult, {
                 nodeOptions: {
                     metadata: interaction,
                     leaveOnEmpty: true,
