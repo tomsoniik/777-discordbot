@@ -7,19 +7,21 @@ export const untrackCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('untrack')
         .setDescription('Zatrzymaj śledzenie gracza')
-        .addStringOption(option => 
-            option.setName('steamid')
+        .addStringOption((option) =>
+            option
+                .setName('steamid')
                 .setDescription('Link do profilu Steam, vanity URL lub SteamID64')
-                .setRequired(true)),
+                .setRequired(true),
+        ),
     execute: async (interaction: ChatInputCommandInteraction) => {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        
+
         const rawInput = interaction.options.getString('steamid', true);
-        const steamId = await resolveSteamId(rawInput) || rawInput; 
-        
+        const steamId = (await resolveSteamId(rawInput)) || rawInput;
+
         const updated = await prisma.trackedPlayer.updateMany({
             where: { steamId, isActive: true },
-            data: { isActive: false }
+            data: { isActive: false },
         });
 
         if (updated.count > 0) {
@@ -27,5 +29,5 @@ export const untrackCommand: Command = {
         } else {
             await interaction.editReply(`SteamID **${steamId}** nie jest obecnie śledzony.`);
         }
-    }
+    },
 };

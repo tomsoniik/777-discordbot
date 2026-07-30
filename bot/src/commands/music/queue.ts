@@ -3,9 +3,7 @@ import { useQueue } from 'discord-player';
 import { Command } from '../../types';
 
 export const queueCommand: Command = {
-    data: new SlashCommandBuilder()
-        .setName('queue')
-        .setDescription('Wyświetla aktualną kolejkę utworów'),
+    data: new SlashCommandBuilder().setName('queue').setDescription('Wyświetla aktualną kolejkę utworów'),
     execute: async (interaction: ChatInputCommandInteraction) => {
         if (!interaction.guild) return;
 
@@ -17,9 +15,9 @@ export const queueCommand: Command = {
 
         const currentTrack = queue.currentTrack;
         const tracks = queue.tracks.toArray();
-        
+
         let description = `**Teraz odtwarzane:**\n🎵 ${currentTrack?.title} - ${currentTrack?.author}\n\n**Następne w kolejce:**\n`;
-        
+
         if (tracks.length === 0) {
             description += 'Brak utworów w kolejce.';
         } else {
@@ -38,5 +36,5 @@ export const queueCommand: Command = {
             .setColor('#7289da');
 
         await interaction.reply({ embeds: [embed] });
-    }
+    },
 };

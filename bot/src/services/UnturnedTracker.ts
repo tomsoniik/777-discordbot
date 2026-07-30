@@ -1,18 +1,25 @@
+import { logger } from '../utils/logger';
 import { Client, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { prisma } from '../utils/db';
 import { ENV } from '../config/env';
 import { ShadowNetwork } from './ShadowNetwork';
 
-export const PREDEFINED_SERVERS: Record<string, { ip: string, port: number, serverId?: string, displayName?: string }> = {
-    'washington': { ip: '94.130.219.164', port: 27116, serverId: '85568392925775084', displayName: 'Washington x100' },
-    'arena': { ip: '83.143.81.182', port: 2484, serverId: '85568392926801330', displayName: 'Arena' },
-    'california': { ip: '39.96.7.81', port: 27015, serverId: '85568392935729730', displayName: 'California x100' },
-    'germany': { ip: '176.57.173.170', port: 28100, serverId: '85568392925775498', displayName: 'Germany x100' },
-    'pei': { ip: '193.169.209.214', port: 20004, serverId: '85568392925775497', displayName: 'PEI x100' },
-    'russia': { ip: '43.167.189.221', port: 27015, serverId: '85568392925719569', displayName: 'Russia x100' },
-    'arid': { ip: '0.0.0.0', port: 0, serverId: '85568392932897412', displayName: 'Arid' },
-    'polaris': { ip: '0.0.0.0', port: 0, serverId: '85568392930289951', displayName: 'A6 Polaris' }
-};
+export const PREDEFINED_SERVERS: Record<string, { ip: string; port: number; serverId?: string; displayName?: string }> =
+    {
+        washington: {
+            ip: '94.130.219.164',
+            port: 27116,
+            serverId: '85568392925775084',
+            displayName: 'Washington x100',
+        },
+        arena: { ip: '83.143.81.182', port: 2484, serverId: '85568392926801330', displayName: 'Arena' },
+        california: { ip: '39.96.7.81', port: 27015, serverId: '85568392935729730', displayName: 'California x100' },
+        germany: { ip: '176.57.173.170', port: 28100, serverId: '85568392925775498', displayName: 'Germany x100' },
+        pei: { ip: '193.169.209.214', port: 20004, serverId: '85568392925775497', displayName: 'PEI x100' },
+        russia: { ip: '43.167.189.221', port: 27015, serverId: '85568392925719569', displayName: 'Russia x100' },
+        arid: { ip: '0.0.0.0', port: 0, serverId: '85568392932897412', displayName: 'Arid' },
+        polaris: { ip: '0.0.0.0', port: 0, serverId: '85568392930289951', displayName: 'A6 Polaris' },
+    };
 
 export class UnturnedTracker {
     private client: Client;
@@ -23,8 +30,8 @@ export class UnturnedTracker {
     }
 
     public start() {
-        console.log('✅ Uruchomiono globalną pętlę śledzenia graczy (Prisma + Steam API).');
-        
+        logger.info('✅ Uruchomiono globalną pętlę śledzenia graczy (Prisma + Steam API).');
+
         this.interval = setInterval(async () => {
             await this.trackIteration();
         }, 60000); // 60 sekund
@@ -47,9 +54,9 @@ export class UnturnedTracker {
                 this.client.user?.setActivity({ name: `Radar: 0 graczy`, type: 4 });
                 return;
             }
-            
+
             const steamIds = trackers.map((t: any) => t.steamId);
-            
+
             // Dzielimy na paczki po 100 SteamID (limit API)
             const chunks = [];
             for (let i = 0; i < steamIds.length; i += 100) {
@@ -57,7 +64,9 @@ export class UnturnedTracker {
             }
 
             for (const chunk of chunks) {
-                const res = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${apiKey}&steamids=${chunk.join(',')}`);
+                const res = await fetch(
+                    `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${apiKey}&steamids=${chunk.join(',')}`,
+                );
                 const data: any = await res.json();
                 const players = data.response?.players || [];
 
@@ -68,10 +77,13 @@ export class UnturnedTracker {
                     const isPlayingUnturned = player.gameextrainfo === 'Unturned' || player.gameid === '304930';
                     const currentIp = player.gameserverip;
                     const currentLobby = player.lobbysteamid;
-                    
+
                     const handleOffline = async () => {
                         if (tracker.isOnline) {
-                            await prisma.trackedPlayer.update({ where: { steamId: player.steamid }, data: { isOnline: false, lastServer: null } });
+                            await prisma.trackedPlayer.update({
+                                where: { steamId: player.steamid },
+                                data: { isOnline: false, lastServer: null },
+                            });
                             const settings = await prisma.botSettings.findUnique({ where: { id: 1 } });
                             const channelId = settings?.defaultChannelId;
                             if (channelId) {
@@ -79,7 +91,9 @@ export class UnturnedTracker {
                                 if (channel && channel.isTextBased() && 'send' in channel) {
                                     const embed = new EmbedBuilder()
                                         .setTitle('👋 GRACZ OPUŚCIŁ SERWER')
-                                        .setDescription(`Gracz **[${player.personaname || player.steamid}](${player.profileurl})** opuścił serwer.`)
+                                        .setDescription(
+                                            `Gracz **[${player.personaname || player.steamid}](${player.profileurl})** opuścił serwer.`,
+                                        )
                                         .setColor('#aaaaaa')
                                         .setTimestamp();
                                     await channel.send({ embeds: [embed] });
@@ -97,15 +111,17 @@ export class UnturnedTracker {
                     let foundServerName = 'Nieznany Serwer';
                     let foundIpPort = currentLobby || currentIp || '';
 
-                    const targets = tracker.targetServer && tracker.targetServer !== 'all' 
-                        ? [PREDEFINED_SERVERS[tracker.targetServer]] 
-                        : Object.values(PREDEFINED_SERVERS);
-                    
+                    const targets =
+                        tracker.targetServer && tracker.targetServer !== 'all'
+                            ? [PREDEFINED_SERVERS[tracker.targetServer]]
+                            : Object.values(PREDEFINED_SERVERS);
+
                     for (const target of targets) {
                         if (!target) continue;
-                        
-                        const isOnlineOnSteam = (currentIp && currentIp === `${target.ip}:${target.port}`) || 
-                                                (currentLobby && target.serverId && currentLobby === target.serverId);
+
+                        const isOnlineOnSteam =
+                            (currentIp && currentIp === `${target.ip}:${target.port}`) ||
+                            (currentLobby && target.serverId && currentLobby === target.serverId);
 
                         if (isOnlineOnSteam) {
                             found = true;
@@ -126,16 +142,21 @@ export class UnturnedTracker {
 
                         let mapName = 'Nieznana';
                         let playersInfo = 'Brak danych';
-                        
+
                         try {
-                            const targetServerConfig = Object.values(PREDEFINED_SERVERS).find(s => 
-                                (s.serverId && s.serverId === foundIpPort) || `${s.ip}:${s.port}` === foundIpPort
+                            const targetServerConfig = Object.values(PREDEFINED_SERVERS).find(
+                                (s) =>
+                                    (s.serverId && s.serverId === foundIpPort) || `${s.ip}:${s.port}` === foundIpPort,
                             );
-                            
-                            const ipToQuery = targetServerConfig ? `${targetServerConfig.ip}:${targetServerConfig.port}` : foundIpPort;
-                            
+
+                            const ipToQuery = targetServerConfig
+                                ? `${targetServerConfig.ip}:${targetServerConfig.port}`
+                                : foundIpPort;
+
                             if (ipToQuery && ipToQuery.includes(':')) {
-                                const serverRes = await fetch(`https://api.steampowered.com/IGameServersService/GetServerList/v1/?key=${apiKey}&filter=\\gameaddr\\${ipToQuery}`);
+                                const serverRes = await fetch(
+                                    `https://api.steampowered.com/IGameServersService/GetServerList/v1/?key=${apiKey}&filter=\\gameaddr\\${ipToQuery}`,
+                                );
                                 const serverData: any = await serverRes.json();
                                 if (serverData.response?.servers && serverData.response.servers.length > 0) {
                                     const srv = serverData.response.servers[0];
@@ -147,7 +168,7 @@ export class UnturnedTracker {
                                 }
                             }
                         } catch (e) {
-                            console.error('Błąd pobierania danych Master Server:', e);
+                            logger.error('Błąd pobierania danych Master Server:', e);
                         }
 
                         await prisma.playerHistory.create({
@@ -155,13 +176,13 @@ export class UnturnedTracker {
                                 steamId: player.steamid,
                                 nickname: player.personaname || player.steamid,
                                 serverIp: foundIpPort,
-                                serverName: foundServerName
-                            }
+                                serverName: foundServerName,
+                            },
                         });
 
                         await prisma.trackedPlayer.update({
                             where: { steamId: player.steamid },
-                            data: { isOnline: true, lastServer: foundIpPort }
+                            data: { isOnline: true, lastServer: foundIpPort },
                         });
 
                         const settings = await prisma.botSettings.findUnique({ where: { id: 1 } });
@@ -171,14 +192,22 @@ export class UnturnedTracker {
                             if (channel && channel.isTextBased() && 'send' in channel) {
                                 const embed = new EmbedBuilder()
                                     .setTitle('🚨 ALARM ŚLEDZENIA (DOŁĄCZYŁ) 🚨')
-                                    .setDescription(`Gracz **[${player.personaname || player.steamid}](${player.profileurl})** został wykryty w grze!`)
+                                    .setDescription(
+                                        `Gracz **[${player.personaname || player.steamid}](${player.profileurl})** został wykryty w grze!`,
+                                    )
                                     .setThumbnail(player.avatarfull)
                                     .setColor('#ff0000')
                                     .addFields(
                                         { name: 'Serwer', value: `\`${foundServerName}\``, inline: false },
                                         { name: 'Mapa', value: `\`${mapName}\``, inline: true },
                                         { name: 'Graczy', value: `\`${playersInfo}\``, inline: true },
-                                        { name: 'Szybkie Dołączenie', value: foundIpPort.match(/^\d+$/) ? `Kliknij w link:\nhttps://join.unbeaten.gg/${foundIpPort}` : `Wklej w przeglądarkę:\n\`steam://run/304930//+connect%20${foundIpPort}\``, inline: false }
+                                        {
+                                            name: 'Szybkie Dołączenie',
+                                            value: foundIpPort.match(/^\d+$/)
+                                                ? `Kliknij w link:\nhttps://join.unbeaten.gg/${foundIpPort}`
+                                                : `Wklej w przeglądarkę:\n\`steam://run/304930//+connect%20${foundIpPort}\``,
+                                            inline: false,
+                                        },
                                     )
                                     .setTimestamp();
 
@@ -186,13 +215,17 @@ export class UnturnedTracker {
                                     new ButtonBuilder()
                                         .setLabel('🚀 Dołącz do gry')
                                         .setStyle(ButtonStyle.Link)
-                                        .setURL(foundIpPort.match(/^\d+$/) ? `https://join.unbeaten.gg/${foundIpPort}` : `https://777-discordbot-tomsoncs.vercel.app/api/join?ip=${foundIpPort}`)
+                                        .setURL(
+                                            foundIpPort.match(/^\d+$/)
+                                                ? `https://join.unbeaten.gg/${foundIpPort}`
+                                                : `https://777-discordbot-tomsoncs.vercel.app/api/join?ip=${foundIpPort}`,
+                                        ),
                                 );
 
-                                await channel.send({ 
-                                    content: '@everyone', 
+                                await channel.send({
+                                    content: '@everyone',
                                     embeds: [embed],
-                                    components: [row]
+                                    components: [row],
                                 });
                             }
                         }
@@ -201,13 +234,13 @@ export class UnturnedTracker {
                     }
                 }
             }
-            
+
             // ECHO-TRACKER: Analiza grupowych powiązań po zebraniu danych ze wszystkich chunków
             const activeOnline = await prisma.trackedPlayer.findMany({ where: { isActive: true, isOnline: true } });
-            
+
             // Mapowanie IP/Lobby -> Lista graczy tam grających
             const locationMap = new Map<string, string[]>();
-            
+
             for (const t of activeOnline) {
                 if (t.lastServer) {
                     const group = locationMap.get(t.lastServer) || [];
@@ -226,17 +259,16 @@ export class UnturnedTracker {
                     }
                 }
             }
-            
+
             const activeCount = trackers.length;
             const onlineCount = activeOnline.length;
-            
+
             this.client.user?.setActivity({
                 name: `Radar: ${activeCount} graczy | 🔴 Online: ${onlineCount}`,
-                type: 4, 
+                type: 4,
             });
-
         } catch (error) {
-            console.error('Błąd pętli śledzenia graczy:', error);
+            logger.error('Błąd pętli śledzenia graczy:', error);
         }
     }
 }

@@ -8,5 +8,5 @@ export const ENV = {
     WEB_URL: process.env.WEB_URL || 'http://localhost:3000',
     WAITING_ROLE_ID: process.env.WAITING_ROLE_ID || '',
     ADMIN_CHANNEL_ID: process.env.ADMIN_CHANNEL_ID || '',
-    STEAM_API_KEY: process.env.STEAM_API_KEY || ''
+    STEAM_API_KEY: process.env.STEAM_API_KEY || '',
 };

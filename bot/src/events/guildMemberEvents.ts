@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { GuildMember } from 'discord.js';
 import { ENV } from '../config/env';
 
@@ -7,7 +8,7 @@ async function fetchConfig() {
         if (!res.ok) return null;
         return await res.json();
     } catch (e) {
-        console.error("Failed to fetch bot config from API", e);
+        logger.error('Failed to fetch bot config from API', e);
         return null;
     }
 }
@@ -20,7 +21,7 @@ export async function onGuildMemberAdd(member: GuildMember) {
         try {
             await member.roles.add(config.autoRoleId);
         } catch (e) {
-            console.error("Failed to add auto role", e);
+            logger.error('Failed to add auto role', e);
         }
     }
 

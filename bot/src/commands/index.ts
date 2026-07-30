@@ -18,5 +18,5 @@ export const commands: Command[] = [
     untrackCommand,
     trackedListCommand,
     trackconfigCommand,
-    checkServersCommand
+    checkServersCommand,
 ];
