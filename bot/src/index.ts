@@ -28,45 +28,15 @@ const client = new Client({
 });
 
 import { Player } from 'discord-player';
-import { YoutubeiExtractor } from 'discord-player-youtubei';
 import { DefaultExtractors } from '@discord-player/extractor';
-import fs from 'fs';
-import path from 'path';
 
 // Zdarzenia
 client.once(Events.ClientReady, async () => {
-    // Inicjalizacja discord-player
+    // Inicjalizacja discord-player z użyciem standardowych modułów
     const player = new Player(client);
 
-    // Załaduj domyślne ekstraktory (np. Spotify, SoundCloud)
+    // Załaduj domyślne ekstraktory (w tym BridgeProvider, który automatycznie pobierze audio z SC jeśli YT nie zadziała)
     await player.extractors.loadMulti(DefaultExtractors);
-
-    // Zarejestruj nowoczesny i stabilny YoutubeiExtractor z obsługą cookies
-    let youtubeiOptions = {};
-    try {
-        const cookiesPath = path.join(__dirname, '../../cookies.json'); // path to bot/cookies.json
-
-        let cookies = null;
-        if (process.env.YOUTUBE_COOKIES) {
-            cookies =
-                typeof process.env.YOUTUBE_COOKIES === 'string'
-                    ? JSON.parse(process.env.YOUTUBE_COOKIES)
-                    : process.env.YOUTUBE_COOKIES;
-            logger.info('✅ Załadowano cookies z ENV (YOUTUBE_COOKIES) dla YoutubeiExtractor!');
-        } else if (fs.existsSync(cookiesPath)) {
-            cookies = JSON.parse(fs.readFileSync(cookiesPath, 'utf8'));
-            logger.info('✅ Załadowano cookies.json z pliku dla YoutubeiExtractor!');
-        } else {
-            logger.info('⚠️ Brak cookies (ani pliku, ani zmiennej). YoutubeiExtractor działa bez logowania.');
-        }
-
-        if (cookies) {
-            youtubeiOptions = { authentication: cookies };
-        }
-    } catch (e) {
-        logger.error(e as Error, '❌ Błąd wczytywania cookies:');
-    }
-    await player.extractors.register(YoutubeiExtractor, youtubeiOptions);
 
     // Debugowanie audio (bardzo ważne do wyłapywania problemów z odtwarzaniem)
     player.events.on('debug', (queue, message) => {

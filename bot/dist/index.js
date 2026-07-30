@@ -1,7 +1,4 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const logger_1 = require("./utils/logger");
 const discord_js_1 = require("discord.js");
@@ -22,43 +19,13 @@ const client = new discord_js_1.Client({
     partials: [discord_js_1.Partials.Message, discord_js_1.Partials.Channel, discord_js_1.Partials.Reaction, discord_js_1.Partials.GuildMember],
 });
 const discord_player_1 = require("discord-player");
-const discord_player_youtubei_1 = require("discord-player-youtubei");
 const extractor_1 = require("@discord-player/extractor");
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
 // Zdarzenia
 client.once(discord_js_1.Events.ClientReady, async () => {
-    // Inicjalizacja discord-player
+    // Inicjalizacja discord-player z użyciem standardowych modułów
     const player = new discord_player_1.Player(client);
-    // Załaduj domyślne ekstraktory (np. Spotify, SoundCloud)
+    // Załaduj domyślne ekstraktory (w tym BridgeProvider, który automatycznie pobierze audio z SC jeśli YT nie zadziała)
     await player.extractors.loadMulti(extractor_1.DefaultExtractors);
-    // Zarejestruj nowoczesny i stabilny YoutubeiExtractor z obsługą cookies
-    let youtubeiOptions = {};
-    try {
-        const cookiesPath = path_1.default.join(__dirname, '../../cookies.json'); // path to bot/cookies.json
-        let cookies = null;
-        if (process.env.YOUTUBE_COOKIES) {
-            cookies =
-                typeof process.env.YOUTUBE_COOKIES === 'string'
-                    ? JSON.parse(process.env.YOUTUBE_COOKIES)
-                    : process.env.YOUTUBE_COOKIES;
-            logger_1.logger.info('✅ Załadowano cookies z ENV (YOUTUBE_COOKIES) dla YoutubeiExtractor!');
-        }
-        else if (fs_1.default.existsSync(cookiesPath)) {
-            cookies = JSON.parse(fs_1.default.readFileSync(cookiesPath, 'utf8'));
-            logger_1.logger.info('✅ Załadowano cookies.json z pliku dla YoutubeiExtractor!');
-        }
-        else {
-            logger_1.logger.info('⚠️ Brak cookies (ani pliku, ani zmiennej). YoutubeiExtractor działa bez logowania.');
-        }
-        if (cookies) {
-            youtubeiOptions = { authentication: cookies };
-        }
-    }
-    catch (e) {
-        logger_1.logger.error(e, '❌ Błąd wczytywania cookies:');
-    }
-    await player.extractors.register(discord_player_youtubei_1.YoutubeiExtractor, youtubeiOptions);
     // Debugowanie audio (bardzo ważne do wyłapywania problemów z odtwarzaniem)
     player.events.on('debug', (queue, message) => {
         logger_1.logger.info(`[Player Debug] ${message}`);
