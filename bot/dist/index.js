@@ -1,5 +1,9 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+const logger_1 = require("./utils/logger");
 const discord_js_1 = require("discord.js");
 const env_1 = require("./config/env");
 const api_1 = require("./api");
@@ -19,54 +23,55 @@ const client = new discord_js_1.Client({
 });
 const discord_player_1 = require("discord-player");
 const discord_player_youtubei_1 = require("discord-player-youtubei");
+const extractor_1 = require("@discord-player/extractor");
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 // Zdarzenia
 client.once(discord_js_1.Events.ClientReady, async () => {
     // Inicjalizacja discord-player
     const player = new discord_player_1.Player(client);
     // Załaduj domyślne ekstraktory (np. Spotify, SoundCloud)
-    const { DefaultExtractors } = require('@discord-player/extractor');
-    await player.extractors.loadMulti(DefaultExtractors);
+    await player.extractors.loadMulti(extractor_1.DefaultExtractors);
     // Zarejestruj nowoczesny i stabilny YoutubeiExtractor z obsługą cookies
     let youtubeiOptions = {};
     try {
-        const fs = require('fs');
-        const path = require('path');
-        const cookiesPath = path.join(__dirname, '../../cookies.json'); // path to bot/cookies.json
+        const cookiesPath = path_1.default.join(__dirname, '../../cookies.json'); // path to bot/cookies.json
         let cookies = null;
         if (process.env.YOUTUBE_COOKIES) {
-            cookies = typeof process.env.YOUTUBE_COOKIES === 'string'
-                ? JSON.parse(process.env.YOUTUBE_COOKIES)
-                : process.env.YOUTUBE_COOKIES;
-            console.log('✅ Załadowano cookies z ENV (YOUTUBE_COOKIES) dla YoutubeiExtractor!');
+            cookies =
+                typeof process.env.YOUTUBE_COOKIES === 'string'
+                    ? JSON.parse(process.env.YOUTUBE_COOKIES)
+                    : process.env.YOUTUBE_COOKIES;
+            logger_1.logger.info('✅ Załadowano cookies z ENV (YOUTUBE_COOKIES) dla YoutubeiExtractor!');
         }
-        else if (fs.existsSync(cookiesPath)) {
-            cookies = JSON.parse(fs.readFileSync(cookiesPath, 'utf8'));
-            console.log('✅ Załadowano cookies.json z pliku dla YoutubeiExtractor!');
+        else if (fs_1.default.existsSync(cookiesPath)) {
+            cookies = JSON.parse(fs_1.default.readFileSync(cookiesPath, 'utf8'));
+            logger_1.logger.info('✅ Załadowano cookies.json z pliku dla YoutubeiExtractor!');
         }
         else {
-            console.log('⚠️ Brak cookies (ani pliku, ani zmiennej). YoutubeiExtractor działa bez logowania.');
+            logger_1.logger.info('⚠️ Brak cookies (ani pliku, ani zmiennej). YoutubeiExtractor działa bez logowania.');
         }
         if (cookies) {
             youtubeiOptions = { authentication: cookies };
         }
     }
     catch (e) {
-        console.error('❌ Błąd wczytywania cookies:', e);
+        logger_1.logger.error(e, '❌ Błąd wczytywania cookies:');
     }
     await player.extractors.register(discord_player_youtubei_1.YoutubeiExtractor, youtubeiOptions);
     // Debugowanie audio (bardzo ważne do wyłapywania problemów z odtwarzaniem)
     player.events.on('debug', (queue, message) => {
-        console.log(`[Player Debug] ${message}`);
+        logger_1.logger.info(`[Player Debug] ${message}`);
     });
     // Nasłuchiwanie błędów odtwarzacza, aby wiedzieć, dlaczego nie gra
     player.events.on('error', (queue, error) => {
-        console.error(`[Player Error] Zgłoszono błąd: ${error.message}`);
+        logger_1.logger.error(`[Player Error] Zgłoszono błąd: ${error.message}`);
         if (queue.metadata) {
             queue.metadata.channel?.send(`❌ Wystąpił błąd odtwarzacza: \`${error.message}\``).catch(() => { });
         }
     });
     player.events.on('playerError', (queue, error) => {
-        console.error(`[Player Error] Błąd strumienia audio: ${error.message}`);
+        logger_1.logger.error(`[Player Error] Błąd strumienia audio: ${error.message}`);
         if (queue.metadata) {
             queue.metadata.channel?.send(`❌ Błąd odtwarzania audio: \`${error.message}\``).catch(() => { });
         }
@@ -88,16 +93,21 @@ client.once(discord_js_1.Events.ClientReady, async () => {
                     embed.addFields({ name: 'Progress', value: progress });
                 }
             }
-            catch (e) { }
-            embed.addFields({ name: 'Status', value: `Volume: ${queue.node.volume}% | Loop: ${queue.repeatMode === 1 ? 'This song' : queue.repeatMode === 2 ? 'Queue' : 'Off'} | Autoplay: ${queue.repeatMode === 3 ? 'On' : 'Off'}` });
-            const row1 = new discord_js_1.ActionRowBuilder()
-                .addComponents(new discord_js_1.ButtonBuilder().setCustomId('music_pause').setLabel('Pause').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_resume').setLabel('Resume').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_previous').setLabel('Previous').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_skip').setLabel('Skip').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_stop').setLabel('Stop').setStyle(discord_js_1.ButtonStyle.Primary));
-            const row2 = new discord_js_1.ActionRowBuilder()
-                .addComponents(new discord_js_1.ButtonBuilder().setCustomId('music_volup').setLabel('Volume up').setStyle(discord_js_1.ButtonStyle.Success), new discord_js_1.ButtonBuilder().setCustomId('music_voldown').setLabel('Volume down').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_shuffle').setLabel('Shuffle').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_repeat').setLabel('Repeat').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_autoplay').setLabel('AutoPlay').setStyle(discord_js_1.ButtonStyle.Secondary));
-            queue.metadata.channel?.send({
+            catch (_e) {
+                // Ignore error if progress bar fails
+            }
+            embed.addFields({
+                name: 'Status',
+                value: `Volume: ${queue.node.volume}% | Loop: ${queue.repeatMode === 1 ? 'This song' : queue.repeatMode === 2 ? 'Queue' : 'Off'} | Autoplay: ${queue.repeatMode === 3 ? 'On' : 'Off'}`,
+            });
+            const row1 = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId('music_pause').setLabel('Pause').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_resume').setLabel('Resume').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_previous').setLabel('Previous').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_skip').setLabel('Skip').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_stop').setLabel('Stop').setStyle(discord_js_1.ButtonStyle.Primary));
+            const row2 = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId('music_volup').setLabel('Volume up').setStyle(discord_js_1.ButtonStyle.Success), new discord_js_1.ButtonBuilder().setCustomId('music_voldown').setLabel('Volume down').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_shuffle').setLabel('Shuffle').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_repeat').setLabel('Repeat').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_autoplay').setLabel('AutoPlay').setStyle(discord_js_1.ButtonStyle.Secondary));
+            queue.metadata.channel
+                ?.send({
                 embeds: [embed],
-                components: [row1, row2]
-            }).catch(() => { });
+                components: [row1, row2],
+            })
+                .catch(() => { });
         }
     });
     await (0, ready_1.onReady)(client);

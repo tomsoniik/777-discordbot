@@ -38,7 +38,7 @@ export function setupApi(client: Client) {
 
             res.json({ success: true });
         } catch (error) {
-            logger.error('Error assigning role or notifying admins:', error);
+            logger.error(error as Error, 'Error assigning role or notifying admins:');
             res.status(500).json({ error: 'Internal server error' });
         }
     });

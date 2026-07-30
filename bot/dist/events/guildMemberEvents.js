@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onGuildMemberAdd = onGuildMemberAdd;
 exports.onGuildMemberRemove = onGuildMemberRemove;
+const logger_1 = require("../utils/logger");
 const env_1 = require("../config/env");
 async function fetchConfig() {
     try {
@@ -11,7 +12,7 @@ async function fetchConfig() {
         return await res.json();
     }
     catch (e) {
-        console.error("Failed to fetch bot config from API", e);
+        logger_1.logger.error(e, 'Failed to fetch bot config from API');
         return null;
     }
 }
@@ -24,7 +25,7 @@ async function onGuildMemberAdd(member) {
             await member.roles.add(config.autoRoleId);
         }
         catch (e) {
-            console.error("Failed to add auto role", e);
+            logger_1.logger.error(e, 'Failed to add auto role');
         }
     }
     if (config.welcomeChannelId && config.welcomeMessage) {

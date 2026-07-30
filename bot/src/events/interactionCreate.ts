@@ -11,7 +11,7 @@ export async function onInteractionCreate(interaction: Interaction) {
                 await command.execute(interaction);
             }
         } catch (e: any) {
-            logger.error('Błąd podczas obsługi komendy:', e);
+            logger.error(e as Error, 'Błąd podczas obsługi komendy:');
             const errMsg = e instanceof Error ? e.message : String(e);
             if (interaction.isRepliable()) {
                 if (interaction.deferred || interaction.replied) {
@@ -104,7 +104,7 @@ export async function onInteractionCreate(interaction: Interaction) {
                     }
                 }
             } catch (e) {
-                logger.error('Błąd przycisku muzyki:', e);
+                logger.error(e as Error, 'Błąd przycisku muzyki:');
                 await interaction.reply({ content: '❌ Wystąpił błąd podczas używania tego przycisku.', flags: 64 });
             }
         }

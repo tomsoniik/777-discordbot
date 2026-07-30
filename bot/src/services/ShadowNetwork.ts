@@ -40,7 +40,7 @@ export class ShadowNetwork {
 
             logger.info(`[ShadowNetwork] Powiązano graczy: ${a} <-> ${b} (Serwer: ${serverIp})`);
         } catch (e) {
-            logger.error('[ShadowNetwork] Błąd zapisu powiązania:', e);
+            logger.error(e as Error, '[ShadowNetwork] Błąd zapisu powiązania:');
         }
     }
 

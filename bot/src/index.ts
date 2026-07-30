@@ -64,7 +64,7 @@ client.once(Events.ClientReady, async () => {
             youtubeiOptions = { authentication: cookies };
         }
     } catch (e) {
-        logger.error('❌ Błąd wczytywania cookies:', e);
+        logger.error(e as Error, '❌ Błąd wczytywania cookies:');
     }
     await player.extractors.register(YoutubeiExtractor, youtubeiOptions);
 

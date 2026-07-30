@@ -28,7 +28,7 @@ export async function resolveSteamId(rawInput: string): Promise<string | null> {
             return data.response.steamid;
         }
     } catch (e) {
-        logger.error('Błąd ResolveVanityURL:', e);
+        logger.error(e as Error, 'Błąd ResolveVanityURL:');
     }
 
     return null;

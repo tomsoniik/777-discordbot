@@ -168,7 +168,7 @@ export class UnturnedTracker {
                                 }
                             }
                         } catch (e) {
-                            logger.error('Błąd pobierania danych Master Server:', e);
+                            logger.error(e as Error, 'Błąd pobierania danych Master Server:');
                         }
 
                         await prisma.playerHistory.create({
@@ -268,7 +268,7 @@ export class UnturnedTracker {
                 type: 4,
             });
         } catch (error) {
-            logger.error('Błąd pętli śledzenia graczy:', error);
+            logger.error(error as Error, 'Błąd pętli śledzenia graczy:');
         }
     }
 }

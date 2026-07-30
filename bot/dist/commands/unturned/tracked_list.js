@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.trackedListCommand = void 0;
+const logger_1 = require("../../utils/logger");
 const discord_js_1 = require("discord.js");
 const db_1 = require("../../utils/db");
 const env_1 = require("../../config/env");
@@ -33,19 +34,21 @@ exports.trackedListCommand = {
                         .setAuthor({
                         name: player.personaname || player.steamid,
                         iconURL: player.avatarfull,
-                        url: player.profileurl
+                        url: player.profileurl,
                     })
                         .setDescription(`Identyfikator: \`${player.steamid}\``);
                     embeds.push(embed);
                 }
             }
             catch (e) {
-                console.error(e);
+                logger_1.logger.error(e);
             }
         }
         if (activeTrackers.length > 9) {
-            embeds.push(new discord_js_1.EmbedBuilder().setColor('#2b2d31').setDescription(`*...i ${activeTrackers.length - 9} innych w bazie (limit wyświetlania)*`));
+            embeds.push(new discord_js_1.EmbedBuilder()
+                .setColor('#2b2d31')
+                .setDescription(`*...i ${activeTrackers.length - 9} innych w bazie (limit wyświetlania)*`));
         }
         await interaction.editReply({ embeds });
-    }
+    },
 };

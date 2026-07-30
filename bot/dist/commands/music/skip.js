@@ -4,9 +4,7 @@ exports.skipCommand = void 0;
 const discord_js_1 = require("discord.js");
 const discord_player_1 = require("discord-player");
 exports.skipCommand = {
-    data: new discord_js_1.SlashCommandBuilder()
-        .setName('skip')
-        .setDescription('Pomija aktualnie odtwarzany utwór'),
+    data: new discord_js_1.SlashCommandBuilder().setName('skip').setDescription('Pomija aktualnie odtwarzany utwór'),
     execute: async (interaction) => {
         if (!interaction.guild)
             return;
@@ -17,5 +15,5 @@ exports.skipCommand = {
         }
         queue.node.skip();
         await interaction.reply('⏭️ Pominięto utwór!');
-    }
+    },
 };

@@ -1,22 +1,23 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.resolveSteamId = resolveSteamId;
+const logger_1 = require("../utils/logger");
 const env_1 = require("../config/env");
 async function resolveSteamId(rawInput) {
     const apiKey = env_1.ENV.STEAM_API_KEY;
     if (!apiKey)
         return null;
-    let input = rawInput.trim();
+    const input = rawInput.trim();
     const match64 = input.match(/(7656119[0-9]{10})/);
     if (match64)
         return match64[0];
-    let vanity = input;
-    const matchId = input.match(/\/id\/([^\/\?]+)/);
+    let vanity;
+    const matchId = input.match(/\/id\/([^/?]+)/);
     if (matchId) {
         vanity = matchId[1];
     }
     else {
-        const parts = input.split('/').filter(p => p.length > 0);
+        const parts = input.split('/').filter((p) => p.length > 0);
         vanity = parts[parts.length - 1];
     }
     try {
@@ -27,7 +28,7 @@ async function resolveSteamId(rawInput) {
         }
     }
     catch (e) {
-        console.error('Błąd ResolveVanityURL:', e);
+        logger_1.logger.error(e, 'Błąd ResolveVanityURL:');
     }
     return null;
 }

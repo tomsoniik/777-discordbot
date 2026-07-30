@@ -4,9 +4,7 @@ exports.queueCommand = void 0;
 const discord_js_1 = require("discord.js");
 const discord_player_1 = require("discord-player");
 exports.queueCommand = {
-    data: new discord_js_1.SlashCommandBuilder()
-        .setName('queue')
-        .setDescription('Wyświetla aktualną kolejkę utworów'),
+    data: new discord_js_1.SlashCommandBuilder().setName('queue').setDescription('Wyświetla aktualną kolejkę utworów'),
     execute: async (interaction) => {
         if (!interaction.guild)
             return;
@@ -35,5 +33,5 @@ exports.queueCommand = {
             .setDescription(description)
             .setColor('#7289da');
         await interaction.reply({ embeds: [embed] });
-    }
+    },
 };

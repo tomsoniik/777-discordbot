@@ -1,19 +1,25 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UnturnedTracker = exports.PREDEFINED_SERVERS = void 0;
+const logger_1 = require("../utils/logger");
 const discord_js_1 = require("discord.js");
 const db_1 = require("../utils/db");
 const env_1 = require("../config/env");
 const ShadowNetwork_1 = require("./ShadowNetwork");
 exports.PREDEFINED_SERVERS = {
-    'washington': { ip: '94.130.219.164', port: 27116, serverId: '85568392925775084', displayName: 'Washington x100' },
-    'arena': { ip: '83.143.81.182', port: 2484, serverId: '85568392926801330', displayName: 'Arena' },
-    'california': { ip: '39.96.7.81', port: 27015, serverId: '85568392935729730', displayName: 'California x100' },
-    'germany': { ip: '176.57.173.170', port: 28100, serverId: '85568392925775498', displayName: 'Germany x100' },
-    'pei': { ip: '193.169.209.214', port: 20004, serverId: '85568392925775497', displayName: 'PEI x100' },
-    'russia': { ip: '43.167.189.221', port: 27015, serverId: '85568392925719569', displayName: 'Russia x100' },
-    'arid': { ip: '0.0.0.0', port: 0, serverId: '85568392932897412', displayName: 'Arid' },
-    'polaris': { ip: '0.0.0.0', port: 0, serverId: '85568392930289951', displayName: 'A6 Polaris' }
+    washington: {
+        ip: '94.130.219.164',
+        port: 27116,
+        serverId: '85568392925775084',
+        displayName: 'Washington x100',
+    },
+    arena: { ip: '83.143.81.182', port: 2484, serverId: '85568392926801330', displayName: 'Arena' },
+    california: { ip: '39.96.7.81', port: 27015, serverId: '85568392935729730', displayName: 'California x100' },
+    germany: { ip: '176.57.173.170', port: 28100, serverId: '85568392925775498', displayName: 'Germany x100' },
+    pei: { ip: '193.169.209.214', port: 20004, serverId: '85568392925775497', displayName: 'PEI x100' },
+    russia: { ip: '43.167.189.221', port: 27015, serverId: '85568392925719569', displayName: 'Russia x100' },
+    arid: { ip: '0.0.0.0', port: 0, serverId: '85568392932897412', displayName: 'Arid' },
+    polaris: { ip: '0.0.0.0', port: 0, serverId: '85568392930289951', displayName: 'A6 Polaris' },
 };
 class UnturnedTracker {
     client;
@@ -22,7 +28,7 @@ class UnturnedTracker {
         this.client = client;
     }
     start() {
-        console.log('✅ Uruchomiono globalną pętlę śledzenia graczy (Prisma + Steam API).');
+        logger_1.logger.info('✅ Uruchomiono globalną pętlę śledzenia graczy (Prisma + Steam API).');
         this.interval = setInterval(async () => {
             await this.trackIteration();
         }, 60000); // 60 sekund
@@ -62,7 +68,10 @@ class UnturnedTracker {
                     const currentLobby = player.lobbysteamid;
                     const handleOffline = async () => {
                         if (tracker.isOnline) {
-                            await db_1.prisma.trackedPlayer.update({ where: { steamId: player.steamid }, data: { isOnline: false, lastServer: null } });
+                            await db_1.prisma.trackedPlayer.update({
+                                where: { steamId: player.steamid },
+                                data: { isOnline: false, lastServer: null },
+                            });
                             const settings = await db_1.prisma.botSettings.findUnique({ where: { id: 1 } });
                             const channelId = settings?.defaultChannelId;
                             if (channelId) {
@@ -111,8 +120,10 @@ class UnturnedTracker {
                         let mapName = 'Nieznana';
                         let playersInfo = 'Brak danych';
                         try {
-                            const targetServerConfig = Object.values(exports.PREDEFINED_SERVERS).find(s => (s.serverId && s.serverId === foundIpPort) || `${s.ip}:${s.port}` === foundIpPort);
-                            const ipToQuery = targetServerConfig ? `${targetServerConfig.ip}:${targetServerConfig.port}` : foundIpPort;
+                            const targetServerConfig = Object.values(exports.PREDEFINED_SERVERS).find((s) => (s.serverId && s.serverId === foundIpPort) || `${s.ip}:${s.port}` === foundIpPort);
+                            const ipToQuery = targetServerConfig
+                                ? `${targetServerConfig.ip}:${targetServerConfig.port}`
+                                : foundIpPort;
                             if (ipToQuery && ipToQuery.includes(':')) {
                                 const serverRes = await fetch(`https://api.steampowered.com/IGameServersService/GetServerList/v1/?key=${apiKey}&filter=\\gameaddr\\${ipToQuery}`);
                                 const serverData = await serverRes.json();
@@ -127,19 +138,19 @@ class UnturnedTracker {
                             }
                         }
                         catch (e) {
-                            console.error('Błąd pobierania danych Master Server:', e);
+                            logger_1.logger.error(e, 'Błąd pobierania danych Master Server:');
                         }
                         await db_1.prisma.playerHistory.create({
                             data: {
                                 steamId: player.steamid,
                                 nickname: player.personaname || player.steamid,
                                 serverIp: foundIpPort,
-                                serverName: foundServerName
-                            }
+                                serverName: foundServerName,
+                            },
                         });
                         await db_1.prisma.trackedPlayer.update({
                             where: { steamId: player.steamid },
-                            data: { isOnline: true, lastServer: foundIpPort }
+                            data: { isOnline: true, lastServer: foundIpPort },
                         });
                         const settings = await db_1.prisma.botSettings.findUnique({ where: { id: 1 } });
                         const channelId = settings?.defaultChannelId;
@@ -151,16 +162,24 @@ class UnturnedTracker {
                                     .setDescription(`Gracz **[${player.personaname || player.steamid}](${player.profileurl})** został wykryty w grze!`)
                                     .setThumbnail(player.avatarfull)
                                     .setColor('#ff0000')
-                                    .addFields({ name: 'Serwer', value: `\`${foundServerName}\``, inline: false }, { name: 'Mapa', value: `\`${mapName}\``, inline: true }, { name: 'Graczy', value: `\`${playersInfo}\``, inline: true }, { name: 'Szybkie Dołączenie', value: foundIpPort.match(/^\d+$/) ? `Kliknij w link:\nhttps://join.unbeaten.gg/${foundIpPort}` : `Wklej w przeglądarkę:\n\`steam://run/304930//+connect%20${foundIpPort}\``, inline: false })
+                                    .addFields({ name: 'Serwer', value: `\`${foundServerName}\``, inline: false }, { name: 'Mapa', value: `\`${mapName}\``, inline: true }, { name: 'Graczy', value: `\`${playersInfo}\``, inline: true }, {
+                                    name: 'Szybkie Dołączenie',
+                                    value: foundIpPort.match(/^\d+$/)
+                                        ? `Kliknij w link:\nhttps://join.unbeaten.gg/${foundIpPort}`
+                                        : `Wklej w przeglądarkę:\n\`steam://run/304930//+connect%20${foundIpPort}\``,
+                                    inline: false,
+                                })
                                     .setTimestamp();
                                 const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder()
                                     .setLabel('🚀 Dołącz do gry')
                                     .setStyle(discord_js_1.ButtonStyle.Link)
-                                    .setURL(foundIpPort.match(/^\d+$/) ? `https://join.unbeaten.gg/${foundIpPort}` : `https://777-discordbot-tomsoncs.vercel.app/api/join?ip=${foundIpPort}`));
+                                    .setURL(foundIpPort.match(/^\d+$/)
+                                    ? `https://join.unbeaten.gg/${foundIpPort}`
+                                    : `https://777-discordbot-tomsoncs.vercel.app/api/join?ip=${foundIpPort}`));
                                 await channel.send({
                                     content: '@everyone',
                                     embeds: [embed],
-                                    components: [row]
+                                    components: [row],
                                 });
                             }
                         }
@@ -199,7 +218,7 @@ class UnturnedTracker {
             });
         }
         catch (error) {
-            console.error('Błąd pętli śledzenia graczy:', error);
+            logger_1.logger.error(error, 'Błąd pętli śledzenia graczy:');
         }
     }
 }

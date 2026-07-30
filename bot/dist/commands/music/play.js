@@ -1,15 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.playCommand = void 0;
+const logger_1 = require("../../utils/logger");
 const discord_js_1 = require("discord.js");
 const discord_player_1 = require("discord-player");
 exports.playCommand = {
     data: new discord_js_1.SlashCommandBuilder()
         .setName('play')
         .setDescription('Odtwarza muzykę (z dowolnego źródła)')
-        .addStringOption(option => option.setName('query')
-        .setDescription('Link lub nazwa utworu')
-        .setRequired(true)),
+        .addStringOption((option) => option.setName('query').setDescription('Link lub nazwa utworu').setRequired(true)),
     execute: async (interaction) => {
         if (!interaction.guild)
             return;
@@ -33,14 +32,14 @@ exports.playCommand = {
                     leaveOnEmpty: true,
                     leaveOnEnd: false,
                     leaveOnStop: true,
-                    volume: 50
-                }
+                    volume: 50,
+                },
             });
             await interaction.editReply(`🎵 Dodano do kolejki: **${track.title}**`);
         }
         catch (error) {
-            console.error('Błąd odtwarzacza discord-player:', error);
+            logger_1.logger.error(error, 'Błąd odtwarzacza discord-player:');
             await interaction.editReply(`❌ Nie udało się odtworzyć tego utworu. Sprawdź, czy link jest poprawny.\nSzczegóły: \`${error.message}\``);
         }
-    }
+    },
 };

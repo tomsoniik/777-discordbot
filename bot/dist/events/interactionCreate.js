@@ -1,25 +1,29 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onInteractionCreate = onInteractionCreate;
+const logger_1 = require("../utils/logger");
 const commands_1 = require("../commands");
 const discord_player_1 = require("discord-player");
 async function onInteractionCreate(interaction) {
     if (interaction.isChatInputCommand()) {
         try {
-            const command = commands_1.commands.find(c => c.data.name === interaction.commandName);
+            const command = commands_1.commands.find((c) => c.data.name === interaction.commandName);
             if (command) {
                 await command.execute(interaction);
             }
         }
         catch (e) {
-            console.error('Błąd podczas obsługi komendy:', e);
+            logger_1.logger.error(e, 'Błąd podczas obsługi komendy:');
             const errMsg = e instanceof Error ? e.message : String(e);
             if (interaction.isRepliable()) {
                 if (interaction.deferred || interaction.replied) {
                     await interaction.editReply(`Wystąpił nieoczekiwany błąd podczas wykonywania tej komendy: \`${errMsg}\``);
                 }
                 else {
-                    await interaction.reply({ content: `Wystąpił nieoczekiwany błąd podczas wykonywania tej komendy: \`${errMsg}\``, flags: 64 });
+                    await interaction.reply({
+                        content: `Wystąpił nieoczekiwany błąd podczas wykonywania tej komendy: \`${errMsg}\``,
+                        flags: 64,
+                    });
                 }
             }
         }
@@ -63,34 +67,44 @@ async function onInteractionCreate(interaction) {
                         queue.delete();
                         await interaction.reply({ content: '⏹️ Odtwarzanie zatrzymane, kolejka wyczyszczona.' });
                         break;
-                    case 'music_volup':
+                    case 'music_volup': {
                         const volUp = Math.min(queue.node.volume + 10, 100);
                         queue.node.setVolume(volUp);
                         await interaction.reply({ content: `🔊 Głośność: ${volUp}%` });
                         break;
-                    case 'music_voldown':
+                    }
+                    case 'music_voldown': {
                         const volDown = Math.max(queue.node.volume - 10, 0);
                         queue.node.setVolume(volDown);
                         await interaction.reply({ content: `🔉 Głośność: ${volDown}%` });
                         break;
+                    }
                     case 'music_shuffle':
                         queue.tracks.shuffle();
                         await interaction.reply({ content: '🔀 Kolejka została przetasowana.' });
                         break;
-                    case 'music_repeat':
+                    case 'music_repeat': {
                         const nextLoop = queue.repeatMode === discord_player_1.QueueRepeatMode.TRACK ? discord_player_1.QueueRepeatMode.OFF : discord_player_1.QueueRepeatMode.TRACK;
                         queue.setRepeatMode(nextLoop);
-                        await interaction.reply({ content: `🔁 Pętla utworu: ${nextLoop === discord_player_1.QueueRepeatMode.TRACK ? 'Włączona' : 'Wyłączona'}` });
+                        await interaction.reply({
+                            content: `🔁 Pętla utworu: ${nextLoop === discord_player_1.QueueRepeatMode.TRACK ? 'Włączona' : 'Wyłączona'}`,
+                        });
                         break;
-                    case 'music_autoplay':
-                        const nextAuto = queue.repeatMode === discord_player_1.QueueRepeatMode.AUTOPLAY ? discord_player_1.QueueRepeatMode.OFF : discord_player_1.QueueRepeatMode.AUTOPLAY;
+                    }
+                    case 'music_autoplay': {
+                        const nextAuto = queue.repeatMode === discord_player_1.QueueRepeatMode.AUTOPLAY
+                            ? discord_player_1.QueueRepeatMode.OFF
+                            : discord_player_1.QueueRepeatMode.AUTOPLAY;
                         queue.setRepeatMode(nextAuto);
-                        await interaction.reply({ content: `🎵 AutoPlay: ${nextAuto === discord_player_1.QueueRepeatMode.AUTOPLAY ? 'Włączony' : 'Wyłączony'}` });
+                        await interaction.reply({
+                            content: `🎵 AutoPlay: ${nextAuto === discord_player_1.QueueRepeatMode.AUTOPLAY ? 'Włączony' : 'Wyłączony'}`,
+                        });
                         break;
+                    }
                 }
             }
             catch (e) {
-                console.error('Błąd przycisku muzyki:', e);
+                logger_1.logger.error(e, 'Błąd przycisku muzyki:');
                 await interaction.reply({ content: '❌ Wystąpił błąd podczas używania tego przycisku.', flags: 64 });
             }
         }

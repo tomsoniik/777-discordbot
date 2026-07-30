@@ -8,7 +8,7 @@ async function fetchConfig() {
         if (!res.ok) return null;
         return await res.json();
     } catch (e) {
-        logger.error('Failed to fetch bot config from API', e);
+        logger.error(e as Error, 'Failed to fetch bot config from API');
         return null;
     }
 }
@@ -21,7 +21,7 @@ export async function onGuildMemberAdd(member: GuildMember) {
         try {
             await member.roles.add(config.autoRoleId);
         } catch (e) {
-            logger.error('Failed to add auto role', e);
+            logger.error(e as Error, 'Failed to add auto role');
         }
     }
 

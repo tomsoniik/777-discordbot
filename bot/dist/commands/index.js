@@ -19,5 +19,5 @@ exports.commands = [
     untrack_1.untrackCommand,
     tracked_list_1.trackedListCommand,
     trackconfig_1.trackconfigCommand,
-    check_servers_1.checkServersCommand
+    check_servers_1.checkServersCommand,
 ];

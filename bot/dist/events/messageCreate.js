@@ -8,15 +8,14 @@ async function onMessageCreate(message) {
     if (message.author.bot)
         return;
     if (message.content === '!ticketsetup' && message.member?.permissions.has('Administrator')) {
-        const row = new discord_js_1.ActionRowBuilder()
-            .addComponents(new discord_js_1.ButtonBuilder()
+        const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder()
             .setLabel('Stwórz Ticket (Aplikuj)')
             .setStyle(discord_js_1.ButtonStyle.Link)
             .setURL(`${env_1.ENV.WEB_URL}/apply`));
         if ('send' in message.channel) {
             await message.channel.send({
                 content: 'Kliknij poniższy przycisk, aby przejść do panelu rekrutacji i wypełnić formularz logując się przez Steam:',
-                components: [row]
+                components: [row],
             });
         }
     }
@@ -51,7 +50,7 @@ async function onMessageCreate(message) {
                     row.addComponents(new discord_js_1.ButtonBuilder()
                         .setLabel(`🚀 Połącz: ${foundMapName}`)
                         .setStyle(discord_js_1.ButtonStyle.Link)
-                        // Możesz użyć URL join.unbeaten.gg lub steam:// 
+                        // Możesz użyć URL join.unbeaten.gg lub steam://
                         .setURL(`https://join.unbeaten.gg/${foundServerIpPort}`));
                 }
                 else {
@@ -72,7 +71,7 @@ async function onMessageCreate(message) {
                     await message.channel.send({
                         content: '@everyone 🚨 **ALARM RAIDOWY!** 🚨',
                         embeds: [alertEmbed],
-                        components: [row]
+                        components: [row],
                     });
                 }
             }

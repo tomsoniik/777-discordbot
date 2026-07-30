@@ -39,7 +39,7 @@ export const playCommand: Command = {
             });
             await interaction.editReply(`🎵 Dodano do kolejki: **${track.title}**`);
         } catch (error: any) {
-            logger.error('Błąd odtwarzacza discord-player:', error);
+            logger.error(error as Error, 'Błąd odtwarzacza discord-player:');
             await interaction.editReply(
                 `❌ Nie udało się odtworzyć tego utworu. Sprawdź, czy link jest poprawny.\nSzczegóły: \`${error.message}\``,
             );
