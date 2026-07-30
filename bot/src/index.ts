@@ -1,7 +1,13 @@
 import { logger } from './utils/logger';
 import ffmpegPath from 'ffmpeg-static';
-if (ffmpegPath) {
-    process.env.FFMPEG_PATH = ffmpegPath;
+import { execSync } from 'child_process';
+
+try {
+    execSync('ffmpeg -version', { stdio: 'ignore' });
+} catch (e) {
+    if (ffmpegPath) {
+        process.env.FFMPEG_PATH = ffmpegPath;
+    }
 }
 
 import {

@@ -5,8 +5,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const logger_1 = require("./utils/logger");
 const ffmpeg_static_1 = __importDefault(require("ffmpeg-static"));
-if (ffmpeg_static_1.default) {
-    process.env.FFMPEG_PATH = ffmpeg_static_1.default;
+const child_process_1 = require("child_process");
+try {
+    (0, child_process_1.execSync)('ffmpeg -version', { stdio: 'ignore' });
+}
+catch (e) {
+    if (ffmpeg_static_1.default) {
+        process.env.FFMPEG_PATH = ffmpeg_static_1.default;
+    }
 }
 const discord_js_1 = require("discord.js");
 const env_1 = require("./config/env");
