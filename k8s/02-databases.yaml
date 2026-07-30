@@ -1,0 +1,112 @@
+# ==========================================
+# BOT DATABASE
+# ==========================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db-bot
+spec:
+  serviceName: "db-bot"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-bot
+  template:
+    metadata:
+      labels:
+        app: db-bot
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_USER
+          value: "bot_user"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: project-secrets
+              key: BOT_DB_PASS
+        - name: POSTGRES_DB
+          value: "bot_db"
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: db-bot-data
+          mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+  - metadata:
+      name: db-bot-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-bot
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: db-bot
+
+---
+# ==========================================
+# FRONTEND DATABASE
+# ==========================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db-front
+spec:
+  serviceName: "db-front"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-front
+  template:
+    metadata:
+      labels:
+        app: db-front
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_USER
+          value: "front_user"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: project-secrets
+              key: FRONT_DB_PASS
+        - name: POSTGRES_DB
+          value: "frontend_db"
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: db-front-data
+          mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+  - metadata:
+      name: db-front-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-front
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: db-front

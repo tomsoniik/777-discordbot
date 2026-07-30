@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bot-deployment
+  labels:
+    app: bot
+spec:
+  replicas: 1 # Bot zazwyczaj działa jako jedna instancja (aby uniknąć duplikacji wiadomości)
+  selector:
+    matchLabels:
+      app: bot
+  template:
+    metadata:
+      labels:
+        app: bot
+    spec:
+      containers:
+      - name: bot
+        image: ghcr.io/your-github-username/bot-777-bot:latest
+        imagePullPolicy: Always
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://bot_user:$(BOT_DB_PASS)@db-bot:5432/bot_db?schema=public"
+        - name: DISCORD_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: project-secrets
+              key: DISCORD_TOKEN
+        - name: STEAM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: project-secrets
+              key: STEAM_API_KEY
+        - name: BOT_DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: project-secrets
+              key: BOT_DB_PASS
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"

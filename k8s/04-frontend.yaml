@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  labels:
+    app: frontend
+spec:
+  replicas: 2 # Frontend można łatwo skalować dla wysokiej dostępności
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: ghcr.io/your-github-username/bot-777-frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://front_user:$(FRONT_DB_PASS)@db-front:5432/frontend_db?schema=public"
+        - name: NEXTAUTH_URL
+          value: "https://your-domain.com"
+        - name: NEXTAUTH_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: project-secrets
+              key: NEXTAUTH_SECRET
+        - name: FRONT_DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: project-secrets
+              key: FRONT_DB_PASS
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  type: LoadBalancer # Lub ClusterIP jeśli używasz Nginx Ingress
+  ports:
+  - port: 80
+    targetPort: 3000
+  selector:
+    app: frontend
