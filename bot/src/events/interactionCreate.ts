@@ -14,15 +14,19 @@ export async function onInteractionCreate(interaction: Interaction) {
             logger.error(e as Error, 'Błąd podczas obsługi komendy:');
             const errMsg = e instanceof Error ? e.message : String(e);
             if (interaction.isRepliable()) {
-                if (interaction.deferred || interaction.replied) {
-                    await interaction.editReply(
-                        `Wystąpił nieoczekiwany błąd podczas wykonywania tej komendy: \`${errMsg}\``,
-                    );
-                } else {
-                    await interaction.reply({
-                        content: `Wystąpił nieoczekiwany błąd podczas wykonywania tej komendy: \`${errMsg}\``,
-                        flags: 64,
-                    });
+                try {
+                    if (interaction.deferred || interaction.replied) {
+                        await interaction.editReply(
+                            `Wystąpił nieoczekiwany błąd podczas wykonywania tej komendy: \`${errMsg}\``,
+                        );
+                    } else {
+                        await interaction.reply({
+                            content: `Wystąpił nieoczekiwany błąd podczas wykonywania tej komendy: \`${errMsg}\``,
+                            flags: 64,
+                        });
+                    }
+                } catch (replyError) {
+                    logger.error(replyError as Error, 'Nie udało się wysłać powiadomienia o błędzie do użytkownika:');
                 }
             }
         }
@@ -105,7 +109,22 @@ export async function onInteractionCreate(interaction: Interaction) {
                 }
             } catch (e) {
                 logger.error(e as Error, 'Błąd przycisku muzyki:');
-                await interaction.reply({ content: '❌ Wystąpił błąd podczas używania tego przycisku.', flags: 64 });
+                try {
+                    if (interaction.isRepliable()) {
+                        if (interaction.deferred || interaction.replied) {
+                            await interaction.editReply({
+                                content: '❌ Wystąpił błąd podczas używania tego przycisku.',
+                            });
+                        } else {
+                            await interaction.reply({
+                                content: '❌ Wystąpił błąd podczas używania tego przycisku.',
+                                flags: 64,
+                            });
+                        }
+                    }
+                } catch (replyError) {
+                    logger.error(replyError as Error, 'Nie udało się wysłać powiadomienia o błędzie przycisku:');
+                }
             }
         }
     }
