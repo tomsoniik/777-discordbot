@@ -1,6 +1,13 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const logger_1 = require("./utils/logger");
+const ffmpeg_static_1 = __importDefault(require("ffmpeg-static"));
+if (ffmpeg_static_1.default) {
+    process.env.FFMPEG_PATH = ffmpeg_static_1.default;
+}
 const discord_js_1 = require("discord.js");
 const env_1 = require("./config/env");
 const api_1 = require("./api");
