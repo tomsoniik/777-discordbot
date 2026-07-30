@@ -8,7 +8,8 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Instalacja WSZYSTKICH pakietów (również devDependencies) do zbudowania TypeScript
-RUN npm ci
+# --no-audit --no-fund oszczędza pamięć RAM przy instalacji
+RUN npm ci --no-audit --no-fund
 
 # Kopiowanie reszty plików
 COPY . .
@@ -16,6 +17,9 @@ COPY . .
 # Generowanie klienta Prisma i budowa bota
 RUN npx prisma generate
 RUN npm run build
+
+# Usuwamy paczki deweloperskie by odchudzić node_modules przed przeniesieniem do obrazu produkcyjnego
+RUN npm prune --omit=dev
 
 
 # STAGE 2: Produkcyjny obraz Bota
@@ -26,17 +30,12 @@ RUN apk add --no-cache ffmpeg python3 make g++
 
 WORKDIR /app
 
-# Kopiowanie zależności z poprzedniego etapu (by zainstalować tylko produkcyjne)
+# Kopiowanie package.json i wygenerowanej bazy
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Instalacja pakietów produkcyjnych (bez devDependencies)
-RUN npm ci --omit=dev
-
-# Generowanie klienta Prisma dla środowiska produkcyjnego
-RUN npx prisma generate
-
-# Kopiowanie zbudowanych plików z etapu builder
+# Zamiast instalować pakiety od nowa i ryzykować Out Of Memory (Exit 137), po prostu kopiujemy gotowe z buildera
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
 # Domyślny port w razie wystawienia API wewn. (opcjonalne)
