@@ -14,11 +14,17 @@ export function buildMusicMessage(queue: GuildQueue<any>) {
     const autoplayTxt = isAutoplay ? 'On' : 'Off';
     const color = '#1db954'; // Zielony, dopasowany do zrzutu ekranu
 
-    const progress = queue.node.createProgressBar({
-        indicator: '🔵',
-        length: 14,
-        timecodes: true,
-    });
+    let progress = '';
+    try {
+        const bar = queue.node.createProgressBar({
+            indicator: '🔵',
+            length: 14,
+            timecodes: true,
+        });
+        if (bar) progress = bar;
+    } catch {
+        // Ignorujemy błąd kalkulacji paska postępu
+    }
 
     const isPaused = queue.node.isPaused();
     const playbackState = isPaused ? '⏸️ Paused' : '▶️ Playing';

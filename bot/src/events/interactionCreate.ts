@@ -75,7 +75,11 @@ export async function onInteractionCreate(interaction: Interaction) {
                         queue.tracks.shuffle();
                         break;
                     case 'music_repeat': {
-                        const modes: QueueRepeatMode[] = [QueueRepeatMode.OFF, QueueRepeatMode.TRACK, QueueRepeatMode.QUEUE];
+                        const modes: QueueRepeatMode[] = [
+                            QueueRepeatMode.OFF,
+                            QueueRepeatMode.TRACK,
+                            QueueRepeatMode.QUEUE,
+                        ];
                         let nextModeIdx = modes.indexOf(queue.repeatMode) + 1;
                         if (nextModeIdx >= modes.length || nextModeIdx < 0) nextModeIdx = 0;
                         queue.setRepeatMode(modes[nextModeIdx] as any);

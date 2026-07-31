@@ -32,8 +32,14 @@ client.once(Events.ClientReady, async () => {
             const meta = queue.metadata as any;
 
             // Czyszczenie poprzedniego interwału i wiadomości (żeby panel był zawsze na dole)
-            if (meta.playerInterval) clearInterval(meta.playerInterval);
-            if (meta.playerMessage) await meta.playerMessage.delete().catch(() => {});
+            if (meta.playerInterval) {
+                clearInterval(meta.playerInterval);
+                meta.playerInterval = null;
+            }
+            if (meta.playerMessage) {
+                await meta.playerMessage.delete().catch(() => {});
+                meta.playerMessage = null;
+            }
 
             const messagePayload = buildMusicMessage(queue);
             const msg = await meta.channel.send(messagePayload).catch(() => null);
@@ -41,21 +47,57 @@ client.once(Events.ClientReady, async () => {
             if (msg) {
                 meta.playerMessage = msg;
 
-                // Odświeżaj panel co 10 sekund
+                // Odświeżaj panel dynamicznie co 3 sekundy
                 meta.playerInterval = setInterval(async () => {
-                    if (queue.deleted) {
-                        clearInterval(meta.playerInterval);
+                    if (queue.deleted || !queue.isPlaying()) {
+                        if (meta.playerInterval) {
+                            clearInterval(meta.playerInterval);
+                            meta.playerInterval = null;
+                        }
                         return;
                     }
                     // Nie obciążamy API jak muzyka jest zapauzowana
                     if (queue.node.isPaused()) return;
 
-                    await msg.edit(buildMusicMessage(queue)).catch(() => {
-                        // Jeśli wiadomość została usunięta, wyczyść interwał
-                        clearInterval(meta.playerInterval);
-                    });
-                }, 10000);
+                    try {
+                        await msg.edit(buildMusicMessage(queue));
+                    } catch (err: any) {
+                        // Jeśli wiadomość została usunięta z Discorda (kod 10008: Unknown Message) lub brak kanału (404), wyczyść interwał
+                        if (err?.code === 10008 || err?.status === 404) {
+                            if (meta.playerInterval) {
+                                clearInterval(meta.playerInterval);
+                                meta.playerInterval = null;
+                            }
+                        }
+                        // Jeśli to tymczasowy błąd API Discorda / rate limit (429), nie przerywamy interwału!
+                    }
+                }, 3000);
             }
+        }
+    });
+
+    player.events.on('emptyQueue', (queue) => {
+        const meta = queue.metadata as any;
+        if (meta?.playerInterval) {
+            clearInterval(meta.playerInterval);
+            meta.playerInterval = null;
+        }
+    });
+
+    player.events.on('disconnect', (queue) => {
+        const meta = queue.metadata as any;
+        if (meta?.playerInterval) {
+            clearInterval(meta.playerInterval);
+            meta.playerInterval = null;
+        }
+    });
+
+    player.events.on('playerError', (queue, error) => {
+        logger.error(error as Error, `[Player Error]`);
+        const meta = queue.metadata as any;
+        if (meta?.playerInterval) {
+            clearInterval(meta.playerInterval);
+            meta.playerInterval = null;
         }
     });
 

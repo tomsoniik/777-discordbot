@@ -76,7 +76,11 @@ async function onInteractionCreate(interaction) {
                         queue.tracks.shuffle();
                         break;
                     case 'music_repeat': {
-                        const modes = [discord_player_1.QueueRepeatMode.OFF, discord_player_1.QueueRepeatMode.TRACK, discord_player_1.QueueRepeatMode.QUEUE];
+                        const modes = [
+                            discord_player_1.QueueRepeatMode.OFF,
+                            discord_player_1.QueueRepeatMode.TRACK,
+                            discord_player_1.QueueRepeatMode.QUEUE,
+                        ];
                         let nextModeIdx = modes.indexOf(queue.repeatMode) + 1;
                         if (nextModeIdx >= modes.length || nextModeIdx < 0)
                             nextModeIdx = 0;
