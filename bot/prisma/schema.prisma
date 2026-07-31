@@ -15,8 +15,8 @@ datasource db {
 
 model TrackedPlayer {
   id           Int      @id @default(autoincrement())
-  steamId      String   @unique
-  addedBy      String   // Discord User ID
+  steamId      String   @unique @default("")
+  addedBy      String   @default("") // Discord User ID
   addedAt      DateTime @default(now())
   targetServer String?  // Optional specific server, or null for all
   isActive     Boolean  @default(true)
@@ -26,9 +26,9 @@ model TrackedPlayer {
 
 model PlayerHistory {
   id           Int      @id @default(autoincrement())
-  steamId      String
+  steamId      String   @default("")
   nickname     String?
-  serverIp     String
+  serverIp     String   @default("")
   serverName   String?
   detectedAt   DateTime @default(now())
 }

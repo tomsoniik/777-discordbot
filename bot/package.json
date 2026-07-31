@@ -4,9 +4,10 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "prisma db push && node dist/index.js",
     "dev": "ts-node src/index.ts",
     "postinstall": "prisma generate",
+    "db:push": "prisma db push",
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\""
   },
