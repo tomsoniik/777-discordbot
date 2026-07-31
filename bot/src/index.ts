@@ -27,10 +27,35 @@ client.once(Events.ClientReady, async () => {
     const player = new Player(client);
     await player.extractors.register(SoundCloudExtractor, {});
 
-    player.events.on('playerStart', (queue, _track) => {
+    player.events.on('playerStart', async (queue, _track) => {
         if (queue.metadata && (queue.metadata as any).channel) {
+            const meta = queue.metadata as any;
+
+            // Czyszczenie poprzedniego interwału i wiadomości (żeby panel był zawsze na dole)
+            if (meta.playerInterval) clearInterval(meta.playerInterval);
+            if (meta.playerMessage) await meta.playerMessage.delete().catch(() => {});
+
             const messagePayload = buildMusicMessage(queue);
-            (queue.metadata as any).channel.send(messagePayload).catch(() => {});
+            const msg = await meta.channel.send(messagePayload).catch(() => null);
+
+            if (msg) {
+                meta.playerMessage = msg;
+
+                // Odświeżaj panel co 10 sekund
+                meta.playerInterval = setInterval(async () => {
+                    if (queue.deleted) {
+                        clearInterval(meta.playerInterval);
+                        return;
+                    }
+                    // Nie obciążamy API jak muzyka jest zapauzowana
+                    if (queue.node.isPaused()) return;
+
+                    await msg.edit(buildMusicMessage(queue)).catch(() => {
+                        // Jeśli wiadomość została usunięta, wyczyść interwał
+                        clearInterval(meta.playerInterval);
+                    });
+                }, 10000);
+            }
         }
     });
 
