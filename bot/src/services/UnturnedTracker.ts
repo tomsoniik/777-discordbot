@@ -3,6 +3,7 @@ import { Client, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } fr
 import { prisma } from '../utils/db';
 import { ENV } from '../config/env';
 import { ShadowNetwork } from './ShadowNetwork';
+import { A2SQuery } from './A2SQuery';
 
 export const PREDEFINED_SERVERS: Record<string, { ip: string; port: number; serverId?: string; displayName?: string }> =
     {
@@ -30,11 +31,13 @@ export class UnturnedTracker {
     }
 
     public start() {
-        logger.info('✅ Uruchomiono globalną pętlę śledzenia graczy (Prisma + Steam API).');
+        logger.info('✅ Uruchomiono ulepszoną hybrydową pętlę śledzenia graczy (Steam API + A2S Anti-DDoS Bypass).');
 
+        // Uruchamiamy od razu pierwszą iterację, a potem co 30 sekund
+        this.trackIteration();
         this.interval = setInterval(async () => {
             await this.trackIteration();
-        }, 60000); // 60 sekund
+        }, 30000); // 30 sekund
     }
 
     public stop() {
@@ -57,7 +60,7 @@ export class UnturnedTracker {
 
             const steamIds = trackers.map((t: any) => t.steamId);
 
-            // Dzielimy na paczki po 100 SteamID (limit API)
+            // Dzielimy na paczki po 100 SteamID (limit Steam Web API)
             const chunks = [];
             for (let i = 0; i < steamIds.length; i += 100) {
                 chunks.push(steamIds.slice(i, i + 100));
@@ -73,6 +76,15 @@ export class UnturnedTracker {
                 for (const player of players) {
                     const tracker = trackers.find((t: any) => t.steamId === player.steamid);
                     if (!tracker) continue;
+
+                    // Zapisujemy/aktualizujemy ostatni nick w Shadow Network
+                    if (player.personaname) {
+                        await prisma.playerNode.upsert({
+                            where: { steamId: player.steamid },
+                            update: { lastNickname: player.personaname, lastSeenAt: new Date() },
+                            create: { steamId: player.steamid, lastNickname: player.personaname },
+                        });
+                    }
 
                     const isPlayingUnturned = player.gameextrainfo === 'Unturned' || player.gameid === '304930';
                     const currentIp = player.gameserverip;
@@ -102,39 +114,69 @@ export class UnturnedTracker {
                         }
                     };
 
-                    if (!isPlayingUnturned && !currentIp && !currentLobby) {
-                        await handleOffline();
-                        continue;
-                    }
-
                     let found = false;
                     let foundServerName = 'Nieznany Serwer';
                     let foundIpPort = currentLobby || currentIp || '';
 
-                    const targets =
-                        tracker.targetServer && tracker.targetServer !== 'all'
-                            ? [PREDEFINED_SERVERS[tracker.targetServer]]
-                            : Object.values(PREDEFINED_SERVERS);
+                    // 1. Sprawdzenie przez dane Steam API (dla profili publicznych)
+                    if (isPlayingUnturned || currentIp || currentLobby) {
+                        const targets =
+                            tracker.targetServer && tracker.targetServer !== 'all'
+                                ? [PREDEFINED_SERVERS[tracker.targetServer]]
+                                : Object.values(PREDEFINED_SERVERS);
 
-                    for (const target of targets) {
-                        if (!target) continue;
+                        for (const target of targets) {
+                            if (!target) continue;
 
-                        const isOnlineOnSteam =
-                            (currentIp && currentIp === `${target.ip}:${target.port}`) ||
-                            (currentLobby && target.serverId && currentLobby === target.serverId);
+                            const isOnlineOnSteam =
+                                (currentIp && currentIp === `${target.ip}:${target.port}`) ||
+                                (currentLobby && target.serverId && currentLobby === target.serverId);
 
-                        if (isOnlineOnSteam) {
+                            if (isOnlineOnSteam) {
+                                found = true;
+                                foundServerName = target.displayName || 'Unturned Server';
+                                foundIpPort = currentLobby || currentIp || `${target.ip}:${target.port}`;
+                                break;
+                            }
+                        }
+
+                        if (!found && (currentIp || currentLobby) && tracker.targetServer === 'all') {
                             found = true;
-                            foundServerName = target.displayName || 'Unturned Server';
-                            foundIpPort = currentLobby || currentIp || `${target.ip}:${target.port}`;
-                            break;
+                            foundServerName = player.gameextrainfo || 'Serwer (Wykryty ze Steam API)';
+                            foundIpPort = currentLobby || currentIp;
                         }
                     }
 
-                    if (!found && (currentIp || currentLobby) && tracker.targetServer === 'all') {
-                        found = true;
-                        foundServerName = player.gameextrainfo || 'Serwer (Wykryty ze Steam API)';
-                        foundIpPort = currentLobby || currentIp;
+                    // 2. Metoda Hybrydowa / A2S Fallback (dla profili prywatnych lub bez ip w Steam API)
+                    if (!found) {
+                        const targetServersToScan =
+                            tracker.targetServer && tracker.targetServer !== 'all'
+                                ? [PREDEFINED_SERVERS[tracker.targetServer]]
+                                : Object.values(PREDEFINED_SERVERS);
+
+                        for (const target of targetServersToScan) {
+                            if (!target) continue;
+
+                            const serverStatus = await A2SQuery.getServerStatus(
+                                target.ip,
+                                target.port,
+                                target.serverId,
+                            );
+                            if (serverStatus) {
+                                const matchedPlayer = serverStatus.players.find((p) =>
+                                    p.name && player.personaname
+                                        ? p.name.toLowerCase() === player.personaname.toLowerCase()
+                                        : false,
+                                );
+
+                                if (matchedPlayer) {
+                                    found = true;
+                                    foundServerName = target.displayName || serverStatus.serverName;
+                                    foundIpPort = target.serverId || `${target.ip}:${target.port}`;
+                                    break;
+                                }
+                            }
+                        }
                     }
 
                     if (found) {
@@ -149,26 +191,21 @@ export class UnturnedTracker {
                                     (s.serverId && s.serverId === foundIpPort) || `${s.ip}:${s.port}` === foundIpPort,
                             );
 
-                            const ipToQuery = targetServerConfig
-                                ? `${targetServerConfig.ip}:${targetServerConfig.port}`
-                                : foundIpPort;
+                            const serverInfo = await A2SQuery.getServerStatus(
+                                targetServerConfig?.ip || '0.0.0.0',
+                                targetServerConfig?.port || 0,
+                                targetServerConfig?.serverId || foundIpPort,
+                            );
 
-                            if (ipToQuery && ipToQuery.includes(':')) {
-                                const serverRes = await fetch(
-                                    `https://api.steampowered.com/IGameServersService/GetServerList/v1/?key=${apiKey}&filter=\\gameaddr\\${ipToQuery}`,
-                                );
-                                const serverData: any = await serverRes.json();
-                                if (serverData.response?.servers && serverData.response.servers.length > 0) {
-                                    const srv = serverData.response.servers[0];
-                                    mapName = srv.map || mapName;
-                                    playersInfo = `${srv.players}/${srv.max_players}`;
-                                    if (srv.name) {
-                                        foundServerName = srv.name;
-                                    }
+                            if (serverInfo) {
+                                mapName = serverInfo.map || mapName;
+                                playersInfo = `${serverInfo.playersCount}/${serverInfo.maxPlayers}`;
+                                if (serverInfo.serverName) {
+                                    foundServerName = serverInfo.serverName;
                                 }
                             }
                         } catch (e) {
-                            logger.error(e as Error, 'Błąd pobierania danych Master Server:');
+                            logger.error(e as Error, 'Błąd pobierania danych serwera A2S/Master:');
                         }
 
                         await prisma.playerHistory.create({
