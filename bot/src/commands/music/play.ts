@@ -61,7 +61,7 @@ export const playCommand: Command = {
                     leaveOnEndCooldown: 300000,
                     volume: 50,
                 },
-                searchEngine: QueryType.SOUNDCLOUD_SEARCH,
+                searchEngine: QueryType.AUTO,
             });
 
             await interaction.editReply(`🎵 Dodano do kolejki: **${track.title}**`);
