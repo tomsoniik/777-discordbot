@@ -25,8 +25,8 @@ RUN npm prune --omit=dev
 # STAGE 2: Produkcyjny obraz Bota
 FROM node:20-alpine
 
-# Instalacja ffmpeg i python (często potrzebny do odtwarzania streamów)
-RUN apk add --no-cache ffmpeg python3 make g++ 
+# Instalacja ffmpeg, python i openssl (często potrzebny do Prisma na Alpine)
+RUN apk add --no-cache ffmpeg python3 make g++ openssl
 
 WORKDIR /app
 
