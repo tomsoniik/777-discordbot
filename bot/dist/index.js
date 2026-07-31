@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const logger_1 = require("./utils/logger");
 const discord_player_1 = require("discord-player");
 const extractor_1 = require("@discord-player/extractor");
+const musicEmbed_1 = require("./utils/musicEmbed");
 const discord_js_1 = require("discord.js");
 const env_1 = require("./config/env");
 const api_1 = require("./api");
@@ -24,17 +25,10 @@ const client = new discord_js_1.Client({
 client.once(discord_js_1.Events.ClientReady, async () => {
     const player = new discord_player_1.Player(client);
     await player.extractors.register(extractor_1.SoundCloudExtractor, {});
-    player.events.on('playerStart', (queue, track) => {
+    player.events.on('playerStart', (queue, _track) => {
         if (queue.metadata && queue.metadata.channel) {
-            const embed = new discord_js_1.EmbedBuilder()
-                .setColor('#ff5500')
-                .setAuthor({ name: '🎶 Now playing (SoundCloud)' })
-                .setTitle(track.title)
-                .setURL(track.url)
-                .setDescription(`**Duration:** ${track.duration}\n**Added by:** ${track.requestedBy?.toString() || 'Nieznany'}`)
-                .setThumbnail(track.thumbnail || null);
-            const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId('music_pause').setLabel('Pause').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_resume').setLabel('Resume').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_skip').setLabel('Skip').setStyle(discord_js_1.ButtonStyle.Primary), new discord_js_1.ButtonBuilder().setCustomId('music_stop').setLabel('Stop').setStyle(discord_js_1.ButtonStyle.Danger));
-            queue.metadata.channel.send({ embeds: [embed], components: [row] }).catch(() => { });
+            const messagePayload = (0, musicEmbed_1.buildMusicMessage)(queue);
+            queue.metadata.channel.send(messagePayload).catch(() => { });
         }
     });
     player.events.on('error', (queue, error) => {

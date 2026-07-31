@@ -1,7 +1,8 @@
 import { logger } from '../utils/logger';
 import { Interaction } from 'discord.js';
 import { commands } from '../commands';
-import { useMainPlayer } from 'discord-player';
+import { useMainPlayer, QueueRepeatMode } from 'discord-player';
+import { buildMusicMessage } from '../utils/musicEmbed';
 
 export async function onInteractionCreate(interaction: Interaction) {
     if (interaction.isChatInputCommand()) {
@@ -48,21 +49,50 @@ export async function onInteractionCreate(interaction: Interaction) {
                 switch (interaction.customId) {
                     case 'music_pause':
                         queue.node.setPaused(true);
-                        await interaction.reply({ content: '⏸️ Muzyka została wstrzymana.' });
                         break;
                     case 'music_resume':
                         queue.node.setPaused(false);
-                        await interaction.reply({ content: '▶️ Muzyka została wznowiona.' });
                         break;
                     case 'music_skip':
                         queue.node.skip();
-                        await interaction.reply({ content: '⏭️ Pominięto utwór.' });
                         break;
                     case 'music_stop':
                         queue.delete();
-                        await interaction.reply({ content: '⏹️ Odtwarzanie zatrzymane, kolejka wyczyszczona.' });
+                        await interaction.update({ embeds: [], components: [], content: '⏹️ Odtwarzanie zatrzymane.' });
+                        return;
+                    case 'music_previous':
+                        if (queue.history.tracks.size > 0) {
+                            await queue.history.previous();
+                        }
                         break;
+                    case 'music_volup':
+                        queue.node.setVolume(Math.min(100, queue.node.volume + 10));
+                        break;
+                    case 'music_voldown':
+                        queue.node.setVolume(Math.max(0, queue.node.volume - 10));
+                        break;
+                    case 'music_shuffle':
+                        queue.tracks.shuffle();
+                        break;
+                    case 'music_repeat': {
+                        const modes: QueueRepeatMode[] = [QueueRepeatMode.OFF, QueueRepeatMode.TRACK, QueueRepeatMode.QUEUE];
+                        let nextModeIdx = modes.indexOf(queue.repeatMode) + 1;
+                        if (nextModeIdx >= modes.length || nextModeIdx < 0) nextModeIdx = 0;
+                        queue.setRepeatMode(modes[nextModeIdx] as any);
+                        break;
+                    }
+                    case 'music_autoplay': {
+                        if (queue.repeatMode === QueueRepeatMode.AUTOPLAY) {
+                            queue.setRepeatMode(QueueRepeatMode.OFF as any);
+                        } else {
+                            queue.setRepeatMode(QueueRepeatMode.AUTOPLAY as any);
+                        }
+                        break;
+                    }
                 }
+
+                // Płynna aktualizacja embeda bez wysyłania nowej wiadomości
+                await interaction.update(buildMusicMessage(queue));
             } catch (e) {
                 logger.error(e as Error, 'Błąd przycisku muzyki:');
                 await interaction.reply({ content: '❌ Wystąpił błąd.', flags: 64 }).catch(() => {});

@@ -4,9 +4,7 @@ exports.queueCommand = void 0;
 const discord_js_1 = require("discord.js");
 const discord_player_1 = require("discord-player");
 exports.queueCommand = {
-    data: new discord_js_1.SlashCommandBuilder()
-        .setName('queue')
-        .setDescription('Wyświetla aktualną kolejkę utworów'),
+    data: new discord_js_1.SlashCommandBuilder().setName('queue').setDescription('Wyświetla aktualną kolejkę utworów'),
     execute: async (interaction) => {
         const queue = (0, discord_player_1.useQueue)(interaction.guildId);
         if (!queue || !queue.isPlaying()) {

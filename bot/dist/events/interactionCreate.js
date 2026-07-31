@@ -4,6 +4,7 @@ exports.onInteractionCreate = onInteractionCreate;
 const logger_1 = require("../utils/logger");
 const commands_1 = require("../commands");
 const discord_player_1 = require("discord-player");
+const musicEmbed_1 = require("../utils/musicEmbed");
 async function onInteractionCreate(interaction) {
     if (interaction.isChatInputCommand()) {
         try {
@@ -49,21 +50,51 @@ async function onInteractionCreate(interaction) {
                 switch (interaction.customId) {
                     case 'music_pause':
                         queue.node.setPaused(true);
-                        await interaction.reply({ content: '⏸️ Muzyka została wstrzymana.' });
                         break;
                     case 'music_resume':
                         queue.node.setPaused(false);
-                        await interaction.reply({ content: '▶️ Muzyka została wznowiona.' });
                         break;
                     case 'music_skip':
                         queue.node.skip();
-                        await interaction.reply({ content: '⏭️ Pominięto utwór.' });
                         break;
                     case 'music_stop':
                         queue.delete();
-                        await interaction.reply({ content: '⏹️ Odtwarzanie zatrzymane, kolejka wyczyszczona.' });
+                        await interaction.update({ embeds: [], components: [], content: '⏹️ Odtwarzanie zatrzymane.' });
+                        return;
+                    case 'music_previous':
+                        if (queue.history.tracks.size > 0) {
+                            await queue.history.previous();
+                        }
                         break;
+                    case 'music_volup':
+                        queue.node.setVolume(Math.min(100, queue.node.volume + 10));
+                        break;
+                    case 'music_voldown':
+                        queue.node.setVolume(Math.max(0, queue.node.volume - 10));
+                        break;
+                    case 'music_shuffle':
+                        queue.tracks.shuffle();
+                        break;
+                    case 'music_repeat': {
+                        const modes = [discord_player_1.QueueRepeatMode.OFF, discord_player_1.QueueRepeatMode.TRACK, discord_player_1.QueueRepeatMode.QUEUE];
+                        let nextModeIdx = modes.indexOf(queue.repeatMode) + 1;
+                        if (nextModeIdx >= modes.length || nextModeIdx < 0)
+                            nextModeIdx = 0;
+                        queue.setRepeatMode(modes[nextModeIdx]);
+                        break;
+                    }
+                    case 'music_autoplay': {
+                        if (queue.repeatMode === discord_player_1.QueueRepeatMode.AUTOPLAY) {
+                            queue.setRepeatMode(discord_player_1.QueueRepeatMode.OFF);
+                        }
+                        else {
+                            queue.setRepeatMode(discord_player_1.QueueRepeatMode.AUTOPLAY);
+                        }
+                        break;
+                    }
                 }
+                // Płynna aktualizacja embeda bez wysyłania nowej wiadomości
+                await interaction.update((0, musicEmbed_1.buildMusicMessage)(queue));
             }
             catch (e) {
                 logger_1.logger.error(e, 'Błąd przycisku muzyki:');

@@ -12,7 +12,10 @@ exports.playCommand = {
     data: new discord_js_1.SlashCommandBuilder()
         .setName('play')
         .setDescription('Odtwórz utwór ze SoundCloud')
-        .addStringOption((option) => option.setName('query').setDescription('Tytuł lub link (linki YT zostaną przekonwertowane)').setRequired(true)),
+        .addStringOption((option) => option
+        .setName('query')
+        .setDescription('Tytuł lub link (linki YT zostaną przekonwertowane)')
+        .setRequired(true)),
     execute: async (interaction) => {
         await interaction.deferReply();
         let query = interaction.options.getString('query', true);
@@ -32,7 +35,10 @@ exports.playCommand = {
                 const info = await play_dl_1.default.video_basic_info(query);
                 if (info.video_details?.title) {
                     query = info.video_details.title;
-                    await interaction.followUp({ content: `🔗 Wykryto link YouTube. Wyszukuję tytuł na SoundCloud: **${query}**...`, flags: discord_js_1.MessageFlags.Ephemeral });
+                    await interaction.followUp({
+                        content: `🔗 Wykryto link YouTube. Wyszukuję tytuł na SoundCloud: **${query}**...`,
+                        flags: discord_js_1.MessageFlags.Ephemeral,
+                    });
                 }
             }
             catch (e) {
@@ -53,7 +59,7 @@ exports.playCommand = {
                     leaveOnEndCooldown: 300000,
                     volume: 50,
                 },
-                searchEngine: discord_player_1.QueryType.SOUNDCLOUD_SEARCH,
+                searchEngine: query.match(/^https?:\/\//) ? discord_player_1.QueryType.AUTO : discord_player_1.QueryType.SOUNDCLOUD_SEARCH,
             });
             await interaction.editReply(`🎵 Dodano do kolejki: **${track.title}**`);
         }

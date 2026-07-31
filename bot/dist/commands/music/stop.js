@@ -4,9 +4,7 @@ exports.stopCommand = void 0;
 const discord_js_1 = require("discord.js");
 const discord_player_1 = require("discord-player");
 exports.stopCommand = {
-    data: new discord_js_1.SlashCommandBuilder()
-        .setName('stop')
-        .setDescription('Zatrzymuje odtwarzanie i czyści kolejkę'),
+    data: new discord_js_1.SlashCommandBuilder().setName('stop').setDescription('Zatrzymuje odtwarzanie i czyści kolejkę'),
     execute: async (interaction) => {
         const queue = (0, discord_player_1.useQueue)(interaction.guildId);
         if (!queue) {
