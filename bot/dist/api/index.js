@@ -8,7 +8,6 @@ const logger_1 = require("../utils/logger");
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const env_1 = require("../config/env");
-const discord_player_1 = require("discord-player");
 function setupApi(client) {
     const app = (0, express_1.default)();
     app.use((0, cors_1.default)());
@@ -40,52 +39,6 @@ function setupApi(client) {
         catch (error) {
             logger_1.logger.error(error, 'Error assigning role or notifying admins:');
             res.status(500).json({ error: 'Internal server error' });
-        }
-    });
-    app.get('/api/music/status', (req, res) => {
-        const guildId = req.query.guildId || env_1.ENV.GUILD_ID;
-        if (!guildId)
-            return res.json({ error: 'No guild id provided' });
-        const serverQueue = (0, discord_player_1.useQueue)(guildId);
-        if (!serverQueue) {
-            return res.json({ playing: false, songs: [], volume: 100, loop: false });
-        }
-        res.json({
-            playing: serverQueue.isPlaying(),
-            songs: serverQueue.tracks.toArray().map((t) => ({ title: t.title, url: t.url, author: t.author })),
-            volume: serverQueue.node.volume,
-            loop: serverQueue.repeatMode !== 0,
-            channelId: serverQueue.channel?.id,
-        });
-    });
-    app.post('/api/music/control', async (req, res) => {
-        const { action, value, guildId } = req.body;
-        const targetGuildId = guildId || env_1.ENV.GUILD_ID;
-        if (!targetGuildId)
-            return res.json({ error: 'No guild id provided' });
-        const serverQueue = (0, discord_player_1.useQueue)(targetGuildId);
-        if (!serverQueue)
-            return res.json({ success: false, error: 'Brak aktywnej kolejki' });
-        try {
-            if (action === 'pause')
-                serverQueue.node.pause();
-            else if (action === 'resume')
-                serverQueue.node.resume();
-            else if (action === 'skip')
-                serverQueue.node.skip();
-            else if (action === 'stop')
-                serverQueue.delete();
-            else if (action === 'loop') {
-                serverQueue.setRepeatMode(serverQueue.repeatMode === 0 ? 1 : 0);
-            }
-            else if (action === 'volume' && typeof value === 'number') {
-                const vol = Math.max(0, Math.min(200, value));
-                serverQueue.node.setVolume(vol);
-            }
-            res.json({ success: true });
-        }
-        catch (e) {
-            res.json({ success: false, error: String(e) });
         }
     });
     app.listen(env_1.ENV.PORT, () => {

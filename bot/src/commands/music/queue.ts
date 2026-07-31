@@ -1,39 +1,27 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import { useQueue } from 'discord-player';
 import { Command } from '../../types';
+import { useQueue } from 'discord-player';
 
 export const queueCommand: Command = {
     data: new SlashCommandBuilder().setName('queue').setDescription('Wyświetla aktualną kolejkę utworów'),
     execute: async (interaction: ChatInputCommandInteraction) => {
-        if (!interaction.guild) return;
+        const queue = useQueue(interaction.guildId!);
 
-        const queue = useQueue(interaction.guild.id);
         if (!queue || !queue.isPlaying()) {
-            await interaction.reply('Aktualnie nic nie jest odtwarzane!');
+            await interaction.reply({ content: '❌ Obecnie nic nie jest odtwarzane.', flags: 64 });
             return;
         }
 
         const currentTrack = queue.currentTrack;
-        const tracks = queue.tracks.toArray();
-
-        let description = `**Teraz odtwarzane:**\n🎵 ${currentTrack?.title} - ${currentTrack?.author}\n\n**Następne w kolejce:**\n`;
-
-        if (tracks.length === 0) {
-            description += 'Brak utworów w kolejce.';
-        } else {
-            const nextSongs = tracks.slice(0, 10);
-            nextSongs.forEach((song, index) => {
-                description += `${index + 1}. ${song.title} - ${song.author}\n`;
-            });
-            if (tracks.length > 10) {
-                description += `...i ${tracks.length - 10} innych utworów.`;
-            }
-        }
+        const tracks = queue.tracks.toArray().slice(0, 10);
 
         const embed = new EmbedBuilder()
-            .setTitle('Kolejka odtwarzania')
-            .setDescription(description)
-            .setColor('#7289da');
+            .setColor('#2b2d31')
+            .setTitle(`Kolejka na serwerze`)
+            .setDescription(
+                `**Teraz gra:**\n${currentTrack?.title} - ${currentTrack?.author}\n\n**Następne w kolejce:**\n${tracks.length > 0 ? tracks.map((track, i) => `${i + 1}. ${track.title}`).join('\n') : 'Brak'}`,
+            )
+            .setFooter({ text: `Łącznie utworów: ${queue.tracks.size}` });
 
         await interaction.reply({ embeds: [embed] });
     },

@@ -1,19 +1,8 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const logger_1 = require("./utils/logger");
-const ffmpeg_static_1 = __importDefault(require("ffmpeg-static"));
-const child_process_1 = require("child_process");
-try {
-    (0, child_process_1.execSync)('ffmpeg -version', { stdio: 'ignore' });
-}
-catch (e) {
-    if (ffmpeg_static_1.default) {
-        process.env.FFMPEG_PATH = ffmpeg_static_1.default;
-    }
-}
+const discord_player_1 = require("discord-player");
+const extractor_1 = require("@discord-player/extractor");
 const discord_js_1 = require("discord.js");
 const env_1 = require("./config/env");
 const api_1 = require("./api");
@@ -31,64 +20,25 @@ const client = new discord_js_1.Client({
     ],
     partials: [discord_js_1.Partials.Message, discord_js_1.Partials.Channel, discord_js_1.Partials.Reaction, discord_js_1.Partials.GuildMember],
 });
-const discord_player_1 = require("discord-player");
-const extractor_1 = require("@discord-player/extractor");
 // Zdarzenia
 client.once(discord_js_1.Events.ClientReady, async () => {
-    // Inicjalizacja discord-player z użyciem standardowych modułów
     const player = new discord_player_1.Player(client);
-    // Załaduj domyślne ekstraktory (w tym BridgeProvider, który automatycznie pobierze audio z SC jeśli YT nie zadziała)
-    await player.extractors.loadMulti(extractor_1.DefaultExtractors);
-    // Debugowanie audio (bardzo ważne do wyłapywania problemów z odtwarzaniem)
-    player.events.on('debug', (queue, message) => {
-        logger_1.logger.info(`[Player Debug] ${message}`);
-    });
-    // Nasłuchiwanie błędów odtwarzacza, aby wiedzieć, dlaczego nie gra
-    player.events.on('error', (queue, error) => {
-        logger_1.logger.error(`[Player Error] Zgłoszono błąd: ${error.message}`);
-        if (queue.metadata) {
-            queue.metadata.channel?.send(`❌ Wystąpił błąd odtwarzacza: \`${error.message}\``).catch(() => { });
-        }
-    });
-    player.events.on('playerError', (queue, error) => {
-        logger_1.logger.error(`[Player Error] Błąd strumienia audio: ${error.message}`);
-        if (queue.metadata) {
-            queue.metadata.channel?.send(`❌ Błąd odtwarzania audio: \`${error.message}\``).catch(() => { });
-        }
-    });
+    await player.extractors.register(extractor_1.SoundCloudExtractor, {});
     player.events.on('playerStart', (queue, track) => {
-        if (queue.metadata) {
+        if (queue.metadata && queue.metadata.channel) {
             const embed = new discord_js_1.EmbedBuilder()
-                .setColor('#2b2d31')
-                .setAuthor({ name: '🎶 Now playing' })
-                .setTitle(`${track.title} [DOWNLOAD AVAILABLE]`) // nawiązanie do screena
+                .setColor('#ff5500')
+                .setAuthor({ name: '🎶 Now playing (SoundCloud)' })
+                .setTitle(track.title)
                 .setURL(track.url)
-                .setDescription(`**Duration**\n${track.duration}\n\n**Source**\n${track.source}\n\n**Added by**\n${track.requestedBy?.toString() || 'Nieznany'}`)
-                .setThumbnail(track.thumbnail || null)
-                .setFooter({ text: 'SkullBot Music' })
-                .setTimestamp();
-            try {
-                const progress = queue.node.createProgressBar();
-                if (progress) {
-                    embed.addFields({ name: 'Progress', value: progress });
-                }
-            }
-            catch (_e) {
-                // Ignore error if progress bar fails
-            }
-            embed.addFields({
-                name: 'Status',
-                value: `Volume: ${queue.node.volume}% | Loop: ${queue.repeatMode === 1 ? 'This song' : queue.repeatMode === 2 ? 'Queue' : 'Off'} | Autoplay: ${queue.repeatMode === 3 ? 'On' : 'Off'}`,
-            });
-            const row1 = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId('music_pause').setLabel('Pause').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_resume').setLabel('Resume').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_previous').setLabel('Previous').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_skip').setLabel('Skip').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_stop').setLabel('Stop').setStyle(discord_js_1.ButtonStyle.Primary));
-            const row2 = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId('music_volup').setLabel('Volume up').setStyle(discord_js_1.ButtonStyle.Success), new discord_js_1.ButtonBuilder().setCustomId('music_voldown').setLabel('Volume down').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_shuffle').setLabel('Shuffle').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_repeat').setLabel('Repeat').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('music_autoplay').setLabel('AutoPlay').setStyle(discord_js_1.ButtonStyle.Secondary));
-            queue.metadata.channel
-                ?.send({
-                embeds: [embed],
-                components: [row1, row2],
-            })
-                .catch(() => { });
+                .setDescription(`**Duration:** ${track.duration}\n**Added by:** ${track.requestedBy?.toString() || 'Nieznany'}`)
+                .setThumbnail(track.thumbnail || null);
+            const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId('music_pause').setLabel('Pause').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_resume').setLabel('Resume').setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder().setCustomId('music_skip').setLabel('Skip').setStyle(discord_js_1.ButtonStyle.Primary), new discord_js_1.ButtonBuilder().setCustomId('music_stop').setLabel('Stop').setStyle(discord_js_1.ButtonStyle.Danger));
+            queue.metadata.channel.send({ embeds: [embed], components: [row] }).catch(() => { });
         }
+    });
+    player.events.on('error', (queue, error) => {
+        logger_1.logger.error(error, `[Player Error]`);
     });
     await (0, ready_1.onReady)(client);
 });

@@ -37,7 +37,7 @@ async function onInteractionCreate(interaction) {
         if (interaction.customId.startsWith('music_')) {
             const player = (0, discord_player_1.useMainPlayer)();
             if (!player) {
-                await interaction.reply({ content: '❌ Błąd: Odtwarzacz nie jest załadowany.', flags: 64 });
+                await interaction.reply({ content: '❌ Odtwarzacz nie jest załadowany.', flags: 64 });
                 return;
             }
             const queue = player.nodes.get(interaction.guildId);
@@ -55,15 +55,6 @@ async function onInteractionCreate(interaction) {
                         queue.node.setPaused(false);
                         await interaction.reply({ content: '▶️ Muzyka została wznowiona.' });
                         break;
-                    case 'music_previous':
-                        if (queue.history.tracks.data.length === 0) {
-                            await interaction.reply({ content: '❌ Brak poprzednich utworów w historii.', flags: 64 });
-                        }
-                        else {
-                            await queue.history.previous();
-                            await interaction.reply({ content: '⏮️ Wrócono do poprzedniego utworu.' });
-                        }
-                        break;
                     case 'music_skip':
                         queue.node.skip();
                         await interaction.reply({ content: '⏭️ Pominięto utwór.' });
@@ -72,62 +63,11 @@ async function onInteractionCreate(interaction) {
                         queue.delete();
                         await interaction.reply({ content: '⏹️ Odtwarzanie zatrzymane, kolejka wyczyszczona.' });
                         break;
-                    case 'music_volup': {
-                        const volUp = Math.min(queue.node.volume + 10, 100);
-                        queue.node.setVolume(volUp);
-                        await interaction.reply({ content: `🔊 Głośność: ${volUp}%` });
-                        break;
-                    }
-                    case 'music_voldown': {
-                        const volDown = Math.max(queue.node.volume - 10, 0);
-                        queue.node.setVolume(volDown);
-                        await interaction.reply({ content: `🔉 Głośność: ${volDown}%` });
-                        break;
-                    }
-                    case 'music_shuffle':
-                        queue.tracks.shuffle();
-                        await interaction.reply({ content: '🔀 Kolejka została przetasowana.' });
-                        break;
-                    case 'music_repeat': {
-                        const nextLoop = queue.repeatMode === discord_player_1.QueueRepeatMode.TRACK ? discord_player_1.QueueRepeatMode.OFF : discord_player_1.QueueRepeatMode.TRACK;
-                        queue.setRepeatMode(nextLoop);
-                        await interaction.reply({
-                            content: `🔁 Pętla utworu: ${nextLoop === discord_player_1.QueueRepeatMode.TRACK ? 'Włączona' : 'Wyłączona'}`,
-                        });
-                        break;
-                    }
-                    case 'music_autoplay': {
-                        const nextAuto = queue.repeatMode === discord_player_1.QueueRepeatMode.AUTOPLAY
-                            ? discord_player_1.QueueRepeatMode.OFF
-                            : discord_player_1.QueueRepeatMode.AUTOPLAY;
-                        queue.setRepeatMode(nextAuto);
-                        await interaction.reply({
-                            content: `🎵 AutoPlay: ${nextAuto === discord_player_1.QueueRepeatMode.AUTOPLAY ? 'Włączony' : 'Wyłączony'}`,
-                        });
-                        break;
-                    }
                 }
             }
             catch (e) {
                 logger_1.logger.error(e, 'Błąd przycisku muzyki:');
-                try {
-                    if (interaction.isRepliable()) {
-                        if (interaction.deferred || interaction.replied) {
-                            await interaction.editReply({
-                                content: '❌ Wystąpił błąd podczas używania tego przycisku.',
-                            });
-                        }
-                        else {
-                            await interaction.reply({
-                                content: '❌ Wystąpił błąd podczas używania tego przycisku.',
-                                flags: 64,
-                            });
-                        }
-                    }
-                }
-                catch (replyError) {
-                    logger_1.logger.error(replyError, 'Nie udało się wysłać powiadomienia o błędzie przycisku:');
-                }
+                await interaction.reply({ content: '❌ Wystąpił błąd.', flags: 64 }).catch(() => { });
             }
         }
     }

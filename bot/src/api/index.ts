@@ -3,7 +3,6 @@ import express from 'express';
 import cors from 'cors';
 import { Client } from 'discord.js';
 import { ENV } from '../config/env';
-import { useQueue } from 'discord-player';
 
 export function setupApi(client: Client) {
     const app = express();
@@ -40,48 +39,6 @@ export function setupApi(client: Client) {
         } catch (error) {
             logger.error(error as Error, 'Error assigning role or notifying admins:');
             res.status(500).json({ error: 'Internal server error' });
-        }
-    });
-
-    app.get('/api/music/status', (req, res) => {
-        const guildId = (req.query.guildId as string) || ENV.GUILD_ID;
-        if (!guildId) return res.json({ error: 'No guild id provided' });
-
-        const serverQueue = useQueue(guildId);
-        if (!serverQueue) {
-            return res.json({ playing: false, songs: [], volume: 100, loop: false });
-        }
-        res.json({
-            playing: serverQueue.isPlaying(),
-            songs: serverQueue.tracks.toArray().map((t: any) => ({ title: t.title, url: t.url, author: t.author })),
-            volume: serverQueue.node.volume,
-            loop: serverQueue.repeatMode !== 0,
-            channelId: serverQueue.channel?.id,
-        });
-    });
-
-    app.post('/api/music/control', async (req, res) => {
-        const { action, value, guildId } = req.body;
-        const targetGuildId = guildId || ENV.GUILD_ID;
-        if (!targetGuildId) return res.json({ error: 'No guild id provided' });
-
-        const serverQueue = useQueue(targetGuildId);
-        if (!serverQueue) return res.json({ success: false, error: 'Brak aktywnej kolejki' });
-
-        try {
-            if (action === 'pause') serverQueue.node.pause();
-            else if (action === 'resume') serverQueue.node.resume();
-            else if (action === 'skip') serverQueue.node.skip();
-            else if (action === 'stop') serverQueue.delete();
-            else if (action === 'loop') {
-                serverQueue.setRepeatMode(serverQueue.repeatMode === 0 ? 1 : 0);
-            } else if (action === 'volume' && typeof value === 'number') {
-                const vol = Math.max(0, Math.min(200, value));
-                serverQueue.node.setVolume(vol);
-            }
-            res.json({ success: true });
-        } catch (e) {
-            res.json({ success: false, error: String(e) });
         }
     });
 

@@ -1,19 +1,18 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
-import { useQueue } from 'discord-player';
 import { Command } from '../../types';
+import { useQueue } from 'discord-player';
 
 export const skipCommand: Command = {
-    data: new SlashCommandBuilder().setName('skip').setDescription('Pomija aktualnie odtwarzany utwór'),
+    data: new SlashCommandBuilder().setName('skip').setDescription('Pomija obecnie odtwarzany utwór'),
     execute: async (interaction: ChatInputCommandInteraction) => {
-        if (!interaction.guild) return;
+        const queue = useQueue(interaction.guildId!);
 
-        const queue = useQueue(interaction.guild.id);
-        if (!queue || !queue.isPlaying()) {
-            await interaction.reply('Aktualnie nic nie jest odtwarzane!');
+        if (!queue) {
+            await interaction.reply({ content: '❌ Obecnie nic nie jest odtwarzane.', flags: 64 });
             return;
         }
 
         queue.node.skip();
-        await interaction.reply('⏭️ Pominięto utwór!');
+        await interaction.reply('⏭️ Pominięto utwór.');
     },
 };
