@@ -61,7 +61,7 @@ export const playCommand: Command = {
                     leaveOnEndCooldown: 300000,
                     volume: 50,
                 },
-                searchEngine: QueryType.AUTO,
+                searchEngine: query.match(/^https?:\/\//) ? QueryType.AUTO : QueryType.SOUNDCLOUD_SEARCH,
             });
 
             await interaction.editReply(`🎵 Dodano do kolejki: **${track.title}**`);
