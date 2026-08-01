@@ -87,9 +87,8 @@ export class ShadowNetwork {
                     addedCount++;
                 }
                 if (addedCount > 0) {
-                    logger.info(
-                        `[ShadowNetwork] Zbudowano siatkę znajomych dla ${steamId} (${addedCount} nowych powiązań).`,
-                    );
+                    // Pomijamy ciągłe logowanie, żeby nie spamować konsoli
+                    // logger.info(`[ShadowNetwork] Zbudowano siatkę znajomych dla ${steamId} (${addedCount} powiązań).`);
                 }
             }
         } catch (_e) {
