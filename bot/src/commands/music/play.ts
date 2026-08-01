@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, MessageFlags, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, EmbedBuilder, ComponentType } from 'discord.js';
 import { Command } from '../../types';
 import { useMainPlayer, QueryType } from 'discord-player';
 import playdl from 'play-dl';
@@ -7,7 +7,7 @@ import { logger } from '../../utils/logger';
 export const playCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('play')
-        .setDescription('Odtwórz utwór ze SoundCloud')
+        .setDescription('Odtwórz utwór lub wyszukaj i wybierz z listy')
         .addStringOption((option) =>
             option
                 .setName('query')
@@ -47,27 +47,128 @@ export const playCommand: Command = {
             }
         }
 
-        try {
-            const { track } = await player.play(channel, query, {
-                nodeOptions: {
-                    metadata: {
-                        channel: interaction.channel,
-                        client: interaction.guild?.members.me,
-                        requestedBy: interaction.user,
+        const isUrl = query.match(/^https?:\/\//);
+
+        if (isUrl) {
+            try {
+                const { track } = await player.play(channel, query, {
+                    nodeOptions: {
+                        metadata: {
+                            channel: interaction.channel,
+                            client: interaction.guild?.members.me,
+                            requestedBy: interaction.user,
+                        },
+                        leaveOnEmpty: true,
+                        leaveOnEmptyCooldown: 300000,
+                        leaveOnEnd: true,
+                        leaveOnEndCooldown: 300000,
+                        volume: 50,
                     },
-                    leaveOnEmpty: true,
-                    leaveOnEmptyCooldown: 300000,
-                    leaveOnEnd: true,
-                    leaveOnEndCooldown: 300000,
-                    volume: 50,
-                },
-                searchEngine: query.match(/^https?:\/\//) ? QueryType.AUTO : QueryType.SOUNDCLOUD_SEARCH,
+                    searchEngine: QueryType.AUTO,
+                });
+
+                await interaction.editReply(`🎵 Dodano do kolejki: **${track.title}**`);
+            } catch (e: any) {
+                logger.error(e as Error, 'Błąd podczas dodawania do kolejki:');
+                await interaction.editReply(`❌ Wystąpił błąd podczas odtwarzania.`);
+            }
+            return;
+        }
+
+        // Wyszukiwanie dla zapytania tekstowego (nie URL)
+        try {
+            const searchResult = await player.search(query, {
+                searchEngine: QueryType.SOUNDCLOUD_SEARCH,
+                requestedBy: interaction.user
             });
 
-            await interaction.editReply(`🎵 Dodano do kolejki: **${track.title}**`);
+            if (!searchResult || !searchResult.tracks.length) {
+                await interaction.editReply('❌ Nie znaleziono wyników dla tego zapytania.');
+                return;
+            }
+
+            const tracks = searchResult.tracks.slice(0, 5); // Bierzemy top 5 wyników
+
+            const embed = new EmbedBuilder()
+                .setTitle(`🔎 Wyniki wyszukiwania dla: ${query}`)
+                .setColor('#0099ff')
+                .setDescription(tracks.map((t, i) => `**${i + 1}.** [${t.title}](${t.url}) - ${t.author} (\`${t.duration}\`)`).join('\n'));
+
+            if (tracks[0].thumbnail) {
+                embed.setThumbnail(tracks[0].thumbnail);
+            }
+
+            const options = tracks.map((t, i) => {
+                return new StringSelectMenuOptionBuilder()
+                    .setLabel(`${i + 1}. ${t.title.slice(0, 50)}`)
+                    .setDescription(`Autor: ${t.author.slice(0, 50)} | Czas: ${t.duration}`)
+                    .setValue(i.toString());
+            });
+
+            const selectMenu = new StringSelectMenuBuilder()
+                .setCustomId('select_track')
+                .setPlaceholder('Wybierz utwór do odtworzenia...')
+                .addOptions(options);
+
+            const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
+
+            const message = await interaction.editReply({
+                embeds: [embed],
+                components: [row]
+            });
+
+            const collector = message.createMessageComponentCollector({
+                componentType: ComponentType.StringSelect,
+                time: 60000,
+                filter: i => i.user.id === interaction.user.id
+            });
+
+            collector.on('collect', async (i) => {
+                await i.deferUpdate();
+                const selectedTrackIndex = parseInt(i.values[0]);
+                const selectedTrack = tracks[selectedTrackIndex];
+
+                try {
+                    await player.play(channel, selectedTrack, {
+                        nodeOptions: {
+                            metadata: {
+                                channel: interaction.channel,
+                                client: interaction.guild?.members.me,
+                                requestedBy: interaction.user,
+                            },
+                            leaveOnEmpty: true,
+                            leaveOnEmptyCooldown: 300000,
+                            leaveOnEnd: true,
+                            leaveOnEndCooldown: 300000,
+                            volume: 50,
+                        }
+                    });
+
+                    await interaction.editReply({
+                        content: `🎵 Dodano do kolejki: **${selectedTrack.title}**`,
+                        embeds: [],
+                        components: []
+                    });
+                } catch (error: any) {
+                    logger.error(error as Error, 'Błąd podczas dodawania do kolejki z wyszukiwania:');
+                    await interaction.editReply({ content: `❌ Wystąpił błąd podczas odtwarzania.`, embeds: [], components: [] });
+                }
+            });
+
+            collector.on('end', async (collected, reason) => {
+                if (reason === 'time') {
+                    // Usuwamy menu wyboru po upływie czasu
+                    await interaction.editReply({
+                        content: '⏳ Czas na wybór minął.',
+                        embeds: [],
+                        components: []
+                    }).catch(() => null); // ignorujemy błąd jeśli wiadomość została np. usunięta
+                }
+            });
+
         } catch (e: any) {
-            logger.error(e as Error, 'Błąd podczas dodawania do kolejki:');
-            await interaction.editReply(`❌ Wystąpił błąd podczas odtwarzania.`);
+            logger.error(e as Error, 'Błąd podczas wyszukiwania:');
+            await interaction.editReply(`❌ Wystąpił błąd podczas wyszukiwania.`);
         }
     },
 };
