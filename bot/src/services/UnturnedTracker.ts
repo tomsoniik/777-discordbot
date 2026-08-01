@@ -119,8 +119,8 @@ export class UnturnedTracker {
                     let matchedServerConfig:
                         { ip: string; port: number; serverId?: string; displayName?: string } | undefined = undefined;
 
-                    // 1. Sprawdzenie czy gra na jednym z zdefiniowanych serwerów Unbeaten
-                    if (isPlayingUnturned || currentIp || currentLobby) {
+                    // 1. Sprawdzenie czy gracz przebywa na jednym z zdefiniowanych serwerów Unbeaten
+                    if (currentLobby || (currentIp && !currentIp.startsWith('169.254.'))) {
                         const targets =
                             tracker.targetServer && tracker.targetServer !== 'all'
                                 ? [PREDEFINED_SERVERS[tracker.targetServer]]
@@ -141,22 +141,6 @@ export class UnturnedTracker {
                             }
                         }
 
-                        // Jeśli nie zadeklarowano w lobby ID, ale wykryto ruch SDR (169.254.x.x) lub gra w Unturned
-                        if (!found && (currentIp || currentLobby || isPlayingUnturned)) {
-                            for (const target of targets) {
-                                if (!target) continue;
-
-                                const status = await A2SQuery.getServerStatus(target.ip, target.port, target.serverId);
-                                if (status && status.playersCount > 0) {
-                                    found = true;
-                                    matchedServerConfig = target;
-                                    foundServerName = target.displayName || status.serverName;
-                                    foundIpPort = target.serverId || `${target.ip}:${target.port}`;
-                                    break;
-                                }
-                            }
-                        }
-
                         if (!found && (currentIp || currentLobby) && tracker.targetServer === 'all') {
                             found = true;
                             foundServerName = player.gameextrainfo || 'Serwer (Steam API)';
@@ -164,9 +148,44 @@ export class UnturnedTracker {
                         }
                     }
 
+                    // 2. Jeśli gracz jest połączony przez SDR (169.254.x.x) bez jawnego lobby ID, szukamy go po nicku
+                    if (!found && isPlayingUnturned && currentIp && currentIp.startsWith('169.254.')) {
+                        const targets =
+                            tracker.targetServer && tracker.targetServer !== 'all'
+                                ? [PREDEFINED_SERVERS[tracker.targetServer]]
+                                : Object.values(PREDEFINED_SERVERS);
+
+                        for (const target of targets) {
+                            if (!target) continue;
+
+                            const serverStatus = await A2SQuery.getServerStatus(
+                                target.ip,
+                                target.port,
+                                target.serverId,
+                            );
+                            if (serverStatus && serverStatus.players.length > 0) {
+                                const isPlayerInList = serverStatus.players.some((p) =>
+                                    p.name && player.personaname
+                                        ? p.name.toLowerCase() === player.personaname.toLowerCase()
+                                        : false,
+                                );
+
+                                if (isPlayerInList) {
+                                    found = true;
+                                    matchedServerConfig = target;
+                                    foundServerName = target.displayName || serverStatus.serverName;
+                                    foundIpPort = target.serverId || `${target.ip}:${target.port}`;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
                     if (found) {
+                        // Jeśli gracz jest już zarejestrowany na TYM SAMYM serwerze, nic nie wysyłamy (brak spamu)
                         if (tracker.isOnline && tracker.lastServer === foundIpPort) continue;
 
+                        const isServerChange = tracker.isOnline && tracker.lastServer !== foundIpPort;
                         let mapName = 'Nieznana';
                         let playersInfo = 'Brak danych';
 
@@ -208,13 +227,18 @@ export class UnturnedTracker {
                         if (channelId) {
                             const channel = this.client.channels.cache.get(channelId);
                             if (channel && channel.isTextBased() && 'send' in channel) {
+                                const title = isServerChange
+                                    ? '🔄 ALARM ŚLEDZENIA (ZMIANA SERWERA) 🔄'
+                                    : '🚨 ALARM ŚLEDZENIA (DOŁĄCZYŁ) 🚨';
+                                const desc = isServerChange
+                                    ? `Gracz **[${player.personaname || player.steamid}](${player.profileurl})** zmienił serwer!`
+                                    : `Gracz **[${player.personaname || player.steamid}](${player.profileurl})** został wykryty w grze!`;
+
                                 const embed = new EmbedBuilder()
-                                    .setTitle('🚨 ALARM ŚLEDZENIA (DOŁĄCZYŁ) 🚨')
-                                    .setDescription(
-                                        `Gracz **[${player.personaname || player.steamid}](${player.profileurl})** został wykryty w grze!`,
-                                    )
+                                    .setTitle(title)
+                                    .setDescription(desc)
                                     .setThumbnail(player.avatarfull)
-                                    .setColor('#ff0000')
+                                    .setColor(isServerChange ? '#ffaa00' : '#ff0000')
                                     .addFields(
                                         { name: 'Serwer', value: `\`${foundServerName}\``, inline: false },
                                         { name: 'Mapa', value: `\`${mapName}\``, inline: true },
@@ -248,6 +272,7 @@ export class UnturnedTracker {
                             }
                         }
                     } else {
+                        // Jeśli nie wykryto gracza na żadnym serwerze (wyszedł z gry / z serwera)
                         await handleOffline();
                     }
                 }
