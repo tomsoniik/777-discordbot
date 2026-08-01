@@ -6,14 +6,9 @@ const gamedig_1 = require("gamedig");
 const env_1 = require("../config/env");
 class A2SQuery {
     static cache = new Map();
-    static CACHE_TTL = 20000; // 20 sekund
-    static isPrivateIp(ip) {
-        return (ip.startsWith('169.254.') ||
-            ip.startsWith('127.') ||
-            ip.startsWith('10.') ||
-            ip.startsWith('192.168.') ||
-            ip.startsWith('172.16.') ||
-            ip === '0.0.0.0');
+    static CACHE_TTL = 15000; // 15 sekund
+    static isLoopbackIp(ip) {
+        return ip === '127.0.0.1' || ip === '0.0.0.0' || ip === 'localhost';
     }
     /**
      * Pobiera stan serwera z bufora lub odpytuje hybrydowo (Steam Web API + GameDig A2S)
@@ -26,11 +21,11 @@ class A2SQuery {
             port = parseInt(parts[1], 10) || 0;
             serverId = undefined;
         }
-        // Obsługa gier lokalnych / APIPA / LAN
-        if (this.isPrivateIp(ip) && (!serverId || serverId === '0')) {
+        // Obsługa gier wyłącznie lokalnych / Loopback bez ID serwera
+        if (this.isLoopbackIp(ip) && (!serverId || serverId === '0')) {
             return {
-                serverName: 'Gra Lokalna / Singleplayer (LAN)',
-                map: 'Singleplayer / LAN',
+                serverName: 'Gra Lokalna / Singleplayer',
+                map: 'Singleplayer',
                 playersCount: 1,
                 maxPlayers: 1,
                 players: [],
@@ -49,7 +44,7 @@ class A2SQuery {
                 if (serverId && serverId !== '0') {
                     filter = `\\steamid\\${serverId}`;
                 }
-                else if (!this.isPrivateIp(ip) && port !== 0) {
+                else if (ip && !this.isLoopbackIp(ip) && !ip.startsWith('169.254.') && port !== 0) {
                     filter = `\\gameaddr\\${ip}:${port}`;
                 }
                 if (filter) {
@@ -74,8 +69,8 @@ class A2SQuery {
                 logger_1.logger.error(e, '[A2SQuery] Błąd Steam Master Server API:');
             }
         }
-        // Metoda 2: Bezpośrednie zapytanie A2S UDP GameDig (Fallback)
-        if (!this.isPrivateIp(ip) && port !== 0) {
+        // Metoda 2: Bezpośrednie zapytanie A2S UDP GameDig (Fallback dla publicznych IP)
+        if (!this.isLoopbackIp(ip) && !ip.startsWith('169.254.') && port !== 0) {
             try {
                 const state = await gamedig_1.GameDig.query({
                     type: 'unturned',

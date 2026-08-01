@@ -30,7 +30,6 @@ class UnturnedTracker {
     }
     start() {
         logger_1.logger.info('✅ Uruchomiono ulepszoną hybrydową pętlę śledzenia graczy (Steam API + A2S Anti-DDoS Bypass).');
-        // Uruchamiamy od razu pierwszą iterację, a potem co 30 sekund
         this.trackIteration();
         this.interval = setInterval(async () => {
             await this.trackIteration();
@@ -99,9 +98,10 @@ class UnturnedTracker {
                         }
                     };
                     let found = false;
-                    let foundServerName = 'Nieznany Serwer';
+                    let foundServerName = 'Unturned Server';
                     let foundIpPort = currentLobby || currentIp || '';
-                    // 1. Sprawdzenie przez dane Steam API (dla profili publicznych)
+                    let matchedServerConfig = undefined;
+                    // 1. Sprawdzenie czy gra na jednym z zdefiniowanych serwerów Unbeaten
                     if (isPlayingUnturned || currentIp || currentLobby) {
                         const targets = tracker.targetServer && tracker.targetServer !== 'all'
                             ? [exports.PREDEFINED_SERVERS[tracker.targetServer]]
@@ -109,41 +109,35 @@ class UnturnedTracker {
                         for (const target of targets) {
                             if (!target)
                                 continue;
-                            const isOnlineOnSteam = (currentIp && currentIp === `${target.ip}:${target.port}`) ||
-                                (currentLobby && target.serverId && currentLobby === target.serverId);
-                            if (isOnlineOnSteam) {
+                            const matchesLobby = currentLobby && target.serverId && currentLobby === target.serverId;
+                            const matchesIp = currentIp && currentIp === `${target.ip}:${target.port}`;
+                            if (matchesLobby || matchesIp) {
                                 found = true;
+                                matchedServerConfig = target;
                                 foundServerName = target.displayName || 'Unturned Server';
-                                foundIpPort = currentLobby || currentIp || `${target.ip}:${target.port}`;
+                                foundIpPort = target.serverId || `${target.ip}:${target.port}`;
                                 break;
                             }
                         }
-                        if (!found && (currentIp || currentLobby) && tracker.targetServer === 'all') {
-                            found = true;
-                            foundServerName = player.gameextrainfo || 'Serwer (Wykryty ze Steam API)';
-                            foundIpPort = currentLobby || currentIp;
-                        }
-                    }
-                    // 2. Metoda Hybrydowa / A2S Fallback (dla profili prywatnych lub bez ip w Steam API)
-                    if (!found) {
-                        const targetServersToScan = tracker.targetServer && tracker.targetServer !== 'all'
-                            ? [exports.PREDEFINED_SERVERS[tracker.targetServer]]
-                            : Object.values(exports.PREDEFINED_SERVERS);
-                        for (const target of targetServersToScan) {
-                            if (!target)
-                                continue;
-                            const serverStatus = await A2SQuery_1.A2SQuery.getServerStatus(target.ip, target.port, target.serverId);
-                            if (serverStatus) {
-                                const matchedPlayer = serverStatus.players.find((p) => p.name && player.personaname
-                                    ? p.name.toLowerCase() === player.personaname.toLowerCase()
-                                    : false);
-                                if (matchedPlayer) {
+                        // Jeśli nie zadeklarowano w lobby ID, ale wykryto ruch SDR (169.254.x.x) lub gra w Unturned
+                        if (!found && (currentIp || currentLobby || isPlayingUnturned)) {
+                            for (const target of targets) {
+                                if (!target)
+                                    continue;
+                                const status = await A2SQuery_1.A2SQuery.getServerStatus(target.ip, target.port, target.serverId);
+                                if (status && status.playersCount > 0) {
                                     found = true;
-                                    foundServerName = target.displayName || serverStatus.serverName;
+                                    matchedServerConfig = target;
+                                    foundServerName = target.displayName || status.serverName;
                                     foundIpPort = target.serverId || `${target.ip}:${target.port}`;
                                     break;
                                 }
                             }
+                        }
+                        if (!found && (currentIp || currentLobby) && tracker.targetServer === 'all') {
+                            found = true;
+                            foundServerName = player.gameextrainfo || 'Serwer (Steam API)';
+                            foundIpPort = currentLobby || currentIp;
                         }
                     }
                     if (found) {
@@ -152,21 +146,15 @@ class UnturnedTracker {
                         let mapName = 'Nieznana';
                         let playersInfo = 'Brak danych';
                         try {
-                            const targetServerConfig = Object.values(exports.PREDEFINED_SERVERS).find((s) => (s.serverId && s.serverId === foundIpPort) || `${s.ip}:${s.port}` === foundIpPort);
-                            let qIp = targetServerConfig?.ip || '0.0.0.0';
-                            let qPort = targetServerConfig?.port || 0;
-                            const qServerId = targetServerConfig?.serverId || (foundIpPort.includes(':') ? undefined : foundIpPort);
-                            if (foundIpPort.includes(':')) {
-                                const parts = foundIpPort.split(':');
-                                qIp = parts[0];
-                                qPort = parseInt(parts[1], 10) || 0;
-                            }
+                            const qIp = matchedServerConfig?.ip || '0.0.0.0';
+                            const qPort = matchedServerConfig?.port || 0;
+                            const qServerId = matchedServerConfig?.serverId || (foundIpPort.includes(':') ? undefined : foundIpPort);
                             const serverInfo = await A2SQuery_1.A2SQuery.getServerStatus(qIp, qPort, qServerId);
                             if (serverInfo) {
                                 mapName = serverInfo.map || mapName;
                                 playersInfo = `${serverInfo.playersCount}/${serverInfo.maxPlayers}`;
-                                if (serverInfo.serverName) {
-                                    foundServerName = targetServerConfig?.displayName || serverInfo.serverName;
+                                if (serverInfo.serverName && !foundServerName.includes('Unbeaten')) {
+                                    foundServerName = matchedServerConfig?.displayName || serverInfo.serverName;
                                 }
                             }
                         }

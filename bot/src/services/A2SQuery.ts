@@ -13,17 +13,10 @@ export interface ServerStatus {
 
 export class A2SQuery {
     private static cache = new Map<string, { data: ServerStatus; timestamp: number }>();
-    private static CACHE_TTL = 20000; // 20 sekund
+    private static CACHE_TTL = 15000; // 15 sekund
 
-    public static isPrivateIp(ip: string): boolean {
-        return (
-            ip.startsWith('169.254.') ||
-            ip.startsWith('127.') ||
-            ip.startsWith('10.') ||
-            ip.startsWith('192.168.') ||
-            ip.startsWith('172.16.') ||
-            ip === '0.0.0.0'
-        );
+    public static isLoopbackIp(ip: string): boolean {
+        return ip === '127.0.0.1' || ip === '0.0.0.0' || ip === 'localhost';
     }
 
     /**
@@ -38,11 +31,11 @@ export class A2SQuery {
             serverId = undefined;
         }
 
-        // Obsługa gier lokalnych / APIPA / LAN
-        if (this.isPrivateIp(ip) && (!serverId || serverId === '0')) {
+        // Obsługa gier wyłącznie lokalnych / Loopback bez ID serwera
+        if (this.isLoopbackIp(ip) && (!serverId || serverId === '0')) {
             return {
-                serverName: 'Gra Lokalna / Singleplayer (LAN)',
-                map: 'Singleplayer / LAN',
+                serverName: 'Gra Lokalna / Singleplayer',
+                map: 'Singleplayer',
                 playersCount: 1,
                 maxPlayers: 1,
                 players: [],
@@ -63,7 +56,7 @@ export class A2SQuery {
                 let filter = '';
                 if (serverId && serverId !== '0') {
                     filter = `\\steamid\\${serverId}`;
-                } else if (!this.isPrivateIp(ip) && port !== 0) {
+                } else if (ip && !this.isLoopbackIp(ip) && !ip.startsWith('169.254.') && port !== 0) {
                     filter = `\\gameaddr\\${ip}:${port}`;
                 }
 
@@ -92,8 +85,8 @@ export class A2SQuery {
             }
         }
 
-        // Metoda 2: Bezpośrednie zapytanie A2S UDP GameDig (Fallback)
-        if (!this.isPrivateIp(ip) && port !== 0) {
+        // Metoda 2: Bezpośrednie zapytanie A2S UDP GameDig (Fallback dla publicznych IP)
+        if (!this.isLoopbackIp(ip) && !ip.startsWith('169.254.') && port !== 0) {
             try {
                 const state = await GameDig.query({
                     type: 'unturned',
