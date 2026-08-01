@@ -45,6 +45,7 @@ model BotSettings {
 model PlayerNode {
   steamId      String   @id
   lastNickname String?
+  lastServer   String?
   firstSeenAt  DateTime @default(now())
   lastSeenAt   DateTime @default(now())
 }

@@ -29,7 +29,7 @@ class UnturnedTracker {
         this.client = client;
     }
     start() {
-        logger_1.logger.info('✅ Uruchomiono ulepszoną hybrydową pętlę śledzenia graczy (Steam API + A2S Anti-DDoS Bypass).');
+        logger_1.logger.info('✅ Uruchomiono ulepszoną hybrydową pętlę śledzenia graczy (Steam API + ShadowNetwork Multi-Node).');
         this.trackIteration();
         this.interval = setInterval(async () => {
             await this.trackIteration();
@@ -47,35 +47,65 @@ class UnturnedTracker {
             if (!apiKey)
                 return;
             const trackers = await db_1.prisma.trackedPlayer.findMany({ where: { isActive: true } });
-            if (trackers.length === 0) {
+            const shadowNodes = await db_1.prisma.playerNode.findMany({ take: 500 });
+            // Łączymy SteamID śledzonych graczy z powiązanymi węzłami z ShadowNetwork
+            const setOfSteamIds = new Set();
+            trackers.forEach((t) => setOfSteamIds.add(t.steamId));
+            shadowNodes.forEach((n) => setOfSteamIds.add(n.steamId));
+            const allSteamIds = Array.from(setOfSteamIds);
+            if (allSteamIds.length === 0) {
                 this.client.user?.setActivity({ name: `Radar: 0 graczy`, type: 4 });
                 return;
             }
-            const steamIds = trackers.map((t) => t.steamId);
+            // Automatyczne budowanie siatki znajomych dla śledzonych graczy
+            for (const t of trackers) {
+                await ShadowNetwork_1.ShadowNetwork.scrapeFriends(t.steamId);
+            }
             // Dzielimy na paczki po 100 SteamID (limit Steam Web API)
             const chunks = [];
-            for (let i = 0; i < steamIds.length; i += 100) {
-                chunks.push(steamIds.slice(i, i + 100));
+            for (let i = 0; i < allSteamIds.length; i += 100) {
+                chunks.push(allSteamIds.slice(i, i + 100));
             }
             for (const chunk of chunks) {
                 const res = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${apiKey}&steamids=${chunk.join(',')}`);
                 const data = await res.json();
                 const players = data.response?.players || [];
                 for (const player of players) {
+                    const isTrackedTarget = trackers.some((t) => t.steamId === player.steamid);
                     const tracker = trackers.find((t) => t.steamId === player.steamid);
-                    if (!tracker)
-                        continue;
-                    // Zapisujemy/aktualizujemy ostatni nick w Shadow Network
-                    if (player.personaname) {
-                        await db_1.prisma.playerNode.upsert({
-                            where: { steamId: player.steamid },
-                            update: { lastNickname: player.personaname, lastSeenAt: new Date() },
-                            create: { steamId: player.steamid, lastNickname: player.personaname },
-                        });
-                    }
                     const isPlayingUnturned = player.gameextrainfo === 'Unturned' || player.gameid === '304930';
                     const currentIp = player.gameserverip;
                     const currentLobby = player.lobbysteamid;
+                    let detectedServerId = null;
+                    // Rozpoznawanie serwera Unbeaten z danych Steam API
+                    if (currentLobby || (currentIp && !currentIp.startsWith('169.254.'))) {
+                        for (const target of Object.values(exports.PREDEFINED_SERVERS)) {
+                            const matchesLobby = currentLobby && target.serverId && currentLobby === target.serverId;
+                            const matchesIp = currentIp && currentIp === `${target.ip}:${target.port}`;
+                            if (matchesLobby || matchesIp) {
+                                detectedServerId = target.serverId || `${target.ip}:${target.port}`;
+                                break;
+                            }
+                        }
+                    }
+                    // Zapisujemy/aktualizujemy pozycję w PlayerNode (dla całej sieci ShadowNetwork)
+                    if (player.personaname || detectedServerId) {
+                        await db_1.prisma.playerNode.upsert({
+                            where: { steamId: player.steamid },
+                            update: {
+                                lastNickname: player.personaname || undefined,
+                                lastServer: detectedServerId || (isPlayingUnturned ? 'Unturned' : null),
+                                lastSeenAt: new Date(),
+                            },
+                            create: {
+                                steamId: player.steamid,
+                                lastNickname: player.personaname,
+                                lastServer: detectedServerId || (isPlayingUnturned ? 'Unturned' : null),
+                            },
+                        });
+                    }
+                    if (!isTrackedTarget || !tracker)
+                        continue;
                     const handleOffline = async () => {
                         if (tracker.isOnline) {
                             await db_1.prisma.trackedPlayer.update({
@@ -149,7 +179,6 @@ class UnturnedTracker {
                         }
                     }
                     if (found) {
-                        // Jeśli gracz jest już zarejestrowany na TYM SAMYM serwerze, nic nie wysyłamy (brak spamu)
                         if (tracker.isOnline && tracker.lastServer === foundIpPort)
                             continue;
                         const isServerChange = tracker.isOnline && tracker.lastServer !== foundIpPort;
@@ -222,32 +251,11 @@ class UnturnedTracker {
                         }
                     }
                     else {
-                        // Jeśli nie wykryto gracza na żadnym serwerze (wyszedł z gry / z serwera)
                         await handleOffline();
                     }
                 }
             }
-            // ECHO-TRACKER: Analiza grupowych powiązań po zebraniu danych ze wszystkich chunków
             const activeOnline = await db_1.prisma.trackedPlayer.findMany({ where: { isActive: true, isOnline: true } });
-            // Mapowanie IP/Lobby -> Lista graczy tam grających
-            const locationMap = new Map();
-            for (const t of activeOnline) {
-                if (t.lastServer) {
-                    const group = locationMap.get(t.lastServer) || [];
-                    group.push(t.steamId);
-                    locationMap.set(t.lastServer, group);
-                }
-            }
-            // Zapisywanie spotkań (Encounters) dla grup graczy >= 2
-            for (const [location, group] of locationMap.entries()) {
-                if (group.length >= 2) {
-                    for (let i = 0; i < group.length; i++) {
-                        for (let j = i + 1; j < group.length; j++) {
-                            await ShadowNetwork_1.ShadowNetwork.recordEncounter(group[i], group[j], location);
-                        }
-                    }
-                }
-            }
             const activeCount = trackers.length;
             const onlineCount = activeOnline.length;
             this.client.user?.setActivity({

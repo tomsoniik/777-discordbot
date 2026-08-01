@@ -47,7 +47,7 @@ export const playersCommand: Command = {
             let playerList: string[] = [];
             let maxPlayers = 0;
 
-            // 1. Obejście Anti-DDoS A2S: Używamy zapytań A2S_PLAYER bez paczek requestRules (które bloker fliltruje)
+            // 1. Obejście Anti-DDoS A2S: Używamy zapytań A2S_PLAYER bez paczek requestRules
             if (ip !== '0.0.0.0' && port !== 0) {
                 const portsToTry = [port, port + 1, port - 1, 27015, 27016, 27116, 27117];
                 for (const p of portsToTry) {
@@ -56,8 +56,8 @@ export const playersCommand: Command = {
                             type: 'unturned',
                             host: ip,
                             port: p,
-                            maxRetries: 3,
-                            requestRules: false, // KLUCZOWE: Wyłączenie pakietów reguł omija obcinanie pakietów przez zapory Anti-DDoS
+                            maxRetries: 2,
+                            requestRules: false,
                         });
 
                         maxPlayers = state.maxplayers;
@@ -75,8 +75,18 @@ export const playersCommand: Command = {
                 }
             }
 
-            // 2. Korelacja ze Śledzonymi Graczymi w Bazie Danych (Shadow Network Fallback)
+            // 2. Korelacja ze Śledzonymi Graczymi i Siecią ShadowNetwork w Bazie Danych
             const targetServerId = serverConfig?.serverId || (serverChoice.includes(':') ? serverChoice : undefined);
+            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+
+            // Wykrywamy graczy w bazie po powiązanym serverId lub IP
+            const activeNodesOnServer = await prisma.playerNode.findMany({
+                where: {
+                    lastServer: targetServerId || { contains: ip },
+                    lastSeenAt: { gte: fifteenMinutesAgo },
+                },
+            });
+
             const trackedOnlineOnServer = await prisma.trackedPlayer.findMany({
                 where: {
                     isActive: true,
@@ -85,12 +95,15 @@ export const playersCommand: Command = {
                 },
             });
 
-            // Pobieranie ich ostatnich nicków z PlayerNode
-            for (const t of trackedOnlineOnServer) {
-                const node = await prisma.playerNode.findUnique({ where: { steamId: t.steamId } });
-                const nameToAdd = node?.lastNickname || `SteamID: ${t.steamId}`;
-                if (!playerList.includes(nameToAdd)) {
-                    playerList.push(`🎯 [Śledzony] ${nameToAdd}`);
+            const trackedSteamIds = new Set(trackedOnlineOnServer.map((t) => t.steamId));
+
+            for (const node of activeNodesOnServer) {
+                const isTracked = trackedSteamIds.has(node.steamId);
+                const prefix = isTracked ? '🎯 [Śledzony]' : '👤';
+                const nameToAdd = `${prefix} ${node.lastNickname || node.steamId}`;
+
+                if (!playerList.some((p) => p.includes(node.lastNickname || node.steamId))) {
+                    playerList.push(nameToAdd);
                 }
             }
 
@@ -115,8 +128,8 @@ export const playersCommand: Command = {
 
             if (playerList.length > 0) {
                 const chunks = [];
-                for (let i = 0; i < playerList.length; i += 30) {
-                    chunks.push(playerList.slice(i, i + 30).join(', '));
+                for (let i = 0; i < playerList.length; i += 25) {
+                    chunks.push(playerList.slice(i, i + 25).join('\n'));
                 }
 
                 chunks.forEach((chunk, index) => {
@@ -125,9 +138,13 @@ export const playersCommand: Command = {
                         value: chunk || 'Brak nazw',
                     });
                 });
+
+                embed.setFooter({
+                    text: `Wykryto ${playerList.length} z ${serverStatus?.playersCount || playerList.length} graczy via Steam Web API & ShadowNetwork.`,
+                });
             } else {
                 embed.setDescription(
-                    `⚠️ **Wywołano hybrydową detekcję**\n\nSerwer **${displayName}** odpowiada (Graczy online: **${serverStatus?.playersCount || 0}**), ale zapora Anti-DDoS aktywnie maskuje tablicę nazw w protokole UDP.\n\n*System kontynuuje śledzenie graczy poprzez sygnatury Steam SDR.*`,
+                    `⚠️ **Detekcja w toku**\n\nSerwer **${displayName}** odpowiada (Graczy online: **${serverStatus?.playersCount || 0}**).\n\nSiatka **ShadowNetwork** uczy się i skanuje powiązania Steam. Dodaj więcej graczy do radarów poprzez \`/track\`, aby bot automatycznie budował pełne listy graczy!`,
                 );
             }
 

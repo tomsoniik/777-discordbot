@@ -14,7 +14,6 @@ export class ShadowNetwork {
         const [a, b] = [steamId1, steamId2].sort();
 
         try {
-            // 1. Zapewnij istnienie węzłów graczy
             await prisma.playerNode.upsert({
                 where: { steamId: a },
                 update: { lastSeenAt: new Date() },
@@ -26,19 +25,17 @@ export class ShadowNetwork {
                 create: { steamId: b },
             });
 
-            // 2. Zapisz incydent w logach (Encounters)
             await prisma.sessionEncounter.create({
                 data: { targetId: a, bystanderId: b, serverIp },
             });
 
-            // 3. Wzmocnij wiązanie (bond)
             await prisma.playerRelation.upsert({
                 where: { steamIdA_steamIdB: { steamIdA: a, steamIdB: b } },
                 update: { bondStrength: { increment: 1 }, lastSeenTgt: new Date() },
                 create: { steamIdA: a, steamIdB: b, bondStrength: 1 },
             });
 
-            logger.info(`[ShadowNetwork] Powiązano graczy: ${a} <-> ${b} (Serwer: ${serverIp})`);
+            logger.info(`[ShadowNetwork] Powowiązano graczy: ${a} <-> ${b} (Serwer: ${serverIp})`);
         } catch (e) {
             logger.error(e as Error, '[ShadowNetwork] Błąd zapisu powiązania:');
         }
@@ -52,7 +49,6 @@ export class ShadowNetwork {
         if (!apiKey) return;
 
         try {
-            // Zawsze utwórz główny węzeł dla śledzonego gracza, nawet jeśli profil jest prywatny
             await prisma.playerNode.upsert({
                 where: { steamId },
                 update: { lastSeenAt: new Date() },
@@ -77,7 +73,6 @@ export class ShadowNetwork {
                         create: { steamId: friendId },
                     });
 
-                    // Jeśli są znajomymi, dajemy im bazową "siłę" = 5
                     await prisma.playerRelation.upsert({
                         where: { steamIdA_steamIdB: { steamIdA: a, steamIdB: b } },
                         update: {},
@@ -90,7 +85,7 @@ export class ShadowNetwork {
                 );
             }
         } catch (_e) {
-            // Prawdopodobnie profil prywatny lub ukryta lista znajomych - ignorujemy
+            // Prawdopodobnie profil prywatny lub ukryta lista znajomych
         }
     }
 }

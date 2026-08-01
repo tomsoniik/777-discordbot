@@ -15,7 +15,6 @@ class ShadowNetwork {
         // Sortujemy alfabetycznie, żeby uniknąć duplikatów (A-B to to samo co B-A)
         const [a, b] = [steamId1, steamId2].sort();
         try {
-            // 1. Zapewnij istnienie węzłów graczy
             await db_1.prisma.playerNode.upsert({
                 where: { steamId: a },
                 update: { lastSeenAt: new Date() },
@@ -26,17 +25,15 @@ class ShadowNetwork {
                 update: { lastSeenAt: new Date() },
                 create: { steamId: b },
             });
-            // 2. Zapisz incydent w logach (Encounters)
             await db_1.prisma.sessionEncounter.create({
                 data: { targetId: a, bystanderId: b, serverIp },
             });
-            // 3. Wzmocnij wiązanie (bond)
             await db_1.prisma.playerRelation.upsert({
                 where: { steamIdA_steamIdB: { steamIdA: a, steamIdB: b } },
                 update: { bondStrength: { increment: 1 }, lastSeenTgt: new Date() },
                 create: { steamIdA: a, steamIdB: b, bondStrength: 1 },
             });
-            logger_1.logger.info(`[ShadowNetwork] Powiązano graczy: ${a} <-> ${b} (Serwer: ${serverIp})`);
+            logger_1.logger.info(`[ShadowNetwork] Powowiązano graczy: ${a} <-> ${b} (Serwer: ${serverIp})`);
         }
         catch (e) {
             logger_1.logger.error(e, '[ShadowNetwork] Błąd zapisu powiązania:');
@@ -50,7 +47,6 @@ class ShadowNetwork {
         if (!apiKey)
             return;
         try {
-            // Zawsze utwórz główny węzeł dla śledzonego gracza, nawet jeśli profil jest prywatny
             await db_1.prisma.playerNode.upsert({
                 where: { steamId },
                 update: { lastSeenAt: new Date() },
@@ -69,7 +65,6 @@ class ShadowNetwork {
                         update: {},
                         create: { steamId: friendId },
                     });
-                    // Jeśli są znajomymi, dajemy im bazową "siłę" = 5
                     await db_1.prisma.playerRelation.upsert({
                         where: { steamIdA_steamIdB: { steamIdA: a, steamIdB: b } },
                         update: {},
@@ -81,7 +76,7 @@ class ShadowNetwork {
             }
         }
         catch (_e) {
-            // Prawdopodobnie profil prywatny lub ukryta lista znajomych - ignorujemy
+            // Prawdopodobnie profil prywatny lub ukryta lista znajomych
         }
     }
 }
