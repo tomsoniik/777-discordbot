@@ -35,14 +35,14 @@ export class ShadowNetwork {
                 create: { steamIdA: a, steamIdB: b, bondStrength: 1 },
             });
 
-            logger.info(`[ShadowNetwork] Powowiązano graczy: ${a} <-> ${b} (Serwer: ${serverIp})`);
+            logger.info(`[ShadowNetwork] Powiązano graczy: ${a} <-> ${b} (Serwer: ${serverIp})`);
         } catch (e) {
             logger.error(e as Error, '[ShadowNetwork] Błąd zapisu powiązania:');
         }
     }
 
     /**
-     * Buduje podstawową siatkę znajomych dla gracza, jeśli jego profil jest publiczny.
+     * Buduje podstawową siatkę znajomych dla gracza. Bezpieczne dla profili prywatnych!
      */
     static async scrapeFriends(steamId: string) {
         const apiKey = ENV.STEAM_API_KEY;
@@ -58,13 +58,19 @@ export class ShadowNetwork {
             const res = await fetch(
                 `https://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=${apiKey}&steamid=${steamId}&relationship=friend`,
             );
+
+            // Jeśli profil lub lista znajomych są prywatne (HTTP 401 / 403), przerywamy bezpiecznie bez błędu
+            if (!res.ok) return;
+
             const data: any = await res.json();
 
-            if (data.friendslist && data.friendslist.friends) {
+            if (data.friendslist && Array.isArray(data.friendslist.friends)) {
                 const friends = data.friendslist.friends;
                 let addedCount = 0;
                 for (const f of friends) {
                     const friendId = f.steamid;
+                    if (!friendId) continue;
+
                     const [a, b] = [steamId, friendId].sort();
 
                     await prisma.playerNode.upsert({
@@ -80,12 +86,14 @@ export class ShadowNetwork {
                     });
                     addedCount++;
                 }
-                logger.info(
-                    `[ShadowNetwork] Zbudowano siatkę znajomych dla ${steamId} (${addedCount} nowych powiązań).`,
-                );
+                if (addedCount > 0) {
+                    logger.info(
+                        `[ShadowNetwork] Zbudowano siatkę znajomych dla ${steamId} (${addedCount} nowych powiązań).`,
+                    );
+                }
             }
         } catch (_e) {
-            // Prawdopodobnie profil prywatny lub ukryta lista znajomych
+            // Ochrona przed awarią - profil prywatny lub brak dostępu
         }
     }
 }
