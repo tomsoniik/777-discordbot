@@ -4,6 +4,7 @@ import { Command } from '../../types';
 import { PREDEFINED_SERVERS } from '../../services/UnturnedTracker';
 import { GameDig } from 'gamedig';
 import { A2SQuery } from '../../services/A2SQuery';
+import { prisma } from '../../utils/db';
 
 export const playersCommand: Command = {
     data: new SlashCommandBuilder()
@@ -43,35 +44,57 @@ export const playersCommand: Command = {
         }
 
         try {
-            // Próbujemy pobrać listę przez GameDig A2S UDP
             let playerList: string[] = [];
             let maxPlayers = 0;
 
+            // 1. Obejście Anti-DDoS A2S: Używamy zapytań A2S_PLAYER bez paczek requestRules (które bloker fliltruje)
             if (ip !== '0.0.0.0' && port !== 0) {
-                const portsToTry = [port, port + 1, port + 2];
+                const portsToTry = [port, port + 1, port - 1, 27015, 27016, 27116, 27117];
                 for (const p of portsToTry) {
                     try {
                         const state = await GameDig.query({
                             type: 'unturned',
                             host: ip,
                             port: p,
-                            maxRetries: 1,
-                            requestRules: true,
+                            maxRetries: 3,
+                            requestRules: false, // KLUCZOWE: Wyłączenie pakietów reguł omija obcinanie pakietów przez zapory Anti-DDoS
                         });
 
                         maxPlayers = state.maxplayers;
-                        playerList = state.players
+                        const extracted = state.players
                             .map((player: any) => player.name)
                             .filter((name: any) => name && name.trim() !== '');
 
-                        if (playerList.length > 0) break;
+                        if (extracted.length > 0) {
+                            playerList = extracted;
+                            break;
+                        }
                     } catch (_) {
                         // Próbuj kolejny port
                     }
                 }
             }
 
-            // Zapytanie fallback via Steam Master Server status
+            // 2. Korelacja ze Śledzonymi Graczymi w Bazie Danych (Shadow Network Fallback)
+            const targetServerId = serverConfig?.serverId || (serverChoice.includes(':') ? serverChoice : undefined);
+            const trackedOnlineOnServer = await prisma.trackedPlayer.findMany({
+                where: {
+                    isActive: true,
+                    isOnline: true,
+                    lastServer: targetServerId || { contains: ip },
+                },
+            });
+
+            // Pobieranie ich ostatnich nicków z PlayerNode
+            for (const t of trackedOnlineOnServer) {
+                const node = await prisma.playerNode.findUnique({ where: { steamId: t.steamId } });
+                const nameToAdd = node?.lastNickname || `SteamID: ${t.steamId}`;
+                if (!playerList.includes(nameToAdd)) {
+                    playerList.push(`🎯 [Śledzony] ${nameToAdd}`);
+                }
+            }
+
+            // 3. Pobranie metadanych z Steam Master Server API
             const serverStatus = await A2SQuery.getServerStatus(ip, port, serverConfig?.serverId);
 
             const embed = new EmbedBuilder()
@@ -84,14 +107,13 @@ export const playersCommand: Command = {
                     { name: 'Mapa', value: `\`${serverStatus.map}\``, inline: true },
                     {
                         name: 'Liczba graczy',
-                        value: `\`${playerList.length || serverStatus.playersCount}/${serverStatus.maxPlayers || maxPlayers || '?'}\``,
+                        value: `\`${serverStatus.playersCount}/${serverStatus.maxPlayers || maxPlayers || '?'}\``,
                         inline: true,
                     },
                 );
             }
 
             if (playerList.length > 0) {
-                // Dzielimy na porcje po 40 nicków na pole Embed (limit znaków w Discordzie)
                 const chunks = [];
                 for (let i = 0; i < playerList.length; i += 30) {
                     chunks.push(playerList.slice(i, i + 30).join(', '));
@@ -99,13 +121,13 @@ export const playersCommand: Command = {
 
                 chunks.forEach((chunk, index) => {
                     embed.addFields({
-                        name: `Lista graczy (część ${index + 1})`,
+                        name: `Wykryci gracze (${index + 1}/${chunks.length})`,
                         value: chunk || 'Brak nazw',
                     });
                 });
             } else {
                 embed.setDescription(
-                    `⚠️ **Brak szczegółowych nicków graczy**\n\nSerwer jest aktywny (Graczy online: **${serverStatus?.playersCount || 0}**), ale zapora Anti-DDoS serwera ukrywa bezpośrednią listę nazw na porcie A2S UDP.`,
+                    `⚠️ **Wywołano hybrydową detekcję**\n\nSerwer **${displayName}** odpowiada (Graczy online: **${serverStatus?.playersCount || 0}**), ale zapora Anti-DDoS aktywnie maskuje tablicę nazw w protokole UDP.\n\n*System kontynuuje śledzenie graczy poprzez sygnatury Steam SDR.*`,
                 );
             }
 
