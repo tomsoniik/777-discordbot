@@ -5,6 +5,7 @@ import { trackedListCommand } from './unturned/tracked_list';
 import { trackconfigCommand } from './unturned/trackconfig';
 import { checkServersCommand } from './unturned/check_servers';
 import { statusCommand } from './unturned/status';
+import { playersCommand } from './unturned/players';
 import { playCommand } from './music/play';
 import { skipCommand } from './music/skip';
 import { stopCommand } from './music/stop';
@@ -17,6 +18,7 @@ export const commands: Command[] = [
     trackconfigCommand,
     checkServersCommand,
     statusCommand,
+    playersCommand,
     playCommand,
     skipCommand,
     stopCommand,

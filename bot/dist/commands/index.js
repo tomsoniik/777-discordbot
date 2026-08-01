@@ -7,6 +7,7 @@ const tracked_list_1 = require("./unturned/tracked_list");
 const trackconfig_1 = require("./unturned/trackconfig");
 const check_servers_1 = require("./unturned/check_servers");
 const status_1 = require("./unturned/status");
+const players_1 = require("./unturned/players");
 const play_1 = require("./music/play");
 const skip_1 = require("./music/skip");
 const stop_1 = require("./music/stop");
@@ -18,6 +19,7 @@ exports.commands = [
     trackconfig_1.trackconfigCommand,
     check_servers_1.checkServersCommand,
     status_1.statusCommand,
+    players_1.playersCommand,
     play_1.playCommand,
     skip_1.skipCommand,
     stop_1.stopCommand,
