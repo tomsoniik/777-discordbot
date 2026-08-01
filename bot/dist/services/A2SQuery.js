@@ -7,10 +7,36 @@ const env_1 = require("../config/env");
 class A2SQuery {
     static cache = new Map();
     static CACHE_TTL = 20000; // 20 sekund
+    static isPrivateIp(ip) {
+        return (ip.startsWith('169.254.') ||
+            ip.startsWith('127.') ||
+            ip.startsWith('10.') ||
+            ip.startsWith('192.168.') ||
+            ip.startsWith('172.16.') ||
+            ip === '0.0.0.0');
+    }
     /**
      * Pobiera stan serwera z bufora lub odpytuje hybrydowo (Steam Web API + GameDig A2S)
      */
     static async getServerStatus(ip, port, serverId) {
+        // Parsowanie w przypadku gdy serverId jest w formacie ip:port
+        if (serverId && serverId.includes(':')) {
+            const parts = serverId.split(':');
+            ip = parts[0];
+            port = parseInt(parts[1], 10) || 0;
+            serverId = undefined;
+        }
+        // Obsługa gier lokalnych / APIPA / LAN
+        if (this.isPrivateIp(ip) && (!serverId || serverId === '0')) {
+            return {
+                serverName: 'Gra Lokalna / Singleplayer (LAN)',
+                map: 'Singleplayer / LAN',
+                playersCount: 1,
+                maxPlayers: 1,
+                players: [],
+                ipPort: `${ip}:${port}`,
+            };
+        }
         const cacheKey = serverId || `${ip}:${port}`;
         const cached = this.cache.get(cacheKey);
         if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
@@ -23,7 +49,7 @@ class A2SQuery {
                 if (serverId && serverId !== '0') {
                     filter = `\\steamid\\${serverId}`;
                 }
-                else if (ip !== '0.0.0.0' && port !== 0) {
+                else if (!this.isPrivateIp(ip) && port !== 0) {
                     filter = `\\gameaddr\\${ip}:${port}`;
                 }
                 if (filter) {
@@ -33,7 +59,7 @@ class A2SQuery {
                     if (server) {
                         const status = {
                             serverName: server.name || 'Unturned Server',
-                            map: server.map || 'Unknown',
+                            map: server.map || 'Nieznana',
                             playersCount: server.players || 0,
                             maxPlayers: server.max_players || 0,
                             players: [],
@@ -49,7 +75,7 @@ class A2SQuery {
             }
         }
         // Metoda 2: Bezpośrednie zapytanie A2S UDP GameDig (Fallback)
-        if (ip !== '0.0.0.0' && port !== 0) {
+        if (!this.isPrivateIp(ip) && port !== 0) {
             try {
                 const state = await gamedig_1.GameDig.query({
                     type: 'unturned',
@@ -59,7 +85,7 @@ class A2SQuery {
                 });
                 const status = {
                     serverName: state.name || 'Unturned Server',
-                    map: state.map || 'Unknown',
+                    map: state.map || 'Nieznana',
                     playersCount: state.players.length,
                     maxPlayers: state.maxplayers,
                     players: state.players.map((p) => ({ name: p.name || 'Gracz' })),
@@ -69,7 +95,7 @@ class A2SQuery {
                 return status;
             }
             catch (_e) {
-                // Serwer zablokowany przez Anti-DDoS UDP lub wyłączony
+                // Zapora Anti-DDoS lub serwer wyłączony
             }
         }
         return null;

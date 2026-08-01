@@ -153,12 +153,20 @@ class UnturnedTracker {
                         let playersInfo = 'Brak danych';
                         try {
                             const targetServerConfig = Object.values(exports.PREDEFINED_SERVERS).find((s) => (s.serverId && s.serverId === foundIpPort) || `${s.ip}:${s.port}` === foundIpPort);
-                            const serverInfo = await A2SQuery_1.A2SQuery.getServerStatus(targetServerConfig?.ip || '0.0.0.0', targetServerConfig?.port || 0, targetServerConfig?.serverId || foundIpPort);
+                            let qIp = targetServerConfig?.ip || '0.0.0.0';
+                            let qPort = targetServerConfig?.port || 0;
+                            const qServerId = targetServerConfig?.serverId || (foundIpPort.includes(':') ? undefined : foundIpPort);
+                            if (foundIpPort.includes(':')) {
+                                const parts = foundIpPort.split(':');
+                                qIp = parts[0];
+                                qPort = parseInt(parts[1], 10) || 0;
+                            }
+                            const serverInfo = await A2SQuery_1.A2SQuery.getServerStatus(qIp, qPort, qServerId);
                             if (serverInfo) {
                                 mapName = serverInfo.map || mapName;
                                 playersInfo = `${serverInfo.playersCount}/${serverInfo.maxPlayers}`;
                                 if (serverInfo.serverName) {
-                                    foundServerName = serverInfo.serverName;
+                                    foundServerName = targetServerConfig?.displayName || serverInfo.serverName;
                                 }
                             }
                         }
