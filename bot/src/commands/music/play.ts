@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, MessageFlags, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, EmbedBuilder, ComponentType } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, MessageFlags, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { Command } from '../../types';
 import { useMainPlayer, QueryType } from 'discord-player';
 import playdl from 'play-dl';
@@ -110,48 +110,67 @@ export const playCommand: Command = {
                 .setPlaceholder('Wybierz utwór do odtworzenia...')
                 .addOptions(options);
 
-            const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
+            const cancelButton = new ButtonBuilder()
+                .setCustomId('cancel_search')
+                .setLabel('Anuluj')
+                .setStyle(ButtonStyle.Danger);
+
+            const row1 = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
+            const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(cancelButton);
 
             const message = await interaction.editReply({
                 embeds: [embed],
-                components: [row]
+                components: [row1, row2]
             });
 
             const collector = message.createMessageComponentCollector({
-                componentType: ComponentType.StringSelect,
                 time: 60000,
                 filter: i => i.user.id === interaction.user.id
             });
 
             collector.on('collect', async (i) => {
                 await i.deferUpdate();
-                const selectedTrackIndex = parseInt(i.values[0]);
-                const selectedTrack = tracks[selectedTrackIndex];
 
-                try {
-                    await player.play(channel, selectedTrack, {
-                        nodeOptions: {
-                            metadata: {
-                                channel: interaction.channel,
-                                client: interaction.guild?.members.me,
-                                requestedBy: interaction.user,
-                            },
-                            leaveOnEmpty: true,
-                            leaveOnEmptyCooldown: 300000,
-                            leaveOnEnd: true,
-                            leaveOnEndCooldown: 300000,
-                            volume: 50,
-                        }
-                    });
-
+                if (i.isButton() && i.customId === 'cancel_search') {
                     await interaction.editReply({
-                        content: `🎵 Dodano do kolejki: **${selectedTrack.title}**`,
+                        content: '❌ Wyszukiwanie anulowane.',
                         embeds: [],
                         components: []
                     });
-                } catch (error: any) {
-                    logger.error(error as Error, 'Błąd podczas dodawania do kolejki z wyszukiwania:');
-                    await interaction.editReply({ content: `❌ Wystąpił błąd podczas odtwarzania.`, embeds: [], components: [] });
+                    collector.stop('cancelled');
+                    return;
+                }
+
+                if (i.isStringSelectMenu() && i.customId === 'select_track') {
+                    const selectedTrackIndex = parseInt(i.values[0]);
+                    const selectedTrack = tracks[selectedTrackIndex];
+
+                    try {
+                        await player.play(channel, selectedTrack, {
+                            nodeOptions: {
+                                metadata: {
+                                    channel: interaction.channel,
+                                    client: interaction.guild?.members.me,
+                                    requestedBy: interaction.user,
+                                },
+                                leaveOnEmpty: true,
+                                leaveOnEmptyCooldown: 300000,
+                                leaveOnEnd: true,
+                                leaveOnEndCooldown: 300000,
+                                volume: 50,
+                            }
+                        });
+
+                        await interaction.editReply({
+                            content: `🎵 Dodano do kolejki: **${selectedTrack.title}**`,
+                            embeds: [],
+                            components: []
+                        });
+                    } catch (error: any) {
+                        logger.error(error as Error, 'Błąd podczas dodawania do kolejki z wyszukiwania:');
+                        await interaction.editReply({ content: `❌ Wystąpił błąd podczas odtwarzania.`, embeds: [], components: [] });
+                    }
+                    collector.stop('selected');
                 }
             });
 
