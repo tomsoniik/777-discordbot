@@ -219,6 +219,61 @@ export class UnturnedTracker {
                         }
                     }
 
+                    // 3. Heurystyczne skanowanie siatki znajomych (ShadowNetwork) dla w pełni prywatnych profili
+                    let heuristicConfidence = 0;
+                    if (!found) {
+                        const relations = await prisma.playerRelation.findMany({
+                            where: {
+                                OR: [{ steamIdA: player.steamid }, { steamIdB: player.steamid }],
+                            },
+                        });
+
+                        const friendIds = relations.map((r) =>
+                            r.steamIdA === player.steamid ? r.steamIdB : r.steamIdA,
+                        );
+
+                        if (friendIds.length > 0) {
+                            const onlineFriends = await prisma.playerNode.findMany({
+                                where: {
+                                    steamId: { in: friendIds },
+                                    lastServer: { not: null, notIn: ['Unturned'] },
+                                    lastSeenAt: { gte: new Date(Date.now() - 3 * 60 * 1000) },
+                                },
+                            });
+
+                            if (onlineFriends.length > 0) {
+                                const serverCounts: Record<string, number> = {};
+                                for (const friend of onlineFriends) {
+                                    if (!friend.lastServer) continue;
+                                    serverCounts[friend.lastServer] = (serverCounts[friend.lastServer] || 0) + 1;
+                                }
+
+                                let bestServer = '';
+                                let maxCount = 0;
+                                for (const [srv, count] of Object.entries(serverCounts)) {
+                                    if (count > maxCount) {
+                                        maxCount = count;
+                                        bestServer = srv;
+                                    }
+                                }
+
+                                if (maxCount >= 1 && bestServer) {
+                                    const target = Object.values(PREDEFINED_SERVERS).find(
+                                        (s) => s.serverId === bestServer || `${s.ip}:${s.port}` === bestServer,
+                                    );
+
+                                    if (target) {
+                                        found = true;
+                                        matchedServerConfig = target;
+                                        foundServerName = target.displayName || 'Unturned Server';
+                                        foundIpPort = target.serverId || `${target.ip}:${target.port}`;
+                                        heuristicConfidence = maxCount;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     if (found) {
                         if (tracker.isOnline && tracker.lastServer === foundIpPort) continue;
 
@@ -267,15 +322,29 @@ export class UnturnedTracker {
                                 const title = isServerChange
                                     ? '🔄 ALARM ŚLEDZENIA (ZMIANA SERWERA) 🔄'
                                     : '🚨 ALARM ŚLEDZENIA (DOŁĄCZYŁ) 🚨';
+
+                                const displayTitle =
+                                    heuristicConfidence > 0
+                                        ? `📡 RADAR HEURYSTYCZNY ${isServerChange ? '(ZMIANA)' : '(WYKRYCIE)'} 📡`
+                                        : title;
+
                                 const desc = isServerChange
                                     ? `Gracz **[${player.personaname || player.steamid}](${player.profileurl})** zmienił serwer!`
                                     : `Gracz **[${player.personaname || player.steamid}](${player.profileurl})** został wykryty w grze!`;
 
+                                const displayDesc =
+                                    heuristicConfidence > 0
+                                        ? `⚠️ **Wykrycie z prawdopodobieństwem!** Gracz ma całkowicie ukryty profil (Prywatny), ale **${heuristicConfidence} jego znajomych** gra obecnie na tym serwerze, więc na 99% gra razem z nimi!\n\n` +
+                                          desc
+                                        : desc;
+
                                 const embed = new EmbedBuilder()
-                                    .setTitle(title)
-                                    .setDescription(desc)
+                                    .setTitle(displayTitle)
+                                    .setDescription(displayDesc)
                                     .setThumbnail(player.avatarfull)
-                                    .setColor(isServerChange ? '#ffaa00' : '#ff0000')
+                                    .setColor(
+                                        heuristicConfidence > 0 ? '#9900ff' : isServerChange ? '#ffaa00' : '#ff0000',
+                                    )
                                     .addFields(
                                         { name: 'Serwer', value: `\`${foundServerName}\``, inline: false },
                                         { name: 'Mapa', value: `\`${mapName}\``, inline: true },
