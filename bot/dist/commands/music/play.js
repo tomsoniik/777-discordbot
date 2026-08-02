@@ -60,6 +60,7 @@ exports.playCommand = {
                         leaveOnEnd: true,
                         leaveOnEndCooldown: 300000,
                         volume: 50,
+                        bufferingTimeout: 0,
                     },
                     searchEngine: discord_player_1.QueryType.AUTO,
                 });
@@ -140,6 +141,7 @@ exports.playCommand = {
                                 leaveOnEnd: true,
                                 leaveOnEndCooldown: 300000,
                                 volume: 50,
+                                bufferingTimeout: 0,
                             }
                         });
                         await interaction.editReply({

@@ -23,7 +23,9 @@ const client = new discord_js_1.Client({
 });
 // Zdarzenia
 client.once(discord_js_1.Events.ClientReady, async () => {
-    const player = new discord_player_1.Player(client);
+    const player = new discord_player_1.Player(client, {
+        connectionTimeout: 120000,
+    });
     await player.extractors.register(extractor_1.SoundCloudExtractor, {});
     player.events.on('playerStart', async (queue, _track) => {
         if (queue.metadata && queue.metadata.channel) {

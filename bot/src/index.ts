@@ -24,7 +24,9 @@ const client = new Client({
 
 // Zdarzenia
 client.once(Events.ClientReady, async () => {
-    const player = new Player(client);
+    const player = new Player(client, {
+        connectionTimeout: 120000,
+    });
     await player.extractors.register(SoundCloudExtractor, {});
 
     player.events.on('playerStart', async (queue, _track) => {

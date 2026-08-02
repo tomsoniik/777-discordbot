@@ -63,6 +63,7 @@ export const playCommand: Command = {
                         leaveOnEnd: true,
                         leaveOnEndCooldown: 300000,
                         volume: 50,
+                        bufferingTimeout: 0,
                     },
                     searchEngine: QueryType.AUTO,
                 });
@@ -158,6 +159,7 @@ export const playCommand: Command = {
                                 leaveOnEnd: true,
                                 leaveOnEndCooldown: 300000,
                                 volume: 50,
+                                bufferingTimeout: 0,
                             }
                         });
 
