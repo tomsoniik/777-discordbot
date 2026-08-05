@@ -1,0 +1,4 @@
+{
+  "buildCommand": "cd web-dashboard && npm install && npx prisma generate && npm run build",
+  "outputDirectory": "web-dashboard/.next"
+}
