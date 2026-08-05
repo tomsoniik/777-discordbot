@@ -363,6 +363,55 @@ function FirstPersonFlyController({ active }: { active: boolean }) {
   return null;
 }
 
+// Unturned FPS Held Item in Hand (with bobbing & sway animation)
+function HeldItem3D({ activeDef, active }: { activeDef?: BuildItem; active: boolean }) {
+  const { camera } = useThree();
+  const meshRef = useRef<THREE.Group>(null);
+  const time = useRef(0);
+
+  useFrame((_, delta) => {
+    if (!meshRef.current || !activeDef || !active) return;
+    time.current += delta * 4;
+
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+    
+    const right = new THREE.Vector3();
+    right.crossVectors(forward, camera.up).normalize();
+
+    const up = new THREE.Vector3();
+    up.crossVectors(right, forward).normalize();
+
+    // Natural Unturned hand position (forward 0.85, right 0.4, down -0.3) + smooth bobbing
+    const bobbingY = Math.sin(time.current) * 0.02;
+    const bobbingX = Math.cos(time.current * 0.8) * 0.015;
+
+    const handPos = camera.position.clone()
+      .addScaledVector(forward, 0.85)
+      .addScaledVector(right, 0.4 + bobbingX)
+      .addScaledVector(up, -0.3 + bobbingY);
+
+    meshRef.current.position.copy(handPos);
+    meshRef.current.quaternion.copy(camera.quaternion);
+    meshRef.current.rotateY(-Math.PI / 6);
+    meshRef.current.rotateX(Math.PI / 10);
+  });
+
+  if (!activeDef || !active) return null;
+
+  const rawColor = activeDef.color && activeDef.color !== 'clear' ? activeDef.color : '#94a3b8';
+  const color = new THREE.Color(rawColor.startsWith('#') || rawColor.startsWith('rgb') ? rawColor : '#94a3b8');
+
+  return (
+    <group ref={meshRef}>
+      <Box args={[0.3, 0.3, 0.3]} castShadow>
+        <meshStandardMaterial color={color} roughness={0.3} metalness={0.4} />
+        <Edges scale={1.05} color="#10b981" opacity={0.9} transparent />
+      </Box>
+    </group>
+  );
+}
+
 export default function Builder3D({
   placedItems,
   buildItems,
@@ -384,6 +433,36 @@ export default function Builder3D({
   const [rotation3D, setRotation3D] = useState(0);
 
   const activeDef = useMemo(() => buildItems.find(d => d.id === activeItem), [activeItem, buildItems]);
+
+  // Keyboard 1-6 Hotbar Selection Listener
+  useEffect(() => {
+    const handleHotbarKeys = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+
+      const codeMap: Record<string, number> = {
+        'Digit1': 0, 'Numpad1': 0, 'Digit2': 1, 'Numpad2': 1,
+        'Digit3': 2, 'Numpad3': 2, 'Digit4': 3, 'Numpad4': 3,
+        'Digit5': 4, 'Numpad5': 4, 'Digit6': 5, 'Numpad6': 5,
+      };
+
+      if (e.code in codeMap) {
+        const idx = codeMap[e.code];
+        const targetItem = buildItems[idx];
+        if (targetItem && onSelectActiveItem) {
+          onSelectActiveItem(activeItem === targetItem.id ? null : targetItem.id);
+        }
+      } else if (['1', '2', '3', '4', '5', '6'].includes(e.key)) {
+        const idx = parseInt(e.key, 10) - 1;
+        const targetItem = buildItems[idx];
+        if (targetItem && onSelectActiveItem) {
+          onSelectActiveItem(activeItem === targetItem.id ? null : targetItem.id);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleHotbarKeys);
+    return () => window.removeEventListener('keydown', handleHotbarKeys);
+  }, [buildItems, activeItem, onSelectActiveItem]);
 
   // Center calculation
   const center = useMemo(() => {
@@ -531,6 +610,9 @@ export default function Builder3D({
           />
         )}
 
+        {/* Item in Hand model in 1st Person Mode with bobbing & sway */}
+        <HeldItem3D activeDef={activeDef} active={cameraView === 'fps'} />
+
         <Grid
           position={[0, -0.01, 0]}
           args={[200, 200]}
@@ -626,6 +708,7 @@ export default function Builder3D({
               className={`${styles.hotbarSlot} ${isActive ? styles.hotbarSlotActive : ''}`}
               onClick={() => onSelectActiveItem && onSelectActiveItem(isActive ? null : item.id)}
             >
+              {isActive && <span className={styles.activeBadge}>WYBRANY</span>}
               <span className={styles.hotbarKey}>{idx + 1}</span>
               <img src={item.texture} alt="" className={styles.hotbarIcon} />
               <span className={styles.hotbarLabel}>{item.name}</span>
@@ -688,10 +771,9 @@ export default function Builder3D({
           <b className={styles.controlKey}>WASD:</b> Poruszanie / Latanie<br />
           <b className={styles.controlKey}>Q / E:</b> Dół / Góra (NoClip)<br />
           <b className={styles.controlKey}>LMB:</b> Stawianie w gnieździe<br />
-          <b className={styles.controlKey}>R:</b> Obrót | <b>1-6:</b> Hotbar
+          <b className={styles.controlKey}>R:</b> Obrót | <b>1-6:</b> Wybór klocka
         </p>
       </div>
     </div>
   );
 }
-
