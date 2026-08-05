@@ -121,8 +121,9 @@ const Item3D = ({
           <Box args={[bedWidth, bedHeight, bedLength]} position={[0, bedPosY, 0]} castShadow receiveShadow>
             <meshStandardMaterial
               color="#ff4757"
-              roughness={0.3}
-              metalness={0.2}
+              emissive="#7f1d1d"
+              roughness={0.2}
+              metalness={0.1}
             />
             <Edges scale={1.05} color={isSelected ? '#10b981' : '#ffffff'} opacity={isSelected ? 1 : 0.9} transparent />
           </Box>
@@ -148,10 +149,11 @@ const Item3D = ({
         <Box args={[width, height, length]} castShadow receiveShadow>
           <meshStandardMaterial
             color={color}
-            roughness={0.4}
-            metalness={0.2}
+            emissive={new THREE.Color(0x2a3242)}
+            roughness={0.2}
+            metalness={0.1}
           />
-          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.8} transparent />
+          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.9} transparent />
         </Box>
       </group>
     );
@@ -161,10 +163,11 @@ const Item3D = ({
         <Box args={[width, 3.0, 0.4]} castShadow receiveShadow>
           <meshStandardMaterial
             color={color}
-            roughness={0.4}
-            metalness={0.2}
+            emissive={new THREE.Color(0x222a36)}
+            roughness={0.2}
+            metalness={0.1}
           />
-          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.8} transparent />
+          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.9} transparent />
         </Box>
       </group>
     );
@@ -174,10 +177,11 @@ const Item3D = ({
         <Cylinder args={[0.4, 0.4, 3.0, 16]} castShadow receiveShadow>
           <meshStandardMaterial
             color={color}
-            roughness={0.4}
-            metalness={0.2}
+            emissive={new THREE.Color(0x1e3a8a)}
+            roughness={0.2}
+            metalness={0.1}
           />
-          <Edges scale={1.02} color={edgeColor} opacity={isSelected ? 1 : 0.8} transparent threshold={15} />
+          <Edges scale={1.02} color={edgeColor} opacity={isSelected ? 1 : 0.9} transparent threshold={15} />
         </Cylinder>
       </group>
     );
@@ -202,10 +206,11 @@ const Item3D = ({
           <extrudeGeometry args={[shape, extrudeSettings]} />
           <meshStandardMaterial
             color={color}
-            roughness={0.4}
-            metalness={0.2}
+            emissive={new THREE.Color(0x2a3242)}
+            roughness={0.2}
+            metalness={0.1}
           />
-          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.8} transparent threshold={15} />
+          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.9} transparent threshold={15} />
         </mesh>
       </group>
     );
@@ -214,7 +219,7 @@ const Item3D = ({
 
 
 
-// Ghost Preview Mesh for 3D Socket Snapping
+// Ghost Preview Mesh for 3D Socket Snapping (with semi-transparent filled faces)
 const GhostMesh3D = ({
   activeDef,
   position,
@@ -244,7 +249,8 @@ const GhostMesh3D = ({
     return (
       <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
         <Box args={[20 * SCALE, 0.5, 40 * SCALE]} position={[0, 0.25, 0]}>
-          <meshStandardMaterial color={color} transparent opacity={0.7} wireframe />
+          <meshStandardMaterial color={color} transparent opacity={0.35} />
+          <Edges scale={1.02} color={color} transparent opacity={0.9} />
         </Box>
       </group>
     );
@@ -252,7 +258,8 @@ const GhostMesh3D = ({
     return (
       <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
         <Box args={[width, height, length]}>
-          <meshStandardMaterial color={color} transparent opacity={0.7} wireframe />
+          <meshStandardMaterial color={color} transparent opacity={0.35} />
+          <Edges scale={1.02} color={color} transparent opacity={0.9} />
         </Box>
       </group>
     );
@@ -260,7 +267,8 @@ const GhostMesh3D = ({
     return (
       <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
         <Box args={[width, 3.0, 0.4]}>
-          <meshStandardMaterial color={color} transparent opacity={0.7} wireframe />
+          <meshStandardMaterial color={color} transparent opacity={0.35} />
+          <Edges scale={1.02} color={color} transparent opacity={0.9} />
         </Box>
       </group>
     );
@@ -268,7 +276,8 @@ const GhostMesh3D = ({
     return (
       <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
         <Cylinder args={[0.4, 0.4, 3.0, 16]}>
-          <meshStandardMaterial color={color} transparent opacity={0.7} wireframe />
+          <meshStandardMaterial color={color} transparent opacity={0.35} />
+          <Edges scale={1.02} color={color} transparent opacity={0.9} />
         </Cylinder>
       </group>
     );
@@ -276,7 +285,8 @@ const GhostMesh3D = ({
     return (
       <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
         <Box args={[width, height, width]}>
-          <meshStandardMaterial color={color} transparent opacity={0.7} wireframe />
+          <meshStandardMaterial color={color} transparent opacity={0.35} />
+          <Edges scale={1.02} color={color} transparent opacity={0.9} />
         </Box>
       </group>
     );
