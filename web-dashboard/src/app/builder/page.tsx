@@ -7,6 +7,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import Link from 'next/link';
 import { Add, FolderOpen, User, Link as LinkIcon, Trash, Clock, Folder, CloseCircle } from 'iconsax-react';
 import { motion, Variants } from 'framer-motion';
+import styles from '@/777_addons/styles/builderPage.module.css';
 
 export default function BuilderDashboard() {
   const { data: session, status } = useSession();
@@ -171,9 +172,9 @@ export default function BuilderDashboard() {
       console.error(err);
     }
 
-    const localList = getLocalProjects().filter((p) => p.id !== projId && p.joinCode !== projId);
+    const localList = getLocalProjects().filter((p: any) => p.id !== projId && p.joinCode !== projId);
     saveLocalProjects(localList);
-    setProjects((prev) => prev.filter((p) => p.id !== projId));
+    setProjects((prev: any[]) => prev.filter((p: any) => p.id !== projId));
   };
 
   if (isLoading) {
@@ -181,41 +182,39 @@ export default function BuilderDashboard() {
   }
 
   return (
-    <div className="container" style={{ padding: '2rem', paddingTop: '120px', minHeight: '100vh' }}>
+    <div className={`container ${styles.container}`}>
       <motion.div 
         initial="hidden"
         animate="visible"
         variants={containerVariants}
       >
-        <motion.div variants={itemVariants} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <motion.div variants={itemVariants} className={styles.headerRow}>
           <div>
-            <h1 style={{ fontSize: '3rem', fontWeight: 800, letterSpacing: '-1.5px', marginBottom: '0.5rem' }}>
+            <h1 className={styles.title}>
               {t('builder_projects_title')}
             </h1>
-            <p style={{ color: 'var(--text-muted)' }}>{t('builder_projects_desc')}</p>
+            <p className={styles.subtitle}>{t('builder_projects_desc')}</p>
           </div>
           
           <button 
-            className="btn-cinematic primary"
+            className={`btn-cinematic primary ${styles.createBtn}`}
             onClick={createProject}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', fontSize: '1rem' }}
           >
             <Add size="24" /> {t('builder_new_project')}
           </button>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="bento-card" style={{ display: 'flex', gap: '1rem', marginBottom: '3rem', padding: '2rem' }}>
-          <div style={{ flex: 1 }}>
-            <h3 style={{ marginBottom: '0.5rem', fontSize: '1.2rem', fontWeight: 600 }}>{t('builder_join_group')}</h3>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>{t('builder_join_desc')}</p>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <motion.div variants={itemVariants} className={`bento-card ${styles.joinSection}`}>
+          <div className={styles.joinSectionInner}>
+            <h3 className={styles.joinTitle}>{t('builder_join_group')}</h3>
+            <p className={styles.joinDesc}>{t('builder_join_desc')}</p>
+            <div className={styles.joinInputRow}>
               <input 
                 type="text" 
-                className="glass-input"
+                className={`glass-input ${styles.joinInput}`}
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value)}
                 placeholder={t('builder_join_placeholder')}
-                style={{ flex: 1, minWidth: '200px', textTransform: 'uppercase' }}
               />
               <button 
                 className="btn-cinematic secondary"
@@ -227,72 +226,58 @@ export default function BuilderDashboard() {
           </div>
         </motion.div>
 
-        <motion.h2 variants={itemVariants} style={{ fontSize: '1.8rem', marginBottom: '1.5rem', fontWeight: 700, letterSpacing: '-0.5px' }}>
+        <motion.h2 variants={itemVariants} className={styles.projectsTitle}>
           {t('builder_your_projects')}
         </motion.h2>
         
         {projects.length === 0 ? (
-          <motion.div variants={itemVariants} className="bento-card" style={{ textAlign: 'center', padding: '4rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <FolderOpen size="48" color="var(--text-muted)" style={{ marginBottom: '1rem' }} />
-            <h3 style={{ color: 'white', marginBottom: '0.5rem', fontSize: '1.2rem' }}>{t('builder_no_projects')}</h3>
-            <p style={{ color: 'var(--text-muted)' }}>{t('builder_no_projects_desc')}</p>
+          <motion.div variants={itemVariants} className={`bento-card ${styles.emptyState}`}>
+            <FolderOpen size="48" color="var(--text-muted)" className={styles.emptyStateIcon} />
+            <h3 className={styles.emptyStateTitle}>{t('builder_no_projects')}</h3>
+            <p className={styles.emptyStateDesc}>{t('builder_no_projects_desc')}</p>
           </motion.div>
         ) : (
-          <motion.div variants={containerVariants} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+          <motion.div variants={containerVariants} className={styles.grid}>
             {projects.map((p) => (
               <motion.div variants={itemVariants} key={p.id}>
-                <Link href={`/builder/${p.id}`} style={{ textDecoration: 'none' }}>
-                  <div className="bento-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '1.5rem', position: 'relative' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <h3 style={{ color: 'white', fontSize: '1.3rem', fontWeight: 600, marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Link href={`/builder/${p.id}`} className={styles.cardLink}>
+                  <div className={`bento-card ${styles.card}`}>
+                    <div className={styles.cardInner}>
+                      <div className={styles.cardHeaderRow}>
+                        <h3 className={styles.cardTitle}>
                           <Folder variant="Bulk" size="22" color="#10b981" /> {p.name}
                         </h3>
                         <button
                           onClick={(e) => deleteProject(e, p.id, p.name)}
                           title={t('builder_delete_project') || "Delete"}
-                          style={{
-                            background: 'rgba(239, 68, 68, 0.1)',
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                            color: '#ef4444',
-                            padding: '6px',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s',
-                            zIndex: 10
-                          }}
-                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)'}
-                          onMouseOut={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                          className={styles.deleteBtn}
                         >
                           <CloseCircle variant="Bulk" size="22" color="#ef4444" />
                         </button>
                       </div>
-                      {p.description && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem', fontStyle: 'italic' }}>{p.description}</p>}
-                      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {p.description && <p className={styles.cardDesc}>{p.description}</p>}
+                      <p className={styles.cardDate}>
                         <Clock size="14" color="rgba(255,255,255,0.4)" /> {t('builder_updated')} {new Date(p.updatedAt).toLocaleString()}
                       </p>
                     </div>
                     
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                        <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '6px', borderRadius: '50%', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className={styles.cardFooter}>
+                      <div className={styles.cardOwner}>
+                        <div className={styles.cardOwnerIconWrap}>
                           <User variant="Bulk" size="16" />
                         </div>
-                        <span style={{ fontWeight: 500, color: 'white' }}>{p.owner?.name || t('builder_guest')}</span>
+                        <span className={styles.cardOwnerName}>{p.owner?.name || t('builder_guest')}</span>
                       </div>
                       
                       {p.collaborators?.length > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        <div className={styles.cardCollabs}>
                           <User variant="Bulk" size="14" /> +{p.collaborators.length}
                         </div>
                       )}
                     </div>
                     
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.1)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--accent-green)', marginTop: '1rem', fontWeight: 500, border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                      <LinkIcon variant="Bulk" size="16" /> {t('builder_code')} <span style={{ letterSpacing: '1px', fontWeight: 700 }}>{p.joinCode}</span>
+                    <div className={styles.cardCodeWrap}>
+                      <LinkIcon variant="Bulk" size="16" /> {t('builder_code')} <span className={styles.cardCodeText}>{p.joinCode}</span>
                     </div>
                   </div>
                 </Link>

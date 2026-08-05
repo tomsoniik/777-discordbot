@@ -4,7 +4,7 @@ module.exports = {
       name: 'bot-777',
       script: 'npm',
       args: 'run start',
-      cwd: './bot',
+      cwd: './discord-bot',
       instances: 1,
       autorestart: true,
       watch: false,

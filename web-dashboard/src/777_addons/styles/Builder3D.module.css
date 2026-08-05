@@ -1,0 +1,49 @@
+.container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: #202428;
+}
+
+.controlsOverlay {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  color: #fff;
+  background: var(--bg-card);
+  padding: 15px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+
+.overlayTitle {
+  margin: 0;
+  font-weight: bold;
+  color: var(--accent-green);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statusDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 10px var(--accent-green);
+}
+
+.controlsList {
+  margin: 8px 0 0 0;
+  opacity: 0.8;
+  line-height: 1.5;
+}
+
+.controlKey {
+  color: white;
+}

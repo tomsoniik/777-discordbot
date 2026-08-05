@@ -1,0 +1,104 @@
+.mainContainer {
+  padding-top: 0;
+}
+
+.systemStatusDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+}
+
+.builderBtn {
+  font-size: 1.1rem;
+  padding: 14px 28px;
+}
+
+.steamBtn {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.steamIcon {
+  width: 20px;
+  filter: invert(1);
+  margin-right: 8px;
+}
+
+.bentoCardCommon {
+  align-items: center;
+  text-align: center;
+}
+
+.bentoCardTitleSmall {
+  font-size: 1.4rem;
+  color: #fff;
+  margin: 0 0 0.75rem 0;
+  font-weight: 700;
+}
+
+.bentoCardDescSmall {
+  color: var(--text-muted);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.bentoCardLarge {
+  align-items: center;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(10, 20, 15, 0.8) 100%);
+}
+
+.cardIconLarge {
+  width: 84px;
+  height: 84px;
+}
+
+.bentoCardTitleLarge {
+  font-size: 1.75rem;
+  color: #fff;
+  margin: 0 0 1rem 0;
+  font-weight: 800;
+}
+
+.bentoCardDescLarge {
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 80%;
+  font-size: 1.05rem;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 6rem;
+  padding: 3rem 0;
+  border-top: 1px solid var(--glass-border);
+  color: var(--text-muted);
+}
+
+.footerLogoContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.footerLine {
+  width: 20px;
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+}
+
+.footerLogoText {
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: -0.5px;
+}
+
+.footerCopyright {
+  margin: 0;
+  font-size: 0.9rem;
+}
