@@ -143,11 +143,14 @@ export function getAuthOptions(req?: Request): NextAuthOptions {
 
 export const authOptions: NextAuthOptions = getAuthOptions();
 
-export async function GET(req: NextRequest, ctx: any) {
-  return NextAuth(req, ctx, getAuthOptions(req));
+export async function GET(req: NextRequest, context: any) {
+  const params = context?.params ? await context.params : undefined;
+  return NextAuth(req, { params }, getAuthOptions(req));
 }
 
-export async function POST(req: NextRequest, ctx: any) {
-  return NextAuth(req, ctx, getAuthOptions(req));
+export async function POST(req: NextRequest, context: any) {
+  const params = context?.params ? await context.params : undefined;
+  return NextAuth(req, { params }, getAuthOptions(req));
 }
+
 
