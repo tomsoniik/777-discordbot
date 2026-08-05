@@ -84,8 +84,13 @@ const Item3D = ({
   const length = SIDE * SCALE;
   const height = isRoof ? 0.3 : 0.4;
 
-  const color = new THREE.Color(item.customColor || def.color);
-  const edgeColor = isSelected ? '#10b981' : 'rgba(0,0,0,0.5)';
+  // Safe vibrant color selection
+  const rawColor = (item.customColor && item.customColor !== 'clear') ? item.customColor : (def.color && def.color !== 'clear' ? def.color : '#94a3b8');
+  const baseColorHex = rawColor.startsWith('#') || rawColor.startsWith('rgb') ? rawColor : '#94a3b8';
+  const color = new THREE.Color(baseColorHex);
+  
+  // Highlight edges with bright cyan/green for high visibility
+  const edgeColor = isSelected ? '#10b981' : '#38bdf8';
 
   const handlePointerDown = (e: THREE.Event | any) => {
     e.stopPropagation();
@@ -114,24 +119,23 @@ const Item3D = ({
       <group position={[posX, spawnY, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
         <group>
           <Box args={[bedWidth, bedHeight, bedLength]} position={[0, bedPosY, 0]} castShadow receiveShadow>
-            <meshPhysicalMaterial
+            <meshStandardMaterial
               color="#ff4757"
-              roughness={0.4}
-              metalness={0.1}
-              clearcoat={0.5}
+              roughness={0.3}
+              metalness={0.2}
             />
-            <Edges scale={1.05} color={isSelected ? '#10b981' : '#ffffff'} opacity={isSelected ? 1 : 0.8} transparent />
+            <Edges scale={1.05} color={isSelected ? '#10b981' : '#ffffff'} opacity={isSelected ? 1 : 0.9} transparent />
           </Box>
 
           {showBedAreas && (
             <>
               <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
                 <circleGeometry args={[radius, 64]} />
-                <meshBasicMaterial color="#ff4757" transparent opacity={0.05} depthWrite={false} />
+                <meshBasicMaterial color="#ff4757" transparent opacity={0.08} depthWrite={false} />
               </mesh>
               <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
                 <ringGeometry args={[radius - 0.2, radius, 64]} />
-                <meshBasicMaterial color="#ff4757" transparent opacity={0.4} depthWrite={false} />
+                <meshBasicMaterial color="#ff4757" transparent opacity={0.5} depthWrite={false} />
               </mesh>
             </>
           )}
@@ -142,13 +146,12 @@ const Item3D = ({
     return (
       <group position={[posX, height / 2 + heightOffset, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
         <Box args={[width, height, length]} castShadow receiveShadow>
-          <meshPhysicalMaterial
+          <meshStandardMaterial
             color={color}
-            roughness={0.3}
-            metalness={0.5}
-            clearcoat={0.2}
+            roughness={0.4}
+            metalness={0.2}
           />
-          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.6} transparent />
+          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.8} transparent />
         </Box>
       </group>
     );
@@ -156,13 +159,12 @@ const Item3D = ({
     return (
       <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
         <Box args={[width, 3.0, 0.4]} castShadow receiveShadow>
-          <meshPhysicalMaterial
+          <meshStandardMaterial
             color={color}
-            roughness={0.3}
-            metalness={0.5}
-            clearcoat={0.2}
+            roughness={0.4}
+            metalness={0.2}
           />
-          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.6} transparent />
+          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.8} transparent />
         </Box>
       </group>
     );
@@ -170,13 +172,12 @@ const Item3D = ({
     return (
       <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
         <Cylinder args={[0.4, 0.4, 3.0, 16]} castShadow receiveShadow>
-          <meshPhysicalMaterial
+          <meshStandardMaterial
             color={color}
-            roughness={0.3}
-            metalness={0.5}
-            clearcoat={0.2}
+            roughness={0.4}
+            metalness={0.2}
           />
-          <Edges scale={1.02} color={edgeColor} opacity={isSelected ? 1 : 0.6} transparent threshold={15} />
+          <Edges scale={1.02} color={edgeColor} opacity={isSelected ? 1 : 0.8} transparent threshold={15} />
         </Cylinder>
       </group>
     );
@@ -199,18 +200,18 @@ const Item3D = ({
       <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
           <extrudeGeometry args={[shape, extrudeSettings]} />
-          <meshPhysicalMaterial
+          <meshStandardMaterial
             color={color}
-            roughness={0.3}
-            metalness={0.5}
-            clearcoat={0.2}
+            roughness={0.4}
+            metalness={0.2}
           />
-          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.6} transparent threshold={15} />
+          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.8} transparent threshold={15} />
         </mesh>
       </group>
     );
   }
 };
+
 
 
 // Ghost Preview Mesh for 3D Socket Snapping

@@ -21,11 +21,11 @@ interface BuildItem {
 const getIconUrl = (id: number) => `https://cdn.jsdelivr.net/gh/SilKsPlugins/UnturnedImages@images/vanilla/items/${id}.png`;
 
 const BUILD_ITEMS: BuildItem[] = [
-  { id: 'f_square', name: 'Foundation', shape: 'square', materialClass: 'structure', color: '#888888', texture: '/custom_roof.png', costs: { 'wood': 4 } },
-  { id: 'c_roof', name: 'Roof', shape: 'square', materialClass: 'structure', color: '#555555', texture: '/custom_roof.png', costs: { 'scrap': 3 } },
-  { id: 'c_roof_tri', name: 'Tri Roof', shape: 'triangle', materialClass: 'structure', color: '#555555', texture: '/custom_roof.png', costs: { 'scrap': 2 } },
-  { id: 'c_wall', name: 'Wall', shape: 'wall', materialClass: 'structure', color: '#444444', texture: '/custom_roof.png', costs: { 'scrap': 2 } },
-  { id: 'c_pillar', name: 'Pillar', shape: 'pillar', materialClass: 'structure', color: '#333333', texture: '/custom_roof.png', costs: { 'scrap': 1 } },
+  { id: 'f_square', name: 'Foundation', shape: 'square', materialClass: 'structure', color: '#94a3b8', texture: '/custom_roof.png', costs: { 'wood': 4 } },
+  { id: 'c_roof', name: 'Roof', shape: 'square', materialClass: 'structure', color: '#64748b', texture: '/custom_roof.png', costs: { 'scrap': 3 } },
+  { id: 'c_roof_tri', name: 'Tri Roof', shape: 'triangle', materialClass: 'structure', color: '#64748b', texture: '/custom_roof.png', costs: { 'scrap': 2 } },
+  { id: 'c_wall', name: 'Wall', shape: 'wall', materialClass: 'structure', color: '#475569', texture: '/custom_roof.png', costs: { 'scrap': 2 } },
+  { id: 'c_pillar', name: 'Pillar', shape: 'pillar', materialClass: 'structure', color: '#3b82f6', texture: '/custom_roof.png', costs: { 'scrap': 1 } },
   { id: 'f_bed', name: 'Claim Bed', shape: 'bed', materialClass: 'furniture', color: '#ff4757', texture: getIconUrl(288), costs: { 'cloth': 4 } }
 ];
 
