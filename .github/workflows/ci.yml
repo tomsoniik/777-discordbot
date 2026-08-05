@@ -12,7 +12,7 @@ jobs:
     
     defaults:
       run:
-        working-directory: ./bot
+        working-directory: ./discord-bot
 
     strategy:
       matrix:
@@ -26,7 +26,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-        cache-dependency-path: './bot/package-lock.json'
+        cache-dependency-path: './discord-bot/package-lock.json'
         
     - name: Install dependencies
       run: npm ci
@@ -36,3 +36,4 @@ jobs:
       
     - name: Build TypeScript
       run: npm run build
+
