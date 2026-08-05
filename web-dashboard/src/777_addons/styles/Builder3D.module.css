@@ -10,14 +10,15 @@
   bottom: 20px;
   right: 20px;
   color: #fff;
-  background: var(--bg-card);
+  background: rgba(15, 23, 20, 0.85);
   padding: 15px;
   border-radius: 12px;
-  font-size: 0.9rem;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--border-color);
+  font-size: 0.85rem;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  z-index: 20;
 }
 
 .overlayTitle {
@@ -47,3 +48,95 @@
 .controlKey {
   color: white;
 }
+
+/* FPS Crosshair */
+.fpsCrosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crosshairDot {
+  width: 8px;
+  height: 8px;
+  background: var(--accent-green);
+  border: 2px solid rgba(0, 0, 0, 0.8);
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--accent-green);
+}
+
+/* Quick Hotbar (Unturned Style) */
+.hotbarOverlay {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  background: rgba(15, 23, 20, 0.85);
+  backdrop-filter: blur(16px);
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 20;
+}
+
+.hotbarSlot {
+  position: relative;
+  width: 52px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 4px;
+}
+
+.hotbarSlot:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-green);
+}
+
+.hotbarSlotActive {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: var(--accent-green);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+}
+
+.hotbarKey {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  font-size: 0.65rem;
+  font-weight: bold;
+  color: var(--accent-green);
+}
+
+.hotbarIcon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  margin-top: 4px;
+}
+
+.hotbarLabel {
+  font-size: 0.6rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+

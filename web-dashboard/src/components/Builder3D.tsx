@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo, useState, useRef, Suspense } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import React, { useMemo, useState, useRef, useEffect, Suspense } from 'react';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment, Edges, Sparkles, ContactShadows, SoftShadows, Box, Cylinder } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -44,6 +44,7 @@ interface Builder3DProps {
   onSelectItem?: (id: string, shiftKey: boolean) => void;
   onDeleteItem?: (id: string) => void;
   onPaintItem?: (id: string) => void;
+  onSelectActiveItem?: (id: string | null) => void;
 }
 
 const SIDE = 60;
@@ -227,19 +228,17 @@ const Item3D = ({
   }
 };
 
-// Ghost Preview Mesh for 3D Placement Sandbox
+// Ghost Preview Mesh for 3D Socket Snapping
 const GhostMesh3D = ({
   activeDef,
   position,
   rotation,
-  floor,
   isValid,
   onPlace
 }: {
   activeDef: BuildItem;
   position: [number, number, number];
   rotation: number;
-  floor: number;
   isValid: boolean;
   onPlace: () => void;
 }) => {
@@ -259,7 +258,7 @@ const GhostMesh3D = ({
     return (
       <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
         <Box args={[20 * SCALE, 0.5, 40 * SCALE]} position={[0, 0.25, 0]}>
-          <meshStandardMaterial color={color} transparent opacity={0.6} wireframe />
+          <meshStandardMaterial color={color} transparent opacity={0.7} wireframe />
         </Box>
       </group>
     );
@@ -267,7 +266,7 @@ const GhostMesh3D = ({
     return (
       <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
         <Box args={[width, height, length]}>
-          <meshStandardMaterial color={color} transparent opacity={0.6} wireframe />
+          <meshStandardMaterial color={color} transparent opacity={0.7} wireframe />
         </Box>
       </group>
     );
@@ -275,7 +274,7 @@ const GhostMesh3D = ({
     return (
       <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
         <Box args={[width, 3.0, 0.4]}>
-          <meshStandardMaterial color={color} transparent opacity={0.6} wireframe />
+          <meshStandardMaterial color={color} transparent opacity={0.7} wireframe />
         </Box>
       </group>
     );
@@ -283,7 +282,7 @@ const GhostMesh3D = ({
     return (
       <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
         <Cylinder args={[0.4, 0.4, 3.0, 16]}>
-          <meshStandardMaterial color={color} transparent opacity={0.6} wireframe />
+          <meshStandardMaterial color={color} transparent opacity={0.7} wireframe />
         </Cylinder>
       </group>
     );
@@ -291,12 +290,92 @@ const GhostMesh3D = ({
     return (
       <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
         <Box args={[width, height, width]}>
-          <meshStandardMaterial color={color} transparent opacity={0.6} wireframe />
+          <meshStandardMaterial color={color} transparent opacity={0.7} wireframe />
         </Box>
       </group>
     );
   }
 };
+
+// First Person NoClip Camera Controller (Unturned Style)
+function FirstPersonFlyController({ active }: { active: boolean }) {
+  const { camera } = useThree();
+  const keys = useRef<Record<string, boolean>>({});
+  const isDragging = useRef(false);
+  const previousMouse = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const pitch = useRef(0);
+  const yaw = useRef(0);
+
+  useEffect(() => {
+    if (!active) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      keys.current[e.code] = true;
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      keys.current[e.code] = false;
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button === 0 || e.button === 2) {
+        isDragging.current = true;
+        previousMouse.current = { x: e.clientX, y: e.clientY };
+      }
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      const dx = e.clientX - previousMouse.current.x;
+      const dy = e.clientY - previousMouse.current.y;
+      previousMouse.current = { x: e.clientX, y: e.clientY };
+
+      const sensitivity = 0.003;
+      yaw.current -= dx * sensitivity;
+      pitch.current -= dy * sensitivity;
+      pitch.current = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitch.current));
+
+      const euler = new THREE.Euler(pitch.current, yaw.current, 0, 'YXZ');
+      camera.quaternion.setFromEuler(euler);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [active, camera]);
+
+  useFrame((_, delta) => {
+    if (!active) return;
+    const speed = 12 * delta;
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+    
+    const right = new THREE.Vector3();
+    right.crossVectors(forward, camera.up).normalize();
+
+    if (keys.current['KeyW']) camera.position.addScaledVector(forward, speed);
+    if (keys.current['KeyS']) camera.position.addScaledVector(forward, -speed);
+    if (keys.current['KeyA']) camera.position.addScaledVector(right, -speed);
+    if (keys.current['KeyD']) camera.position.addScaledVector(right, speed);
+    if (keys.current['KeyE'] || keys.current['Space']) camera.position.y += speed;
+    if (keys.current['KeyQ'] || keys.current['ShiftLeft']) camera.position.y -= speed;
+  });
+
+  return null;
+}
 
 export default function Builder3D({
   placedItems,
@@ -310,15 +389,17 @@ export default function Builder3D({
   onPlaceItem,
   onSelectItem,
   onDeleteItem,
-  onPaintItem
+  onPaintItem,
+  onSelectActiveItem
 }: Builder3DProps) {
-  const [cameraView, setCameraView] = useState<'orbit' | 'top' | 'iso'>('orbit');
+  const [cameraView, setCameraView] = useState<'fps' | 'orbit' | 'top' | 'iso'>('fps');
   const [ghostPos, setGhostPos] = useState<[number, number, number] | null>(null);
   const [ghost2DPos, setGhost2DPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [rotation3D, setRotation3D] = useState(0);
 
   const activeDef = useMemo(() => buildItems.find(d => d.id === activeItem), [activeItem, buildItems]);
 
+  // Center calculation
   const center = useMemo(() => {
     if (placedItems.length === 0) return [0, 0, 0] as [number, number, number];
     let sx = 0, sz = 0;
@@ -329,6 +410,7 @@ export default function Builder3D({
     return [sx / placedItems.length, 0, sz / placedItems.length] as [number, number, number];
   }, [placedItems]);
 
+  // Unturned Structure Socket Snapping Logic
   const handlePointerMoveGround = (e: THREE.Event | any) => {
     if (!activeDef) {
       setGhostPos(null);
@@ -337,16 +419,62 @@ export default function Builder3D({
     const point = e.point as THREE.Vector3;
     if (!point) return;
 
-    // Convert 3D world units to 2D grid coordinates
-    const gridX = Math.round((point.x / SCALE) / 30) * 30;
-    const gridZ = Math.round((point.z / SCALE) / 30) * 30;
+    let targetX = Math.round((point.x / SCALE) / 30) * 30;
+    let targetZ = Math.round((point.z / SCALE) / 30) * 30;
+    let targetFloor = currentFloor;
 
-    const floorOffset = currentFloor * 3.0;
+    // Find nearest placed item to test socket snapping
+    let closestItem: PlacedItem | null = null;
+    let minSocketDist = 4.0; // 3D world units threshold
+
+    placedItems.forEach(item => {
+      const itemX3D = item.x * SCALE;
+      const itemZ3D = item.y * SCALE;
+      const dist = Math.hypot(point.x - itemX3D, point.z - itemZ3D);
+      if (dist < minSocketDist) {
+        minSocketDist = dist;
+        closestItem = item;
+      }
+    });
+
+    if (closestItem) {
+      const closestDef = buildItems.find(d => d.id === (closestItem as PlacedItem).itemId);
+      const itemFloor = (closestItem as PlacedItem).floor || 0;
+
+      // Socket Snapping Rules:
+      if (activeDef.shape === 'square' || activeDef.shape === 'triangle') {
+        if (closestDef?.shape === 'square' || closestDef?.shape === 'triangle') {
+          // Snap foundation edge-to-edge
+          const dx = point.x - (closestItem as PlacedItem).x * SCALE;
+          const dz = point.z - (closestItem as PlacedItem).y * SCALE;
+          if (Math.abs(dx) > Math.abs(dz)) {
+            targetX = (closestItem as PlacedItem).x + (dx > 0 ? 60 : -60);
+            targetZ = (closestItem as PlacedItem).y;
+          } else {
+            targetX = (closestItem as PlacedItem).x;
+            targetZ = (closestItem as PlacedItem).y + (dz > 0 ? 60 : -60);
+          }
+          targetFloor = itemFloor;
+        }
+      } else if (activeDef.shape === 'wall') {
+        // Wall snaps to foundation or lower wall top
+        targetX = (closestItem as PlacedItem).x;
+        targetZ = (closestItem as PlacedItem).y;
+        targetFloor = point.y > (itemFloor * 3.0 + 1.5) ? itemFloor + 1 : itemFloor;
+      } else if (activeDef.shape === 'pillar') {
+        // Pillar snaps to corners
+        targetX = (closestItem as PlacedItem).x + (point.x > (closestItem as PlacedItem).x * SCALE ? 30 : -30);
+        targetZ = (closestItem as PlacedItem).y + (point.z > (closestItem as PlacedItem).y * SCALE ? 30 : -30);
+        targetFloor = itemFloor;
+      }
+    }
+
+    const floorOffset = targetFloor * 3.0;
     const isRoof = activeDef.id.includes('roof');
     const heightOffset = floorOffset + (isRoof ? 3.0 : (activeDef.shape === 'wall' || activeDef.shape === 'pillar' ? 1.5 : 0.2));
 
-    setGhostPos([gridX * SCALE, heightOffset, gridZ * SCALE]);
-    setGhost2DPos({ x: gridX, y: gridZ });
+    setGhostPos([targetX * SCALE, heightOffset, targetZ * SCALE]);
+    setGhost2DPos({ x: targetX, y: targetZ });
   };
 
   const handleGroundClick = () => {
@@ -373,6 +501,7 @@ export default function Builder3D({
   };
 
   const cameraPos = useMemo(() => {
+    if (cameraView === 'fps') return [center[0], 5, center[2] + 12] as [number, number, number];
     if (cameraView === 'top') return [center[0], 45, center[2] + 0.1] as [number, number, number];
     if (cameraView === 'iso') return [center[0] + 30, 30, center[2] + 30] as [number, number, number];
     return [center[0], 25, center[2] + 25] as [number, number, number];
@@ -380,7 +509,7 @@ export default function Builder3D({
 
   return (
     <div className={styles.container}>
-      <Canvas shadows camera={{ position: cameraPos, fov: 40 }}>
+      <Canvas shadows camera={{ position: cameraPos, fov: cameraView === 'fps' ? 70 : 40 }}>
         <color attach="background" args={[isNightMode ? '#0a0d12' : '#1a1f26']} />
 
         <SoftShadows size={8} samples={16} focus={0.5} />
@@ -398,18 +527,23 @@ export default function Builder3D({
         {isNightMode ? (
           <>
             <pointLight position={[center[0], 10, center[2]]} intensity={1.5} color="#10b981" />
-            <Sparkles count={80} scale={40} size={3} speed={0.4} color="#10b981" />
+            <Sparkles count={100} scale={40} size={3} speed={0.4} color="#10b981" />
           </>
         ) : (
           <Environment preset="dawn" />
         )}
 
-        <OrbitControls
-          target={center}
-          maxPolarAngle={cameraView === 'top' ? 0.05 : Math.PI / 2 - 0.05}
-          dampingFactor={0.05}
-          makeDefault
-        />
+        {/* Camera Controllers */}
+        {cameraView === 'fps' ? (
+          <FirstPersonFlyController active={true} />
+        ) : (
+          <OrbitControls
+            target={center}
+            maxPolarAngle={cameraView === 'top' ? 0.05 : Math.PI / 2 - 0.05}
+            dampingFactor={0.05}
+            makeDefault
+          />
+        )}
 
         <Grid
           position={[0, -0.01, 0]}
@@ -420,11 +554,11 @@ export default function Builder3D({
           sectionSize={3}
           sectionThickness={1.5}
           sectionColor={isNightMode ? '#10b981' : '#4b5563'}
-          fadeDistance={100}
+          fadeDistance={120}
           fadeStrength={2}
         />
 
-        {/* Interactive Ground Plane for 3D Sandbox Raycasting */}
+        {/* Interactive Ground Plane */}
         <mesh
           position={[0, -0.05, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
@@ -465,7 +599,6 @@ export default function Builder3D({
                 activeDef={activeDef}
                 position={ghostPos}
                 rotation={rotation3D}
-                floor={currentFloor}
                 isValid={true}
                 onPlace={handleGroundClick}
               />
@@ -474,12 +607,37 @@ export default function Builder3D({
         </Suspense>
       </Canvas>
 
+      {/* Unturned Style Crosshair Overlay for FPS Fly Mode */}
+      {cameraView === 'fps' && (
+        <div className={styles.fpsCrosshair}>
+          <div className={styles.crosshairDot} />
+        </div>
+      )}
+
+      {/* Unturned Style Quick Hotbar (1-6) */}
+      <div className={styles.hotbarOverlay}>
+        {buildItems.slice(0, 6).map((item, idx) => {
+          const isActive = activeItem === item.id;
+          return (
+            <button
+              key={item.id}
+              className={`${styles.hotbarSlot} ${isActive ? styles.hotbarSlotActive : ''}`}
+              onClick={() => onSelectActiveItem && onSelectActiveItem(isActive ? null : item.id)}
+            >
+              <span className={styles.hotbarKey}>{idx + 1}</span>
+              <img src={item.texture} alt="" className={styles.hotbarIcon} />
+              <span className={styles.hotbarLabel}>{item.name}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* 3D Sandbox Floating Controls */}
       <div className={styles.controlsOverlay}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <p className={styles.overlayTitle} style={{ margin: 0 }}>
             <span className={styles.statusDot} />
-            3D Sandbox Builder (Live)
+            Unturned 3D Sandbox (NoClip Fly)
           </p>
           {activeDef && (
             <button
@@ -502,11 +660,18 @@ export default function Builder3D({
 
         <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
           <button
+            className={`btn-cinematic ${cameraView === 'fps' ? 'primary' : 'secondary'}`}
+            style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+            onClick={() => setCameraView('fps')}
+          >
+            🕹️ 1. Osoba (NoClip)
+          </button>
+          <button
             className={`btn-cinematic ${cameraView === 'orbit' ? 'primary' : 'secondary'}`}
             style={{ padding: '4px 10px', fontSize: '0.75rem' }}
             onClick={() => setCameraView('orbit')}
           >
-            Perspektywa
+            Perspektywa 3D
           </button>
           <button
             className={`btn-cinematic ${cameraView === 'iso' ? 'primary' : 'secondary'}`}
@@ -515,20 +680,13 @@ export default function Builder3D({
           >
             Izometria
           </button>
-          <button
-            className={`btn-cinematic ${cameraView === 'top' ? 'primary' : 'secondary'}`}
-            style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-            onClick={() => setCameraView('top')}
-          >
-            Widok z Góry
-          </button>
         </div>
 
         <p className={styles.controlsList}>
-          <b className={styles.controlKey}>LMB:</b> Obracanie / Stawianie klocka<br />
-          <b className={styles.controlKey}>RMB:</b> Przesuwanie kamery<br />
-          <b className={styles.controlKey}>Scroll:</b> Zoom<br />
-          <b className={styles.controlKey}>R:</b> Obracanie klocka 3D
+          <b className={styles.controlKey}>WASD:</b> Poruszanie / Latanie<br />
+          <b className={styles.controlKey}>Q / E:</b> Dół / Góra (NoClip)<br />
+          <b className={styles.controlKey}>LMB:</b> Stawianie w gnieździe<br />
+          <b className={styles.controlKey}>R:</b> Obrót | <b>1-6:</b> Hotbar
         </p>
       </div>
     </div>

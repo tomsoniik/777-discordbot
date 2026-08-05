@@ -1288,6 +1288,7 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
                   commitAction(placedItems.map(i => i.id === itemId ? { ...i, customColor: selectedColor === 'clear' ? undefined : selectedColor } : i));
                 }
               }}
+              onSelectActiveItem={(itemId) => setActiveItem(itemId)}
             />
           ) : (
             <div 
