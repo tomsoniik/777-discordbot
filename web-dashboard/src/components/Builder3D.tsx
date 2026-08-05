@@ -68,16 +68,10 @@ const Item3D = ({
   allItems,
   buildDefs,
   isSelected,
-  currentFloor,
   showBedAreas,
   onPointerDown
 }: Item3DProps) => {
   const itemFloor = item.floor || 0;
-  if (itemFloor > currentFloor) return null;
-
-  const isLowerFloor = itemFloor < currentFloor;
-  const opacity = isLowerFloor ? 0.35 : 0.85;
-
   const posX = item.x * SCALE;
   const posZ = item.y * SCALE;
   const rotY = -item.rotation * (Math.PI / 180);
@@ -91,7 +85,7 @@ const Item3D = ({
   const height = isRoof ? 0.3 : 0.4;
 
   const color = new THREE.Color(item.customColor || def.color);
-  const edgeColor = isSelected ? '#10b981' : (isLowerFloor ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.4)');
+  const edgeColor = isSelected ? '#10b981' : 'rgba(0,0,0,0.5)';
 
   const handlePointerDown = (e: THREE.Event | any) => {
     e.stopPropagation();
@@ -125,17 +119,15 @@ const Item3D = ({
               roughness={0.4}
               metalness={0.1}
               clearcoat={0.5}
-              transparent={isLowerFloor}
-              opacity={opacity}
             />
-            <Edges scale={1.05} color={isSelected ? '#10b981' : '#ffffff'} opacity={isSelected ? 1 : 0.6} transparent />
+            <Edges scale={1.05} color={isSelected ? '#10b981' : '#ffffff'} opacity={isSelected ? 1 : 0.8} transparent />
           </Box>
 
           {showBedAreas && (
             <>
               <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
                 <circleGeometry args={[radius, 64]} />
-                <meshBasicMaterial color="#ff4757" transparent opacity={0.03} depthWrite={false} />
+                <meshBasicMaterial color="#ff4757" transparent opacity={0.05} depthWrite={false} />
               </mesh>
               <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
                 <ringGeometry args={[radius - 0.2, radius, 64]} />
@@ -152,13 +144,11 @@ const Item3D = ({
         <Box args={[width, height, length]} castShadow receiveShadow>
           <meshPhysicalMaterial
             color={color}
-            transparent
-            opacity={opacity}
             roughness={0.3}
-            metalness={0.6}
+            metalness={0.5}
             clearcoat={0.2}
           />
-          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.4} transparent />
+          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.6} transparent />
         </Box>
       </group>
     );
@@ -168,13 +158,11 @@ const Item3D = ({
         <Box args={[width, 3.0, 0.4]} castShadow receiveShadow>
           <meshPhysicalMaterial
             color={color}
-            transparent
-            opacity={opacity}
             roughness={0.3}
-            metalness={0.6}
+            metalness={0.5}
             clearcoat={0.2}
           />
-          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.4} transparent />
+          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.6} transparent />
         </Box>
       </group>
     );
@@ -184,13 +172,11 @@ const Item3D = ({
         <Cylinder args={[0.4, 0.4, 3.0, 16]} castShadow receiveShadow>
           <meshPhysicalMaterial
             color={color}
-            transparent
-            opacity={opacity}
             roughness={0.3}
-            metalness={0.6}
+            metalness={0.5}
             clearcoat={0.2}
           />
-          <Edges scale={1.02} color={edgeColor} opacity={isSelected ? 1 : 0.4} transparent threshold={15} />
+          <Edges scale={1.02} color={edgeColor} opacity={isSelected ? 1 : 0.6} transparent threshold={15} />
         </Cylinder>
       </group>
     );
@@ -215,18 +201,17 @@ const Item3D = ({
           <extrudeGeometry args={[shape, extrudeSettings]} />
           <meshPhysicalMaterial
             color={color}
-            transparent
-            opacity={opacity}
             roughness={0.3}
-            metalness={0.6}
+            metalness={0.5}
             clearcoat={0.2}
           />
-          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.4} transparent threshold={15} />
+          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.6} transparent threshold={15} />
         </mesh>
       </group>
     );
   }
 };
+
 
 // Ghost Preview Mesh for 3D Socket Snapping
 const GhostMesh3D = ({
@@ -575,8 +560,24 @@ export default function Builder3D({
         <Suspense fallback={null}>
           <group>
             {placedItems.map(item => {
-              const def = buildItems.find(d => d.id === item.itemId);
-              if (!def) return null;
+              let def = buildItems.find(d => d.id === item.itemId);
+              if (!def) {
+                const idLower = (item.itemId || '').toLowerCase();
+                const fallbackShape: ShapeType = idLower.includes('wall') ? 'wall' :
+                  idLower.includes('pillar') ? 'pillar' :
+                  idLower.includes('bed') ? 'bed' :
+                  idLower.includes('tri') ? 'triangle' : 'square';
+
+                def = {
+                  id: item.itemId || 'structure',
+                  name: 'Structure',
+                  shape: fallbackShape,
+                  materialClass: 'structure',
+                  color: idLower.includes('bed') ? '#ff4757' : '#777777',
+                  texture: '/custom_roof.png',
+                  costs: {}
+                };
+              }
               const isSelected = selectedItemIds.includes(item.id);
               return (
                 <Item3D
