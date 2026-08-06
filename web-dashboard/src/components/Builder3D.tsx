@@ -386,7 +386,7 @@ function FirstPersonFlyController({
   return null;
 }
 
-// FPS Camera Crosshair Raycasting & Placement Controller (Unturned Style)
+// FPS Camera Crosshair Raycasting & Placement Controller (Unturned Edge & Socket Snapping)
 function FPSPlacementController({
   activeDef,
   placedItems,
@@ -396,7 +396,8 @@ function FPSPlacementController({
   selectedColor,
   onPlaceItem,
   setGhostPos,
-  setGhost2DPos
+  setGhost2DPos,
+  setGhostRot
 }: {
   activeDef?: BuildItem;
   placedItems: PlacedItem[];
@@ -407,9 +408,10 @@ function FPSPlacementController({
   onPlaceItem?: (item: Omit<PlacedItem, 'id'>) => void;
   setGhostPos: (pos: [number, number, number] | null) => void;
   setGhost2DPos: (pos: { x: number; y: number } | null) => void;
+  setGhostRot: (rot: number) => void;
 }) {
   const { camera, scene } = useThree();
-  const ghostRef = useRef<{ x: number; y: number } | null>(null);
+  const ghostRef = useRef<{ x: number; y: number; rotation: number } | null>(null);
   const lastPlaceTimeRef = useRef(0);
 
   useFrame(() => {
@@ -450,6 +452,7 @@ function FPSPlacementController({
     let targetX = Math.round((targetPoint.x / SCALE) / 60) * 60;
     let targetZ = Math.round((targetPoint.z / SCALE) / 60) * 60;
     let targetFloor = currentFloor;
+    let targetRotation = rotation3D;
 
     // Socket snapping to nearest placed item
     let closestItem: PlacedItem | null = null;
@@ -468,27 +471,46 @@ function FPSPlacementController({
     if (closestItem) {
       const closestDef = buildItems.find(d => d.id === (closestItem as PlacedItem).itemId);
       const itemFloor = (closestItem as PlacedItem).floor || 0;
+      const cX = (closestItem as PlacedItem).x;
+      const cZ = (closestItem as PlacedItem).y;
+      const cX3D = cX * SCALE;
+      const cZ3D = cZ * SCALE;
 
       if (activeDef.shape === 'square' || activeDef.shape === 'triangle') {
         if (closestDef?.shape === 'square' || closestDef?.shape === 'triangle') {
-          const dx = targetPoint.x - (closestItem as PlacedItem).x * SCALE;
-          const dz = targetPoint.z - (closestItem as PlacedItem).y * SCALE;
+          const dx = targetPoint.x - cX3D;
+          const dz = targetPoint.z - cZ3D;
           if (Math.abs(dx) > Math.abs(dz)) {
-            targetX = (closestItem as PlacedItem).x + (dx > 0 ? 60 : -60);
-            targetZ = (closestItem as PlacedItem).y;
+            targetX = cX + (dx > 0 ? 60 : -60);
+            targetZ = cZ;
           } else {
-            targetX = (closestItem as PlacedItem).x;
-            targetZ = (closestItem as PlacedItem).y + (dz > 0 ? 60 : -60);
+            targetX = cX;
+            targetZ = cZ + (dz > 0 ? 60 : -60);
           }
           targetFloor = itemFloor;
         }
       } else if (activeDef.shape === 'wall') {
-        targetX = (closestItem as PlacedItem).x;
-        targetZ = (closestItem as PlacedItem).y;
+        // Unturned Edge Snapping: snap wall to 4 edges of foundation!
+        const dx = targetPoint.x - cX3D;
+        const dz = targetPoint.z - cZ3D;
+        if (Math.abs(dx) > Math.abs(dz)) {
+          // East / West edge
+          targetX = cX + (dx > 0 ? 30 : -30);
+          targetZ = cZ;
+          targetRotation = 90; // Wall aligns along Z
+        } else {
+          // North / South edge
+          targetX = cX;
+          targetZ = cZ + (dz > 0 ? 30 : -30);
+          targetRotation = 0; // Wall aligns along X
+        }
         targetFloor = targetPoint.y > (itemFloor * 3.0 + 1.5) ? itemFloor + 1 : itemFloor;
       } else if (activeDef.shape === 'pillar') {
-        targetX = (closestItem as PlacedItem).x + (targetPoint.x > (closestItem as PlacedItem).x * SCALE ? 30 : -30);
-        targetZ = (closestItem as PlacedItem).y + (targetPoint.z > (closestItem as PlacedItem).y * SCALE ? 30 : -30);
+        // Unturned Corner Snapping: snap pillar to 4 corners of foundation!
+        const dx = targetPoint.x - cX3D;
+        const dz = targetPoint.z - cZ3D;
+        targetX = cX + (dx > 0 ? 30 : -30);
+        targetZ = cZ + (dz > 0 ? 30 : -30);
         targetFloor = itemFloor;
       }
     }
@@ -499,7 +521,8 @@ function FPSPlacementController({
 
     setGhostPos([targetX * SCALE, heightOffset, targetZ * SCALE]);
     setGhost2DPos({ x: targetX, y: targetZ });
-    ghostRef.current = { x: targetX, y: targetZ };
+    setGhostRot(targetRotation);
+    ghostRef.current = { x: targetX, y: targetZ, rotation: targetRotation };
   });
 
   // Handle placement on LMB click when locked (250ms debounce)
@@ -517,7 +540,7 @@ function FPSPlacementController({
         itemId: activeDef.id,
         x: ghostRef.current.x,
         y: ghostRef.current.y,
-        rotation: rotation3D,
+        rotation: ghostRef.current.rotation,
         customColor: (selectedColor && selectedColor !== 'clear') ? selectedColor : undefined,
         floor: currentFloor
       });
@@ -525,7 +548,7 @@ function FPSPlacementController({
 
     window.addEventListener('mousedown', handleMouseDown);
     return () => window.removeEventListener('mousedown', handleMouseDown);
-  }, [activeDef, currentFloor, onPlaceItem, rotation3D, selectedColor]);
+  }, [activeDef, currentFloor, onPlaceItem, selectedColor]);
 
   return null;
 }
@@ -597,6 +620,7 @@ export default function Builder3D({
   const [ghostPos, setGhostPos] = useState<[number, number, number] | null>(null);
   const [ghost2DPos, setGhost2DPos] = useState<{ x: number; y: number } | null>(null);
   const [rotation3D, setRotation3D] = useState(0);
+  const [ghostRot, setGhostRot] = useState(0);
 
   const activeDef = useMemo(() => buildItems.find(d => d.id === activeItem), [activeItem, buildItems]);
 
@@ -692,7 +716,7 @@ export default function Builder3D({
         {/* Unturned Pointer Lock 1st Person Controller */}
         <FirstPersonFlyController containerRef={containerRef} center={center} />
 
-        {/* Unturned 3D Crosshair Placement Raycaster & Snapper */}
+        {/* Unturned 3D Crosshair Placement Raycaster & Edge Snapper */}
         <FPSPlacementController
           activeDef={activeDef}
           placedItems={placedItems}
@@ -703,6 +727,7 @@ export default function Builder3D({
           onPlaceItem={onPlaceItem}
           setGhostPos={setGhostPos}
           setGhost2DPos={setGhost2DPos}
+          setGhostRot={setGhostRot}
         />
 
         {/* Unturned 3D Held Item Model w/ Bobbing */}
@@ -775,7 +800,7 @@ export default function Builder3D({
               <GhostMesh3D
                 activeDef={activeDef}
                 position={ghostPos}
-                rotation={rotation3D}
+                rotation={ghostRot}
                 isValid={true}
               />
             )}
