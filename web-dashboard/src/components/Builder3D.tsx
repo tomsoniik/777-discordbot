@@ -7,7 +7,7 @@ import * as THREE from 'three';
 
 import styles from '@/777_addons/styles/Builder3D.module.css';
 
-export type ShapeType = 'square' | 'triangle' | 'bed' | 'wall' | 'pillar';
+export type ShapeType = 'square' | 'triangle' | 'bed' | 'wall' | 'pillar' | 'remover';
 
 export interface BuildItem {
   id: string;
@@ -57,6 +57,7 @@ interface Item3DProps {
   allItems: PlacedItem[];
   buildDefs: BuildItem[];
   isSelected: boolean;
+  isTargetedForDemolish: boolean;
   currentFloor: number;
   showBedAreas: boolean;
   onPointerDown: (e: THREE.Event | any, id: string) => void;
@@ -85,7 +86,18 @@ function TexturedMaterial({ textureUrl, color }: { textureUrl: string; color: TH
   );
 }
 
-function ItemMaterial({ def, color }: { def: BuildItem; color: THREE.Color }) {
+function ItemMaterial({ def, color, isTargeted }: { def: BuildItem; color: THREE.Color; isTargeted: boolean }) {
+  if (isTargeted) {
+    return (
+      <meshStandardMaterial
+        color="#ef4444"
+        roughness={0.1}
+        metalness={0.8}
+        emissive={new THREE.Color(0x991b1b)}
+        emissiveIntensity={0.8}
+      />
+    );
+  }
   if (def.texture && def.texture.startsWith('/')) {
     return (
       <Suspense fallback={<meshStandardMaterial color={color} roughness={0.3} emissive={new THREE.Color(0x1e2634)} />}>
@@ -109,6 +121,7 @@ const Item3D = ({
   allItems,
   buildDefs,
   isSelected,
+  isTargetedForDemolish,
   showBedAreas,
   onPointerDown
 }: Item3DProps) => {
@@ -129,7 +142,7 @@ const Item3D = ({
   const baseColorHex = rawColor.startsWith('#') || rawColor.startsWith('rgb') ? rawColor : '#94a3b8';
   const color = new THREE.Color(baseColorHex);
   
-  const edgeColor = isSelected ? '#10b981' : '#38bdf8';
+  const edgeColor = isTargetedForDemolish ? '#ef4444' : isSelected ? '#10b981' : '#38bdf8';
 
   const handlePointerDown = (e: THREE.Event | any) => {
     e.stopPropagation();
@@ -155,16 +168,16 @@ const Item3D = ({
     const spawnY = floorOffset + (isOnRoof ? 3.3 : 0.41);
 
     return (
-      <group position={[posX, spawnY, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
+      <group position={[posX, spawnY, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
         <group>
-          <Box args={[bedWidth, bedHeight, bedLength]} position={[0, bedPosY, 0]} castShadow receiveShadow>
+          <Box args={[bedWidth, bedHeight, bedLength]} position={[0, bedPosY, 0]} castShadow receiveShadow userData={{ itemId: item.id }}>
             <meshStandardMaterial
-              color="#ff4757"
-              emissive="#7f1d1d"
+              color={isTargetedForDemolish ? "#ef4444" : "#ff4757"}
+              emissive={isTargetedForDemolish ? "#991b1b" : "#7f1d1d"}
               roughness={0.2}
               metalness={0.1}
             />
-            <Edges scale={1.05} color={isSelected ? '#10b981' : '#ffffff'} opacity={isSelected ? 1 : 0.9} transparent />
+            <Edges scale={1.05} color={edgeColor} opacity={1} transparent />
           </Box>
 
           {showBedAreas && (
@@ -184,28 +197,28 @@ const Item3D = ({
     );
   } else if (def.shape === 'square') {
     return (
-      <group position={[posX, height / 2 + heightOffset, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
-        <Box args={[width, height, length]} castShadow receiveShadow>
-          <ItemMaterial def={def} color={color} />
-          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.9} transparent />
+      <group position={[posX, height / 2 + heightOffset, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
+        <Box args={[width, height, length]} castShadow receiveShadow userData={{ itemId: item.id }}>
+          <ItemMaterial def={def} color={color} isTargeted={isTargetedForDemolish} />
+          <Edges scale={1.01} color={edgeColor} opacity={1} transparent />
         </Box>
       </group>
     );
   } else if (def.shape === 'wall') {
     return (
-      <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
-        <Box args={[width, 3.0, 0.4]} castShadow receiveShadow>
-          <ItemMaterial def={def} color={color} />
-          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.9} transparent />
+      <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
+        <Box args={[width, 3.0, 0.4]} castShadow receiveShadow userData={{ itemId: item.id }}>
+          <ItemMaterial def={def} color={color} isTargeted={isTargetedForDemolish} />
+          <Edges scale={1.01} color={edgeColor} opacity={1} transparent />
         </Box>
       </group>
     );
   } else if (def.shape === 'pillar') {
     return (
-      <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
-        <Cylinder args={[0.4, 0.4, 3.0, 16]} castShadow receiveShadow>
-          <ItemMaterial def={def} color={color} />
-          <Edges scale={1.02} color={edgeColor} opacity={isSelected ? 1 : 0.9} transparent threshold={15} />
+      <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
+        <Cylinder args={[0.4, 0.4, 3.0, 16]} castShadow receiveShadow userData={{ itemId: item.id }}>
+          <ItemMaterial def={def} color={color} isTargeted={isTargetedForDemolish} />
+          <Edges scale={1.02} color={edgeColor} opacity={1} transparent threshold={15} />
         </Cylinder>
       </group>
     );
@@ -224,11 +237,11 @@ const Item3D = ({
     const extrudeSettings = { depth: height, bevelEnabled: true, bevelSegments: 2, steps: 2, bevelSize: 0.05, bevelThickness: 0.05 };
 
     return (
-      <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
+      <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow userData={{ itemId: item.id }}>
           <extrudeGeometry args={[shape, extrudeSettings]} />
-          <ItemMaterial def={def} color={color} />
-          <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.9} transparent threshold={15} />
+          <ItemMaterial def={def} color={color} isTargeted={isTargetedForDemolish} />
+          <Edges scale={1.01} color={edgeColor} opacity={1} transparent threshold={15} />
         </mesh>
       </group>
     );
@@ -302,7 +315,7 @@ const GhostMesh3D = ({
   }
 };
 
-// First Person NoClip Camera Controller (Unturned Style with Pointer Lock)
+// Continuous First Person NoClip Camera Controller (Unturned Style)
 function FirstPersonFlyController({
   containerRef,
   center
@@ -386,7 +399,7 @@ function FirstPersonFlyController({
   return null;
 }
 
-// FPS Camera Crosshair Raycasting & Placement Controller (Unturned Edge & Socket Snapping)
+// FPS Camera Crosshair Placement & Demolish Controller (Unturned Style)
 function FPSPlacementController({
   activeDef,
   placedItems,
@@ -395,9 +408,11 @@ function FPSPlacementController({
   rotation3D,
   selectedColor,
   onPlaceItem,
+  onDeleteItem,
   setGhostPos,
   setGhost2DPos,
-  setGhostRot
+  setGhostRot,
+  setTargetedItemId
 }: {
   activeDef?: BuildItem;
   placedItems: PlacedItem[];
@@ -406,25 +421,66 @@ function FPSPlacementController({
   rotation3D: number;
   selectedColor?: string;
   onPlaceItem?: (item: Omit<PlacedItem, 'id'>) => void;
+  onDeleteItem?: (id: string) => void;
   setGhostPos: (pos: [number, number, number] | null) => void;
   setGhost2DPos: (pos: { x: number; y: number } | null) => void;
   setGhostRot: (rot: number) => void;
+  setTargetedItemId: (id: string | null) => void;
 }) {
   const { camera, scene } = useThree();
   const ghostRef = useRef<{ x: number; y: number; rotation: number } | null>(null);
+  const targetedItemRef = useRef<string | null>(null);
   const lastPlaceTimeRef = useRef(0);
 
   useFrame(() => {
     if (!activeDef) {
       setGhostPos(null);
       setGhost2DPos(null);
+      setTargetedItemId(null);
       ghostRef.current = null;
+      targetedItemRef.current = null;
       return;
     }
 
-    // Raycast from Camera Center (crosshair 0, 0)
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+
+    // DEMOLISH / REMOVER TOOL MODE
+    if (activeDef.shape === 'remover' || activeDef.id === 'remover_tool') {
+      const intersects = raycaster.intersectObjects(scene.children, true);
+      const validHits = intersects.filter(hit => hit.object.type === 'Mesh' && hit.distance > 0.5);
+
+      if (validHits.length > 0) {
+        let parentObj: THREE.Object3D | null = validHits[0].object;
+        let itemIdFound: string | null = null;
+
+        while (parentObj) {
+          if (parentObj.userData?.itemId) {
+            itemIdFound = parentObj.userData.itemId;
+            break;
+          }
+          parentObj = parentObj.parent;
+        }
+
+        if (itemIdFound) {
+          setTargetedItemId(itemIdFound);
+          targetedItemRef.current = itemIdFound;
+        } else {
+          setTargetedItemId(null);
+          targetedItemRef.current = null;
+        }
+      } else {
+        setTargetedItemId(null);
+        targetedItemRef.current = null;
+      }
+      setGhostPos(null);
+      setGhost2DPos(null);
+      return;
+    }
+
+    // BUILDING MODE
+    setTargetedItemId(null);
+    targetedItemRef.current = null;
 
     let targetPoint: THREE.Vector3 | null = null;
     const intersects = raycaster.intersectObjects(scene.children, true);
@@ -456,7 +512,7 @@ function FPSPlacementController({
 
     // Socket snapping to nearest placed item
     let closestItem: PlacedItem | null = null;
-    let minSocketDist = 6.0; // 3D units threshold
+    let minSocketDist = 6.0;
 
     placedItems.forEach(item => {
       const itemX3D = item.x * SCALE;
@@ -490,23 +546,19 @@ function FPSPlacementController({
           targetFloor = itemFloor;
         }
       } else if (activeDef.shape === 'wall') {
-        // Unturned Edge Snapping: snap wall to 4 edges of foundation!
         const dx = targetPoint.x - cX3D;
         const dz = targetPoint.z - cZ3D;
         if (Math.abs(dx) > Math.abs(dz)) {
-          // East / West edge
           targetX = cX + (dx > 0 ? 30 : -30);
           targetZ = cZ;
-          targetRotation = 90; // Wall aligns along Z
+          targetRotation = 90;
         } else {
-          // North / South edge
           targetX = cX;
           targetZ = cZ + (dz > 0 ? 30 : -30);
-          targetRotation = 0; // Wall aligns along X
+          targetRotation = 0;
         }
         targetFloor = targetPoint.y > (itemFloor * 3.0 + 1.5) ? itemFloor + 1 : itemFloor;
       } else if (activeDef.shape === 'pillar') {
-        // Unturned Corner Snapping: snap pillar to 4 corners of foundation!
         const dx = targetPoint.x - cX3D;
         const dz = targetPoint.z - cZ3D;
         targetX = cX + (dx > 0 ? 30 : -30);
@@ -525,35 +577,48 @@ function FPSPlacementController({
     ghostRef.current = { x: targetX, y: targetZ, rotation: targetRotation };
   });
 
-  // Handle placement on LMB click when locked (250ms debounce)
+  // Handle placement & demolition on LMB click (250ms debounce)
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return; // Left Click only
-      if (!document.pointerLockElement) return; // Must be in PointerLock
-      if (!activeDef || !ghostRef.current || !onPlaceItem) return;
+      if (!activeDef) return;
 
       const now = Date.now();
       if (now - lastPlaceTimeRef.current < 250) return;
-      lastPlaceTimeRef.current = now;
 
-      onPlaceItem({
-        itemId: activeDef.id,
-        x: ghostRef.current.x,
-        y: ghostRef.current.y,
-        rotation: ghostRef.current.rotation,
-        customColor: (selectedColor && selectedColor !== 'clear') ? selectedColor : undefined,
-        floor: currentFloor
-      });
+      // DEMOLISH ACTION
+      if (activeDef.shape === 'remover' || activeDef.id === 'remover_tool') {
+        if (targetedItemRef.current && onDeleteItem) {
+          lastPlaceTimeRef.current = now;
+          onDeleteItem(targetedItemRef.current);
+          setTargetedItemId(null);
+          targetedItemRef.current = null;
+        }
+        return;
+      }
+
+      // PLACEMENT ACTION
+      if (ghostRef.current && onPlaceItem) {
+        lastPlaceTimeRef.current = now;
+        onPlaceItem({
+          itemId: activeDef.id,
+          x: ghostRef.current.x,
+          y: ghostRef.current.y,
+          rotation: ghostRef.current.rotation,
+          customColor: (selectedColor && selectedColor !== 'clear') ? selectedColor : undefined,
+          floor: currentFloor
+        });
+      }
     };
 
     window.addEventListener('mousedown', handleMouseDown);
     return () => window.removeEventListener('mousedown', handleMouseDown);
-  }, [activeDef, currentFloor, onPlaceItem, selectedColor]);
+  }, [activeDef, currentFloor, onDeleteItem, onPlaceItem, selectedColor, setTargetedItemId]);
 
   return null;
 }
 
-// Unturned FPS Held Item in Hand (with bobbing & sway animation)
+// Unturned 3D Held Item in Hand (with High-Tech Demolition Sledgehammer for Remover Tool)
 function HeldItem3D({ activeDef }: { activeDef?: BuildItem }) {
   const { camera } = useThree();
   const meshRef = useRef<THREE.Group>(null);
@@ -588,6 +653,24 @@ function HeldItem3D({ activeDef }: { activeDef?: BuildItem }) {
 
   if (!activeDef) return null;
 
+  if (activeDef.shape === 'remover' || activeDef.id === 'remover_tool') {
+    return (
+      <group ref={meshRef}>
+        {/* Heavy Sledgehammer Handle */}
+        <Cylinder args={[0.04, 0.04, 1.0, 12]} position={[0, -0.2, 0]}>
+          <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.8} />
+        </Cylinder>
+        {/* Heavy Red Metallic Hammer Head */}
+        <Box args={[0.25, 0.35, 0.55]} position={[0, 0.25, 0]}>
+          <meshStandardMaterial color="#ef4444" roughness={0.2} metalness={0.9} emissive="#991b1b" emissiveIntensity={0.6} />
+          <Edges scale={1.05} color="#ff0000" opacity={0.9} transparent />
+        </Box>
+        {/* Energy Pulse Light */}
+        <pointLight position={[0, 0.25, 0.2]} color="#ef4444" intensity={3} distance={4} />
+      </group>
+    );
+  }
+
   const rawColor = activeDef.color && activeDef.color !== 'clear' ? activeDef.color : '#94a3b8';
   const color = new THREE.Color(rawColor.startsWith('#') || rawColor.startsWith('rgb') ? rawColor : '#94a3b8');
 
@@ -621,6 +704,7 @@ export default function Builder3D({
   const [ghost2DPos, setGhost2DPos] = useState<{ x: number; y: number } | null>(null);
   const [rotation3D, setRotation3D] = useState(0);
   const [ghostRot, setGhostRot] = useState(0);
+  const [targetedItemId, setTargetedItemId] = useState<string | null>(null);
 
   const activeDef = useMemo(() => buildItems.find(d => d.id === activeItem), [activeItem, buildItems]);
 
@@ -645,6 +729,7 @@ export default function Builder3D({
         'Digit1': 0, 'Numpad1': 0, 'Digit2': 1, 'Numpad2': 1,
         'Digit3': 2, 'Numpad3': 2, 'Digit4': 3, 'Numpad4': 3,
         'Digit5': 4, 'Numpad5': 4, 'Digit6': 5, 'Numpad6': 5,
+        'Digit7': 6, 'Numpad7': 6
       };
 
       if (e.code in codeMap) {
@@ -653,7 +738,7 @@ export default function Builder3D({
         if (targetItem && onSelectActiveItem) {
           onSelectActiveItem(activeItem === targetItem.id ? null : targetItem.id);
         }
-      } else if (['1', '2', '3', '4', '5', '6'].includes(e.key)) {
+      } else if (['1', '2', '3', '4', '5', '6', '7'].includes(e.key)) {
         const idx = parseInt(e.key, 10) - 1;
         const targetItem = buildItems[idx];
         if (targetItem && onSelectActiveItem) {
@@ -687,6 +772,8 @@ export default function Builder3D({
     }
   };
 
+  const isDemolishActive = activeDef?.shape === 'remover' || activeDef?.id === 'remover_tool';
+
   return (
     <div ref={containerRef} className={styles.container}>
       <Canvas shadows camera={{ fov: 75 }}>
@@ -716,7 +803,7 @@ export default function Builder3D({
         {/* Unturned Pointer Lock 1st Person Controller */}
         <FirstPersonFlyController containerRef={containerRef} center={center} />
 
-        {/* Unturned 3D Crosshair Placement Raycaster & Edge Snapper */}
+        {/* Unturned 3D Crosshair Placement & Demolish Controller */}
         <FPSPlacementController
           activeDef={activeDef}
           placedItems={placedItems}
@@ -725,12 +812,14 @@ export default function Builder3D({
           rotation3D={rotation3D}
           selectedColor={selectedColor}
           onPlaceItem={onPlaceItem}
+          onDeleteItem={onDeleteItem}
           setGhostPos={setGhostPos}
           setGhost2DPos={setGhost2DPos}
           setGhostRot={setGhostRot}
+          setTargetedItemId={setTargetedItemId}
         />
 
-        {/* Unturned 3D Held Item Model w/ Bobbing */}
+        {/* Unturned 3D Held Item Model (Custom Demolition Hammer when Wyburzanie is selected) */}
         <HeldItem3D activeDef={activeDef} />
 
         <Grid
@@ -780,6 +869,7 @@ export default function Builder3D({
                 };
               }
               const isSelected = selectedItemIds.includes(item.id);
+              const isTargetedForDemolish = targetedItemId === item.id;
               return (
                 <Item3D
                   key={item.id}
@@ -788,6 +878,7 @@ export default function Builder3D({
                   allItems={placedItems}
                   buildDefs={buildItems}
                   isSelected={isSelected}
+                  isTargetedForDemolish={isTargetedForDemolish}
                   currentFloor={currentFloor}
                   showBedAreas={showBedAreas}
                   onPointerDown={handleItemPointerDown}
@@ -796,7 +887,7 @@ export default function Builder3D({
             })}
 
             {/* Ghost Mesh preview for placement */}
-            {activeDef && ghostPos && (
+            {activeDef && ghostPos && !isDemolishActive && (
               <GhostMesh3D
                 activeDef={activeDef}
                 position={ghostPos}
@@ -808,22 +899,24 @@ export default function Builder3D({
         </Suspense>
       </Canvas>
 
-      {/* Unturned Style Crosshair Overlay */}
+      {/* Unturned Style Crosshair Overlay (Turns Red when aiming Demolish Tool) */}
       <div className={styles.fpsCrosshair}>
-        <div className={styles.crosshairDot} />
+        <div className={styles.crosshairDot} style={{ background: isDemolishActive ? '#ef4444' : '#10b981', boxShadow: isDemolishActive ? '0 0 10px #ef4444' : '0 0 8px #10b981' }} />
       </div>
 
-      {/* Unturned Style Quick Hotbar (1-6) */}
+      {/* Unturned Style Quick Hotbar */}
       <div className={styles.hotbarOverlay}>
-        {buildItems.slice(0, 6).map((item, idx) => {
+        {buildItems.slice(0, 7).map((item, idx) => {
           const isActive = activeItem === item.id;
+          const isRemover = item.shape === 'remover' || item.id === 'remover_tool';
           return (
             <button
               key={item.id}
-              className={`${styles.hotbarSlot} ${isActive ? styles.hotbarSlotActive : ''}`}
+              className={`${styles.hotbarSlot} ${isActive ? styles.hotbarSlotActive : ''} ${isRemover ? styles.hotbarRemover : ''}`}
               onClick={() => onSelectActiveItem && onSelectActiveItem(isActive ? null : item.id)}
+              style={isRemover ? { borderColor: isActive ? '#ef4444' : '#7f1d1d' } : undefined}
             >
-              {isActive && <span className={styles.activeBadge}>WYBRANY</span>}
+              {isActive && <span className={styles.activeBadge} style={{ background: isRemover ? '#ef4444' : undefined }}>{isRemover ? 'WYBURZANIE' : 'WYBRANY'}</span>}
               <span className={styles.hotbarKey}>{idx + 1}</span>
               <img src={item.texture} alt="" className={styles.hotbarIcon} />
               <span className={styles.hotbarLabel}>{item.name}</span>
@@ -836,10 +929,10 @@ export default function Builder3D({
       <div className={styles.controlsOverlay}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <p className={styles.overlayTitle} style={{ margin: 0 }}>
-            <span className={styles.statusDot} />
-            Unturned 3D Sandbox (NoClip FPS)
+            <span className={styles.statusDot} style={{ background: isDemolishActive ? '#ef4444' : undefined }} />
+            Unturned 3D Sandbox (Continuous Freelook FPS)
           </p>
-          {activeDef && (
+          {activeDef && !isDemolishActive && (
             <button
               onClick={() => setRotation3D(r => (r + 90) % 360)}
               style={{
@@ -859,11 +952,10 @@ export default function Builder3D({
         </div>
 
         <p className={styles.controlsList}>
-          <b className={styles.controlKey}>KLIKNIJ NA EKRAN:</b> Włącz rozglądanie się myszką (Unturned FPS)<br />
-          <b className={styles.controlKey}>WASD:</b> Poruszanie / Latanie<br />
-          <b className={styles.controlKey}>Q / E:</b> Dół / Góra (NoClip)<br />
-          <b className={styles.controlKey}>LMB:</b> Stawianie klocka w celowniku<br />
-          <b className={styles.controlKey}>R:</b> Obrót (+90°) | <b>1-6:</b> Wybór klocka | <b>ESC:</b> Odblokuj mysz
+          <b className={styles.controlKey}>RUCH MYSZY:</b> Ciągły Freelook (360° FPS)<br />
+          <b className={styles.controlKey}>WASD:</b> Poruszanie / Latanie | <b>Q / E:</b> Dół / Góra (NoClip)<br />
+          <b className={styles.controlKey}>LMB:</b> {isDemolishActive ? 'Wyburz celowaną ścianę/konstrukcję' : 'Stawianie klocka w celowniku'}<br />
+          <b className={styles.controlKey}>1: Wyburzanie</b> | <b>2-7:</b> Wybór klocka | <b>R:</b> Obrót (+90°)
         </p>
       </div>
     </div>

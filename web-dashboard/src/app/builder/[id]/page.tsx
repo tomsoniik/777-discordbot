@@ -4,7 +4,7 @@ import React, { useState, MouseEvent, useMemo, useRef, useEffect, use } from 're
 import styles from '../builder.module.css';
 import { useLanguage } from '@/context/LanguageContext';
 
-type ShapeType = 'square' | 'triangle' | 'bed' | 'wall' | 'pillar';
+type ShapeType = 'square' | 'triangle' | 'bed' | 'wall' | 'pillar' | 'remover';
 
 interface BuildItem {
   id: string;
@@ -21,6 +21,7 @@ interface BuildItem {
 const getIconUrl = (id: number) => `https://cdn.jsdelivr.net/gh/SilKsPlugins/UnturnedImages@images/vanilla/items/${id}.png`;
 
 const BUILD_ITEMS: BuildItem[] = [
+  { id: 'remover_tool', name: 'Wyburzanie (Demolish)', shape: 'remover', materialClass: 'furniture', color: '#ef4444', texture: getIconUrl(276), costs: {} },
   { id: 'f_square', name: 'Foundation', shape: 'square', materialClass: 'structure', color: '#94a3b8', texture: '/custom_roof.png', costs: { 'wood': 4 } },
   { id: 'c_roof', name: 'Roof', shape: 'square', materialClass: 'structure', color: '#64748b', texture: '/custom_roof.png', costs: { 'scrap': 3 } },
   { id: 'c_roof_tri', name: 'Tri Roof', shape: 'triangle', materialClass: 'structure', color: '#64748b', texture: '/custom_roof.png', costs: { 'scrap': 2 } },
