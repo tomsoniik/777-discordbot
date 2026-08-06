@@ -31,11 +31,15 @@
 }
 
 .sidebarToggleBtn {
+  position: absolute;
+  left: 340px;
+  top: 75px;
+  z-index: 30;
   background: rgba(16, 185, 129, 0.2);
   border: 1px solid rgba(16, 185, 129, 0.4);
   color: #10b981;
-  border-radius: 8px;
-  padding: 6px 10px;
+  border-radius: 0 8px 8px 0;
+  padding: 8px 12px;
   cursor: pointer;
   backdrop-filter: blur(12px);
   transition: all 0.2s ease;
@@ -44,12 +48,15 @@
   gap: 6px;
   font-size: 0.85rem;
   font-weight: 600;
-  flex-shrink: 0;
 }
 
 .sidebarToggleBtn:hover {
   background: rgba(16, 185, 129, 0.4);
   box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+}
+
+.sidebarCollapsedToggle {
+  left: 0;
 }
 
 /* Category Tabs */
