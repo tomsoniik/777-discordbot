@@ -315,68 +315,62 @@ const GhostMesh3D = ({
 };
 
 // First Person NoClip Camera Controller (Unturned Style)
-function FirstPersonFlyController({ active }: { active: boolean }) {
+function FirstPersonFlyController({ active, center }: { active: boolean; center: [number, number, number] }) {
   const { camera } = useThree();
   const keys = useRef<Record<string, boolean>>({});
-  const isDragging = useRef(false);
-  const previousMouse = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const pitch = useRef(0);
   const yaw = useRef(0);
+  const initialized = useRef(false);
 
   useEffect(() => {
-    if (!active) return;
+    if (!active) {
+      initialized.current = false;
+      return;
+    }
+
+    if (!initialized.current) {
+      camera.position.set(center[0], 2.2, center[2] + 6.0);
+      camera.lookAt(center[0], 2.2, center[2]);
+      yaw.current = 0;
+      pitch.current = 0;
+      initialized.current = true;
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
       keys.current[e.code] = true;
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       keys.current[e.code] = false;
     };
 
-    const handleMouseDown = (e: MouseEvent) => {
-      if (e.button === 0 || e.button === 2) {
-        isDragging.current = true;
-        previousMouse.current = { x: e.clientX, y: e.clientY };
-      }
-    };
-
-    const handleMouseUp = () => {
-      isDragging.current = false;
-    };
-
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging.current) return;
-      const dx = e.clientX - previousMouse.current.x;
-      const dy = e.clientY - previousMouse.current.y;
-      previousMouse.current = { x: e.clientX, y: e.clientY };
+      // Rotate camera on mouse move or drag in 1st person mode
+      if (e.buttons === 1 || e.buttons === 2 || document.pointerLockElement) {
+        const sensitivity = 0.003;
+        yaw.current -= e.movementX * sensitivity;
+        pitch.current -= e.movementY * sensitivity;
+        pitch.current = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, pitch.current));
 
-      const sensitivity = 0.003;
-      yaw.current -= dx * sensitivity;
-      pitch.current -= dy * sensitivity;
-      pitch.current = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitch.current));
-
-      const euler = new THREE.Euler(pitch.current, yaw.current, 0, 'YXZ');
-      camera.quaternion.setFromEuler(euler);
+        const euler = new THREE.Euler(pitch.current, yaw.current, 0, 'YXZ');
+        camera.quaternion.setFromEuler(euler);
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('mousemove', handleMouseMove);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [active, camera]);
+  }, [active, camera, center]);
 
   useFrame((_, delta) => {
     if (!active) return;
-    const speed = 12 * delta;
+    const speed = 14 * delta;
     const forward = new THREE.Vector3();
     camera.getWorldDirection(forward);
     
@@ -393,6 +387,7 @@ function FirstPersonFlyController({ active }: { active: boolean }) {
 
   return null;
 }
+
 
 // Unturned FPS Held Item in Hand (with bobbing & sway animation)
 function HeldItem3D({ activeDef, active }: { activeDef?: BuildItem; active: boolean }) {
@@ -540,7 +535,6 @@ export default function Builder3D({
       // Socket Snapping Rules:
       if (activeDef.shape === 'square' || activeDef.shape === 'triangle') {
         if (closestDef?.shape === 'square' || closestDef?.shape === 'triangle') {
-          // Snap foundation edge-to-edge
           const dx = point.x - (closestItem as PlacedItem).x * SCALE;
           const dz = point.z - (closestItem as PlacedItem).y * SCALE;
           if (Math.abs(dx) > Math.abs(dz)) {
@@ -553,12 +547,10 @@ export default function Builder3D({
           targetFloor = itemFloor;
         }
       } else if (activeDef.shape === 'wall') {
-        // Wall snaps to foundation or lower wall top
         targetX = (closestItem as PlacedItem).x;
         targetZ = (closestItem as PlacedItem).y;
         targetFloor = point.y > (itemFloor * 3.0 + 1.5) ? itemFloor + 1 : itemFloor;
       } else if (activeDef.shape === 'pillar') {
-        // Pillar snaps to corners
         targetX = (closestItem as PlacedItem).x + (point.x > (closestItem as PlacedItem).x * SCALE ? 30 : -30);
         targetZ = (closestItem as PlacedItem).y + (point.z > (closestItem as PlacedItem).y * SCALE ? 30 : -30);
         targetFloor = itemFloor;
@@ -597,7 +589,7 @@ export default function Builder3D({
   };
 
   const cameraPos = useMemo(() => {
-    if (cameraView === 'fps') return [center[0], 5, center[2] + 12] as [number, number, number];
+    if (cameraView === 'fps') return [center[0], 2.2, center[2] + 6] as [number, number, number];
     if (cameraView === 'top') return [center[0], 45, center[2] + 0.1] as [number, number, number];
     if (cameraView === 'iso') return [center[0] + 30, 30, center[2] + 30] as [number, number, number];
     return [center[0], 25, center[2] + 25] as [number, number, number];
@@ -610,7 +602,7 @@ export default function Builder3D({
 
         <SoftShadows size={8} samples={16} focus={0.5} />
 
-        <ambientLight intensity={isNightMode ? 0.2 : 0.7} color="#ffffff" />
+        <ambientLight intensity={isNightMode ? 0.3 : 0.8} color="#ffffff" />
         <directionalLight
           position={[30, 50, 20]}
           intensity={isNightMode ? 0.4 : 1.3}
@@ -631,7 +623,7 @@ export default function Builder3D({
 
         {/* Camera Controllers */}
         {cameraView === 'fps' ? (
-          <FirstPersonFlyController active={true} />
+          <FirstPersonFlyController active={true} center={center} />
         ) : (
           <OrbitControls
             target={center}
