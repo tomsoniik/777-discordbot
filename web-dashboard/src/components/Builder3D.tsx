@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useRef, useEffect, Suspense } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Grid, Environment, Edges, Sparkles, ContactShadows, SoftShadows, Box, Cylinder, useTexture } from '@react-three/drei';
+import { Grid, Environment, Edges, Sparkles, ContactShadows, SoftShadows, Box, Cylinder, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
 import styles from '@/777_addons/styles/Builder3D.module.css';
@@ -125,12 +125,10 @@ const Item3D = ({
   const length = SIDE * SCALE;
   const height = isRoof ? 0.3 : 0.4;
 
-  // Safe vibrant color selection
   const rawColor = (item.customColor && item.customColor !== 'clear') ? item.customColor : (def.color && def.color !== 'clear' ? def.color : '#94a3b8');
   const baseColorHex = rawColor.startsWith('#') || rawColor.startsWith('rgb') ? rawColor : '#94a3b8';
   const color = new THREE.Color(baseColorHex);
   
-  // Highlight edges with bright cyan/green for high visibility
   const edgeColor = isSelected ? '#10b981' : '#38bdf8';
 
   const handlePointerDown = (e: THREE.Event | any) => {
@@ -212,7 +210,6 @@ const Item3D = ({
       </group>
     );
   } else {
-    // Triangle
     const shape = useMemo(() => {
       const s = new THREE.Shape();
       const w = width;
@@ -238,21 +235,17 @@ const Item3D = ({
   }
 };
 
-
-
-// Ghost Preview Mesh for 3D Socket Snapping (with semi-transparent filled faces)
+// Ghost Preview Mesh for 3D Socket Snapping
 const GhostMesh3D = ({
   activeDef,
   position,
   rotation,
-  isValid,
-  onPlace
+  isValid
 }: {
   activeDef: BuildItem;
   position: [number, number, number];
   rotation: number;
   isValid: boolean;
-  onPlace: () => void;
 }) => {
   const rotY = -rotation * (Math.PI / 180);
   const color = isValid ? '#10b981' : '#ef4444';
@@ -261,14 +254,9 @@ const GhostMesh3D = ({
   const length = SIDE * SCALE;
   const height = activeDef.id.includes('roof') ? 0.3 : 0.4;
 
-  const handleClick = (e: THREE.Event | any) => {
-    e.stopPropagation();
-    onPlace();
-  };
-
   if (activeDef.shape === 'bed') {
     return (
-      <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
+      <group position={position} rotation={[0, rotY, 0]}>
         <Box args={[20 * SCALE, 0.5, 40 * SCALE]} position={[0, 0.25, 0]}>
           <meshStandardMaterial color={color} transparent opacity={0.35} />
           <Edges scale={1.02} color={color} transparent opacity={0.9} />
@@ -277,7 +265,7 @@ const GhostMesh3D = ({
     );
   } else if (activeDef.shape === 'square') {
     return (
-      <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
+      <group position={position} rotation={[0, rotY, 0]}>
         <Box args={[width, height, length]}>
           <meshStandardMaterial color={color} transparent opacity={0.35} />
           <Edges scale={1.02} color={color} transparent opacity={0.9} />
@@ -286,7 +274,7 @@ const GhostMesh3D = ({
     );
   } else if (activeDef.shape === 'wall') {
     return (
-      <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
+      <group position={position} rotation={[0, rotY, 0]}>
         <Box args={[width, 3.0, 0.4]}>
           <meshStandardMaterial color={color} transparent opacity={0.35} />
           <Edges scale={1.02} color={color} transparent opacity={0.9} />
@@ -295,7 +283,7 @@ const GhostMesh3D = ({
     );
   } else if (activeDef.shape === 'pillar') {
     return (
-      <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
+      <group position={position} rotation={[0, rotY, 0]}>
         <Cylinder args={[0.4, 0.4, 3.0, 16]}>
           <meshStandardMaterial color={color} transparent opacity={0.35} />
           <Edges scale={1.02} color={color} transparent opacity={0.9} />
@@ -304,7 +292,7 @@ const GhostMesh3D = ({
     );
   } else {
     return (
-      <group position={position} rotation={[0, rotY, 0]} onClick={handleClick}>
+      <group position={position} rotation={[0, rotY, 0]}>
         <Box args={[width, height, width]}>
           <meshStandardMaterial color={color} transparent opacity={0.35} />
           <Edges scale={1.02} color={color} transparent opacity={0.9} />
@@ -398,6 +386,141 @@ function FirstPersonFlyController({
   return null;
 }
 
+// FPS Camera Crosshair Raycasting & Placement Controller (Unturned Style)
+function FPSPlacementController({
+  activeDef,
+  placedItems,
+  buildItems,
+  currentFloor,
+  rotation3D,
+  selectedColor,
+  onPlaceItem,
+  setGhostPos,
+  setGhost2DPos
+}: {
+  activeDef?: BuildItem;
+  placedItems: PlacedItem[];
+  buildItems: BuildItem[];
+  currentFloor: number;
+  rotation3D: number;
+  selectedColor?: string;
+  onPlaceItem?: (item: Omit<PlacedItem, 'id'>) => void;
+  setGhostPos: (pos: [number, number, number] | null) => void;
+  setGhost2DPos: (pos: { x: number; y: number } | null) => void;
+}) {
+  const { camera } = useThree();
+  const ghostRef = useRef<{ x: number; y: number } | null>(null);
+
+  useFrame(() => {
+    if (!activeDef) {
+      setGhostPos(null);
+      setGhost2DPos(null);
+      ghostRef.current = null;
+      return;
+    }
+
+    // Raycast from Camera Center (crosshair 0, 0)
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+
+    // Ground plane at Y = 0
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const targetPoint = new THREE.Vector3();
+    const hit = raycaster.ray.intersectPlane(groundPlane, targetPoint);
+
+    if (!hit) {
+      setGhostPos(null);
+      setGhost2DPos(null);
+      ghostRef.current = null;
+      return;
+    }
+
+    if (camera.position.distanceTo(targetPoint) > 40) {
+      setGhostPos(null);
+      setGhost2DPos(null);
+      ghostRef.current = null;
+      return;
+    }
+
+    // Alignment to 60-unit 2D grid
+    let targetX = Math.round((targetPoint.x / SCALE) / 60) * 60;
+    let targetZ = Math.round((targetPoint.z / SCALE) / 60) * 60;
+    let targetFloor = currentFloor;
+
+    // Socket snapping to nearest placed item
+    let closestItem: PlacedItem | null = null;
+    let minSocketDist = 5.0; // 3D units threshold
+
+    placedItems.forEach(item => {
+      const itemX3D = item.x * SCALE;
+      const itemZ3D = item.y * SCALE;
+      const dist = Math.hypot(targetPoint.x - itemX3D, targetPoint.z - itemZ3D);
+      if (dist < minSocketDist) {
+        minSocketDist = dist;
+        closestItem = item;
+      }
+    });
+
+    if (closestItem) {
+      const closestDef = buildItems.find(d => d.id === (closestItem as PlacedItem).itemId);
+      const itemFloor = (closestItem as PlacedItem).floor || 0;
+
+      if (activeDef.shape === 'square' || activeDef.shape === 'triangle') {
+        if (closestDef?.shape === 'square' || closestDef?.shape === 'triangle') {
+          const dx = targetPoint.x - (closestItem as PlacedItem).x * SCALE;
+          const dz = targetPoint.z - (closestItem as PlacedItem).y * SCALE;
+          if (Math.abs(dx) > Math.abs(dz)) {
+            targetX = (closestItem as PlacedItem).x + (dx > 0 ? 60 : -60);
+            targetZ = (closestItem as PlacedItem).y;
+          } else {
+            targetX = (closestItem as PlacedItem).x;
+            targetZ = (closestItem as PlacedItem).y + (dz > 0 ? 60 : -60);
+          }
+          targetFloor = itemFloor;
+        }
+      } else if (activeDef.shape === 'wall') {
+        targetX = (closestItem as PlacedItem).x;
+        targetZ = (closestItem as PlacedItem).y;
+        targetFloor = targetPoint.y > (itemFloor * 3.0 + 1.5) ? itemFloor + 1 : itemFloor;
+      } else if (activeDef.shape === 'pillar') {
+        targetX = (closestItem as PlacedItem).x + (targetPoint.x > (closestItem as PlacedItem).x * SCALE ? 30 : -30);
+        targetZ = (closestItem as PlacedItem).y + (targetPoint.z > (closestItem as PlacedItem).y * SCALE ? 30 : -30);
+        targetFloor = itemFloor;
+      }
+    }
+
+    const floorOffset = targetFloor * 3.0;
+    const isRoof = activeDef.id.includes('roof');
+    const heightOffset = floorOffset + (isRoof ? 3.0 : (activeDef.shape === 'wall' || activeDef.shape === 'pillar' ? 1.5 : 0.2));
+
+    setGhostPos([targetX * SCALE, heightOffset, targetZ * SCALE]);
+    setGhost2DPos({ x: targetX, y: targetZ });
+    ghostRef.current = { x: targetX, y: targetZ };
+  });
+
+  // Handle placement on LMB click when locked
+  useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return; // Only Left Click
+      if (!activeDef || !ghostRef.current || !onPlaceItem) return;
+
+      onPlaceItem({
+        itemId: activeDef.id,
+        x: ghostRef.current.x,
+        y: ghostRef.current.y,
+        rotation: rotation3D,
+        customColor: (selectedColor && selectedColor !== 'clear') ? selectedColor : undefined,
+        floor: currentFloor
+      });
+    };
+
+    window.addEventListener('mousedown', handleMouseDown);
+    return () => window.removeEventListener('mousedown', handleMouseDown);
+  }, [activeDef, currentFloor, onPlaceItem, rotation3D, selectedColor]);
+
+  return null;
+}
+
 // Unturned FPS Held Item in Hand (with bobbing & sway animation)
 function HeldItem3D({ activeDef }: { activeDef?: BuildItem }) {
   const { camera } = useThree();
@@ -417,7 +540,6 @@ function HeldItem3D({ activeDef }: { activeDef?: BuildItem }) {
     const up = new THREE.Vector3();
     up.crossVectors(right, forward).normalize();
 
-    // Natural Unturned hand position (forward 0.85, right 0.4, down -0.3) + smooth bobbing
     const bobbingY = Math.sin(time.current) * 0.02;
     const bobbingX = Math.cos(time.current * 0.8) * 0.015;
 
@@ -464,7 +586,7 @@ export default function Builder3D({
 }: Builder3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [ghostPos, setGhostPos] = useState<[number, number, number] | null>(null);
-  const [ghost2DPos, setGhost2DPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [ghost2DPos, setGhost2DPos] = useState<{ x: number; y: number } | null>(null);
   const [rotation3D, setRotation3D] = useState(0);
 
   const activeDef = useMemo(() => buildItems.find(d => d.id === activeItem), [activeItem, buildItems]);
@@ -510,83 +632,6 @@ export default function Builder3D({
     return [sx / placedItems.length, 0, sz / placedItems.length] as [number, number, number];
   }, [placedItems]);
 
-  // Unturned Structure Socket Snapping Logic
-  const handlePointerMoveGround = (e: THREE.Event | any) => {
-    if (!activeDef) {
-      setGhostPos(null);
-      return;
-    }
-    const point = e.point as THREE.Vector3;
-    if (!point) return;
-
-    let targetX = Math.round((point.x / SCALE) / 30) * 30;
-    let targetZ = Math.round((point.z / SCALE) / 30) * 30;
-    let targetFloor = currentFloor;
-
-    // Find nearest placed item to test socket snapping
-    let closestItem: PlacedItem | null = null;
-    let minSocketDist = 4.0; // 3D world units threshold
-
-    placedItems.forEach(item => {
-      const itemX3D = item.x * SCALE;
-      const itemZ3D = item.y * SCALE;
-      const dist = Math.hypot(point.x - itemX3D, point.z - itemZ3D);
-      if (dist < minSocketDist) {
-        minSocketDist = dist;
-        closestItem = item;
-      }
-    });
-
-    if (closestItem) {
-      const closestDef = buildItems.find(d => d.id === (closestItem as PlacedItem).itemId);
-      const itemFloor = (closestItem as PlacedItem).floor || 0;
-
-      // Socket Snapping Rules:
-      if (activeDef.shape === 'square' || activeDef.shape === 'triangle') {
-        if (closestDef?.shape === 'square' || closestDef?.shape === 'triangle') {
-          const dx = point.x - (closestItem as PlacedItem).x * SCALE;
-          const dz = point.z - (closestItem as PlacedItem).y * SCALE;
-          if (Math.abs(dx) > Math.abs(dz)) {
-            targetX = (closestItem as PlacedItem).x + (dx > 0 ? 60 : -60);
-            targetZ = (closestItem as PlacedItem).y;
-          } else {
-            targetX = (closestItem as PlacedItem).x;
-            targetZ = (closestItem as PlacedItem).y + (dz > 0 ? 60 : -60);
-          }
-          targetFloor = itemFloor;
-        }
-      } else if (activeDef.shape === 'wall') {
-        targetX = (closestItem as PlacedItem).x;
-        targetZ = (closestItem as PlacedItem).y;
-        targetFloor = point.y > (itemFloor * 3.0 + 1.5) ? itemFloor + 1 : itemFloor;
-      } else if (activeDef.shape === 'pillar') {
-        targetX = (closestItem as PlacedItem).x + (point.x > (closestItem as PlacedItem).x * SCALE ? 30 : -30);
-        targetZ = (closestItem as PlacedItem).y + (point.z > (closestItem as PlacedItem).y * SCALE ? 30 : -30);
-        targetFloor = itemFloor;
-      }
-    }
-
-    const floorOffset = targetFloor * 3.0;
-    const isRoof = activeDef.id.includes('roof');
-    const heightOffset = floorOffset + (isRoof ? 3.0 : (activeDef.shape === 'wall' || activeDef.shape === 'pillar' ? 1.5 : 0.2));
-
-    setGhostPos([targetX * SCALE, heightOffset, targetZ * SCALE]);
-    setGhost2DPos({ x: targetX, y: targetZ });
-  };
-
-  const handleGroundClick = () => {
-    if (activeDef && ghost2DPos && onPlaceItem) {
-      onPlaceItem({
-        itemId: activeDef.id,
-        x: ghost2DPos.x,
-        y: ghost2DPos.y,
-        rotation: rotation3D,
-        customColor: (selectedColor && selectedColor !== 'clear') ? selectedColor : undefined,
-        floor: currentFloor
-      });
-    }
-  };
-
   const handleItemPointerDown = (e: THREE.Event | any, id: string) => {
     if (selectedColor && onPaintItem) {
       onPaintItem(id);
@@ -626,6 +671,19 @@ export default function Builder3D({
         {/* Unturned Pointer Lock 1st Person Controller */}
         <FirstPersonFlyController containerRef={containerRef} center={center} />
 
+        {/* Unturned 3D Crosshair Placement Raycaster & Snapper */}
+        <FPSPlacementController
+          activeDef={activeDef}
+          placedItems={placedItems}
+          buildItems={buildItems}
+          currentFloor={currentFloor}
+          rotation3D={rotation3D}
+          selectedColor={selectedColor}
+          onPlaceItem={onPlaceItem}
+          setGhostPos={setGhostPos}
+          setGhost2DPos={setGhost2DPos}
+        />
+
         {/* Unturned 3D Held Item Model w/ Bobbing */}
         <HeldItem3D activeDef={activeDef} />
 
@@ -642,13 +700,11 @@ export default function Builder3D({
           fadeStrength={2}
         />
 
-        {/* Interactive Ground Plane */}
+        {/* Ground Plane */}
         <mesh
           position={[0, -0.05, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
           receiveShadow
-          onPointerMove={handlePointerMoveGround}
-          onClick={handleGroundClick}
         >
           <planeGeometry args={[400, 400]} />
           <meshStandardMaterial color={isNightMode ? '#0f172a' : '#14181d'} roughness={0.9} metalness={0.1} />
@@ -700,7 +756,6 @@ export default function Builder3D({
                 position={ghostPos}
                 rotation={rotation3D}
                 isValid={true}
-                onPlace={handleGroundClick}
               />
             )}
           </group>
@@ -761,11 +816,10 @@ export default function Builder3D({
           <b className={styles.controlKey}>KLIKNIJ NA EKRAN:</b> Włącz rozglądanie się myszką (Unturned FPS)<br />
           <b className={styles.controlKey}>WASD:</b> Poruszanie / Latanie<br />
           <b className={styles.controlKey}>Q / E:</b> Dół / Góra (NoClip)<br />
-          <b className={styles.controlKey}>LMB:</b> Stawianie w gnieździe<br />
+          <b className={styles.controlKey}>LMB:</b> Stawianie klocka w celowniku<br />
           <b className={styles.controlKey}>R:</b> Obrót | <b>1-6:</b> Wybór klocka | <b>ESC:</b> Odblokuj mysz
         </p>
       </div>
     </div>
   );
 }
-
