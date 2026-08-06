@@ -408,8 +408,9 @@ function FPSPlacementController({
   setGhostPos: (pos: [number, number, number] | null) => void;
   setGhost2DPos: (pos: { x: number; y: number } | null) => void;
 }) {
-  const { camera } = useThree();
+  const { camera, scene } = useThree();
   const ghostRef = useRef<{ x: number; y: number } | null>(null);
+  const lastPlaceTimeRef = useRef(0);
 
   useFrame(() => {
     if (!activeDef) {
@@ -423,19 +424,22 @@ function FPSPlacementController({
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
-    // Ground plane at Y = 0
-    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    const targetPoint = new THREE.Vector3();
-    const hit = raycaster.ray.intersectPlane(groundPlane, targetPoint);
+    let targetPoint: THREE.Vector3 | null = null;
+    const intersects = raycaster.intersectObjects(scene.children, true);
+    const validHits = intersects.filter(hit => hit.object.type === 'Mesh' && hit.distance > 0.5);
 
-    if (!hit) {
-      setGhostPos(null);
-      setGhost2DPos(null);
-      ghostRef.current = null;
-      return;
+    if (validHits.length > 0) {
+      targetPoint = validHits[0].point;
+    } else {
+      // Ground plane fallback Y = 0
+      const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const pt = new THREE.Vector3();
+      if (raycaster.ray.intersectPlane(groundPlane, pt)) {
+        targetPoint = pt;
+      }
     }
 
-    if (camera.position.distanceTo(targetPoint) > 40) {
+    if (!targetPoint || camera.position.distanceTo(targetPoint) > 35) {
       setGhostPos(null);
       setGhost2DPos(null);
       ghostRef.current = null;
@@ -449,12 +453,12 @@ function FPSPlacementController({
 
     // Socket snapping to nearest placed item
     let closestItem: PlacedItem | null = null;
-    let minSocketDist = 5.0; // 3D units threshold
+    let minSocketDist = 6.0; // 3D units threshold
 
     placedItems.forEach(item => {
       const itemX3D = item.x * SCALE;
       const itemZ3D = item.y * SCALE;
-      const dist = Math.hypot(targetPoint.x - itemX3D, targetPoint.z - itemZ3D);
+      const dist = Math.hypot((targetPoint as THREE.Vector3).x - itemX3D, (targetPoint as THREE.Vector3).z - itemZ3D);
       if (dist < minSocketDist) {
         minSocketDist = dist;
         closestItem = item;
@@ -490,7 +494,7 @@ function FPSPlacementController({
     }
 
     const floorOffset = targetFloor * 3.0;
-    const isRoof = activeDef.id.includes('roof');
+    const isRoof = activeDef.id.includes('roof') || activeDef.id.includes('hole');
     const heightOffset = floorOffset + (isRoof ? 3.0 : (activeDef.shape === 'wall' || activeDef.shape === 'pillar' ? 1.5 : 0.2));
 
     setGhostPos([targetX * SCALE, heightOffset, targetZ * SCALE]);
@@ -498,11 +502,16 @@ function FPSPlacementController({
     ghostRef.current = { x: targetX, y: targetZ };
   });
 
-  // Handle placement on LMB click when locked
+  // Handle placement on LMB click when locked (250ms debounce)
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
-      if (e.button !== 0) return; // Only Left Click
+      if (e.button !== 0) return; // Left Click only
+      if (!document.pointerLockElement) return; // Must be in PointerLock
       if (!activeDef || !ghostRef.current || !onPlaceItem) return;
+
+      const now = Date.now();
+      if (now - lastPlaceTimeRef.current < 250) return;
+      lastPlaceTimeRef.current = now;
 
       onPlaceItem({
         itemId: activeDef.id,
@@ -590,6 +599,18 @@ export default function Builder3D({
   const [rotation3D, setRotation3D] = useState(0);
 
   const activeDef = useMemo(() => buildItems.find(d => d.id === activeItem), [activeItem, buildItems]);
+
+  // Keyboard 'R' Rotation Listener
+  useEffect(() => {
+    const handleRotationKey = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+      if (e.code === 'KeyR' || e.key.toLowerCase() === 'r') {
+        setRotation3D(r => (r + 90) % 360);
+      }
+    };
+    window.addEventListener('keydown', handleRotationKey);
+    return () => window.removeEventListener('keydown', handleRotationKey);
+  }, []);
 
   // Keyboard 1-6 Hotbar Selection Listener
   useEffect(() => {
@@ -817,7 +838,7 @@ export default function Builder3D({
           <b className={styles.controlKey}>WASD:</b> Poruszanie / Latanie<br />
           <b className={styles.controlKey}>Q / E:</b> Dół / Góra (NoClip)<br />
           <b className={styles.controlKey}>LMB:</b> Stawianie klocka w celowniku<br />
-          <b className={styles.controlKey}>R:</b> Obrót | <b>1-6:</b> Wybór klocka | <b>ESC:</b> Odblokuj mysz
+          <b className={styles.controlKey}>R:</b> Obrót (+90°) | <b>1-6:</b> Wybór klocka | <b>ESC:</b> Odblokuj mysz
         </p>
       </div>
     </div>
