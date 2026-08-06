@@ -63,46 +63,6 @@ interface Item3DProps {
   onPointerDown: (e: THREE.Event | any, id: string) => void;
 }
 
-function ItemMaterial({ color, isTargeted, textureUrl }: { color: THREE.Color; isTargeted: boolean; textureUrl?: string }) {
-  const [map, setMap] = useState<THREE.Texture | null>(null);
-
-  useEffect(() => {
-    if (textureUrl && !isTargeted && textureUrl.startsWith('/')) {
-      new THREE.TextureLoader().load(textureUrl, (tex) => {
-        tex.wrapS = THREE.RepeatWrapping;
-        tex.wrapT = THREE.RepeatWrapping;
-        tex.colorSpace = THREE.SRGBColorSpace;
-        setMap(tex);
-      });
-    } else {
-      setMap(null);
-    }
-  }, [textureUrl, isTargeted]);
-
-  if (isTargeted) {
-    return (
-      <meshStandardMaterial
-        attach="material"
-        color="#ef4444"
-        roughness={0.2}
-        metalness={0.6}
-        emissive={new THREE.Color(0x991b1b)}
-        emissiveIntensity={0.6}
-      />
-    );
-  }
-  return (
-    <meshStandardMaterial
-      attach="material"
-      color={map ? '#ffffff' : color}
-      map={map}
-      roughness={0.6}
-      metalness={0.1}
-      envMapIntensity={0.8}
-    />
-  );
-}
-
 const Item3D = ({
   item,
   def,
@@ -132,10 +92,48 @@ const Item3D = ({
   
   const edgeColor = isTargetedForDemolish ? '#ef4444' : isSelected ? '#10b981' : '#38bdf8';
 
+  const [map, setMap] = useState<THREE.Texture | null>(null);
+
+  useEffect(() => {
+    const textureUrl = def.texture;
+    if (textureUrl && !isTargetedForDemolish && textureUrl.startsWith('/')) {
+      new THREE.TextureLoader().load(textureUrl, (tex) => {
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
+        setMap(tex);
+      });
+    } else {
+      setMap(null);
+    }
+  }, [def.texture, isTargetedForDemolish]);
+
   const handlePointerDown = (e: THREE.Event | any) => {
     e.stopPropagation();
     onPointerDown(e, item.id);
   };
+
+  const materialNode = isTargetedForDemolish ? (
+    <meshStandardMaterial
+      attach="material"
+      color="#ef4444"
+      roughness={0.2}
+      metalness={0.6}
+      emissive={new THREE.Color(0x991b1b)}
+      emissiveIntensity={0.6}
+    />
+  ) : (
+    <meshStandardMaterial
+      attach="material"
+      color={map ? '#ffffff' : color}
+      map={map}
+      roughness={0.6}
+      metalness={0.1}
+      envMapIntensity={0.8}
+    />
+  );
 
   if (def.shape === 'bed') {
     const bedWidth = 20 * SCALE;
@@ -189,7 +187,7 @@ const Item3D = ({
       <group position={[posX, height / 2 + heightOffset, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
         <mesh castShadow receiveShadow userData={{ itemId: item.id }}>
           <boxGeometry args={[width, height, length]} />
-          <ItemMaterial color={color} isTargeted={isTargetedForDemolish} textureUrl={def.texture} />
+          {materialNode}
           <Edges scale={1.005} color={edgeColor} opacity={1} transparent />
         </mesh>
       </group>
@@ -199,7 +197,7 @@ const Item3D = ({
       <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
         <mesh castShadow receiveShadow userData={{ itemId: item.id }}>
           <boxGeometry args={[width, 3.0, 0.4]} />
-          <ItemMaterial color={color} isTargeted={isTargetedForDemolish} textureUrl={def.texture} />
+          {materialNode}
           <Edges scale={1.005} color={edgeColor} opacity={1} transparent />
         </mesh>
       </group>
@@ -209,7 +207,7 @@ const Item3D = ({
       <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
         <mesh castShadow receiveShadow userData={{ itemId: item.id }}>
           <cylinderGeometry args={[0.4, 0.4, 3.0, 16]} />
-          <ItemMaterial color={color} isTargeted={isTargetedForDemolish} textureUrl={def.texture} />
+          {materialNode}
           <Edges scale={1.02} color={edgeColor} opacity={1} transparent threshold={15} />
         </mesh>
       </group>
@@ -232,7 +230,7 @@ const Item3D = ({
       <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow userData={{ itemId: item.id }}>
           <extrudeGeometry args={[shape, extrudeSettings]} />
-          <ItemMaterial color={color} isTargeted={isTargetedForDemolish} textureUrl={def.texture} />
+          {materialNode}
           <Edges scale={1.01} color={edgeColor} opacity={1} transparent threshold={15} />
         </mesh>
       </group>
