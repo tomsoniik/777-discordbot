@@ -82,6 +82,7 @@ function ItemMaterial({ color, isTargeted, textureUrl }: { color: THREE.Color; i
   if (isTargeted) {
     return (
       <meshStandardMaterial
+        attach="material"
         color="#ef4444"
         roughness={0.2}
         metalness={0.6}
@@ -92,6 +93,7 @@ function ItemMaterial({ color, isTargeted, textureUrl }: { color: THREE.Color; i
   }
   return (
     <meshStandardMaterial
+      attach="material"
       color={map ? '#ffffff' : color}
       map={map}
       roughness={0.6}
