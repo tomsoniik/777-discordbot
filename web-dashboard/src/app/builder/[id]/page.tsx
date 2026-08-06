@@ -985,14 +985,6 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
 
   return (
     <div className={styles.container}>
-      {/* Sidebar Toggle Button */}
-      <button 
-        className={`${styles.sidebarToggleBtn} ${isSidebarCollapsed ? styles.sidebarCollapsedToggle : ''}`}
-        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-      >
-        {isSidebarCollapsed ? '▶ Przybornik' : '◀ Zwiń'}
-      </button>
-
       {/* Tabbed Glassmorphic Sidebar */}
       <div className={`${styles.sidebar} ${isSidebarCollapsed ? styles.sidebarCollapsed : ''}`}>
         <div className={styles.tabsRow}>
@@ -1139,6 +1131,14 @@ export default function BuilderCanvas({ params }: { params: Promise<{ id: string
 
       <div className={styles.mainArea}>
         <div className={styles.toolbar}>
+          {/* Sidebar Toggle Button */}
+          <button 
+            className={styles.sidebarToggleBtn}
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          >
+            {isSidebarCollapsed ? '▶ Przybornik' : '◀ Zwiń'}
+          </button>
+          
           {project && (
              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'white', flex: 1, minWidth: 0 }}>
                  {isEditingInfo ? (
