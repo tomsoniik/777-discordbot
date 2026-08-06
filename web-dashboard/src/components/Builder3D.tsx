@@ -314,8 +314,14 @@ const GhostMesh3D = ({
   }
 };
 
-// First Person NoClip Camera Controller (Unturned Style)
-function FirstPersonFlyController({ active, center }: { active: boolean; center: [number, number, number] }) {
+// First Person NoClip Camera Controller (Unturned Style with Pointer Lock)
+function FirstPersonFlyController({
+  containerRef,
+  center
+}: {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  center: [number, number, number];
+}) {
   const { camera } = useThree();
   const keys = useRef<Record<string, boolean>>({});
   const pitch = useRef(0);
@@ -323,11 +329,6 @@ function FirstPersonFlyController({ active, center }: { active: boolean; center:
   const initialized = useRef(false);
 
   useEffect(() => {
-    if (!active) {
-      initialized.current = false;
-      return;
-    }
-
     if (!initialized.current) {
       camera.position.set(center[0], 2.2, center[2] + 6.0);
       camera.lookAt(center[0], 2.2, center[2]);
@@ -336,18 +337,26 @@ function FirstPersonFlyController({ active, center }: { active: boolean; center:
       initialized.current = true;
     }
 
+    const container = containerRef.current;
+
+    const handleCanvasClick = () => {
+      if (document.pointerLockElement !== container) {
+        container?.requestPointerLock();
+      }
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
       keys.current[e.code] = true;
     };
+
     const handleKeyUp = (e: KeyboardEvent) => {
       keys.current[e.code] = false;
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      // Rotate camera on mouse move or drag in 1st person mode
-      if (e.buttons === 1 || e.buttons === 2 || document.pointerLockElement) {
-        const sensitivity = 0.003;
+      if (document.pointerLockElement === container || e.buttons === 1 || e.buttons === 2) {
+        const sensitivity = 0.0025; // Unturned mouse sensitivity
         yaw.current -= e.movementX * sensitivity;
         pitch.current -= e.movementY * sensitivity;
         pitch.current = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, pitch.current));
@@ -357,19 +366,20 @@ function FirstPersonFlyController({ active, center }: { active: boolean; center:
       }
     };
 
+    container?.addEventListener('click', handleCanvasClick);
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('mousemove', handleMouseMove);
 
     return () => {
+      container?.removeEventListener('click', handleCanvasClick);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [active, camera, center]);
+  }, [camera, center, containerRef]);
 
   useFrame((_, delta) => {
-    if (!active) return;
     const speed = 14 * delta;
     const forward = new THREE.Vector3();
     camera.getWorldDirection(forward);
@@ -388,15 +398,14 @@ function FirstPersonFlyController({ active, center }: { active: boolean; center:
   return null;
 }
 
-
 // Unturned FPS Held Item in Hand (with bobbing & sway animation)
-function HeldItem3D({ activeDef, active }: { activeDef?: BuildItem; active: boolean }) {
+function HeldItem3D({ activeDef }: { activeDef?: BuildItem }) {
   const { camera } = useThree();
   const meshRef = useRef<THREE.Group>(null);
   const time = useRef(0);
 
   useFrame((_, delta) => {
-    if (!meshRef.current || !activeDef || !active) return;
+    if (!meshRef.current || !activeDef) return;
     time.current += delta * 4;
 
     const forward = new THREE.Vector3();
@@ -423,7 +432,7 @@ function HeldItem3D({ activeDef, active }: { activeDef?: BuildItem; active: bool
     meshRef.current.rotateX(Math.PI / 10);
   });
 
-  if (!activeDef || !active) return null;
+  if (!activeDef) return null;
 
   const rawColor = activeDef.color && activeDef.color !== 'clear' ? activeDef.color : '#94a3b8';
   const color = new THREE.Color(rawColor.startsWith('#') || rawColor.startsWith('rgb') ? rawColor : '#94a3b8');
@@ -453,7 +462,7 @@ export default function Builder3D({
   onPaintItem,
   onSelectActiveItem
 }: Builder3DProps) {
-  const [cameraView, setCameraView] = useState<'fps' | 'orbit' | 'top' | 'iso'>('fps');
+  const containerRef = useRef<HTMLDivElement>(null);
   const [ghostPos, setGhostPos] = useState<[number, number, number] | null>(null);
   const [ghost2DPos, setGhost2DPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [rotation3D, setRotation3D] = useState(0);
@@ -588,16 +597,9 @@ export default function Builder3D({
     }
   };
 
-  const cameraPos = useMemo(() => {
-    if (cameraView === 'fps') return [center[0], 2.2, center[2] + 6] as [number, number, number];
-    if (cameraView === 'top') return [center[0], 45, center[2] + 0.1] as [number, number, number];
-    if (cameraView === 'iso') return [center[0] + 30, 30, center[2] + 30] as [number, number, number];
-    return [center[0], 25, center[2] + 25] as [number, number, number];
-  }, [cameraView, center]);
-
   return (
-    <div className={styles.container}>
-      <Canvas shadows camera={{ position: cameraPos, fov: cameraView === 'fps' ? 70 : 40 }}>
+    <div ref={containerRef} className={styles.container}>
+      <Canvas shadows camera={{ fov: 75 }}>
         <color attach="background" args={[isNightMode ? '#0a0d12' : '#1a1f26']} />
 
         <SoftShadows size={8} samples={16} focus={0.5} />
@@ -621,20 +623,11 @@ export default function Builder3D({
           <Environment preset="dawn" />
         )}
 
-        {/* Camera Controllers */}
-        {cameraView === 'fps' ? (
-          <FirstPersonFlyController active={true} center={center} />
-        ) : (
-          <OrbitControls
-            target={center}
-            maxPolarAngle={cameraView === 'top' ? 0.05 : Math.PI / 2 - 0.05}
-            dampingFactor={0.05}
-            makeDefault
-          />
-        )}
+        {/* Unturned Pointer Lock 1st Person Controller */}
+        <FirstPersonFlyController containerRef={containerRef} center={center} />
 
-        {/* Item in Hand model in 1st Person Mode with bobbing & sway */}
-        <HeldItem3D activeDef={activeDef} active={cameraView === 'fps'} />
+        {/* Unturned 3D Held Item Model w/ Bobbing */}
+        <HeldItem3D activeDef={activeDef} />
 
         <Grid
           position={[0, -0.01, 0]}
@@ -714,12 +707,10 @@ export default function Builder3D({
         </Suspense>
       </Canvas>
 
-      {/* Unturned Style Crosshair Overlay for FPS Fly Mode */}
-      {cameraView === 'fps' && (
-        <div className={styles.fpsCrosshair}>
-          <div className={styles.crosshairDot} />
-        </div>
-      )}
+      {/* Unturned Style Crosshair Overlay */}
+      <div className={styles.fpsCrosshair}>
+        <div className={styles.crosshairDot} />
+      </div>
 
       {/* Unturned Style Quick Hotbar (1-6) */}
       <div className={styles.hotbarOverlay}>
@@ -740,12 +731,12 @@ export default function Builder3D({
         })}
       </div>
 
-      {/* 3D Sandbox Floating Controls */}
+      {/* Unturned 3D Sandbox Floating Controls */}
       <div className={styles.controlsOverlay}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <p className={styles.overlayTitle} style={{ margin: 0 }}>
             <span className={styles.statusDot} />
-            Unturned 3D Sandbox (NoClip Fly)
+            Unturned 3D Sandbox (NoClip FPS)
           </p>
           {activeDef && (
             <button
@@ -766,37 +757,15 @@ export default function Builder3D({
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
-          <button
-            className={`btn-cinematic ${cameraView === 'fps' ? 'primary' : 'secondary'}`}
-            style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-            onClick={() => setCameraView('fps')}
-          >
-            🕹️ 1. Osoba (NoClip)
-          </button>
-          <button
-            className={`btn-cinematic ${cameraView === 'orbit' ? 'primary' : 'secondary'}`}
-            style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-            onClick={() => setCameraView('orbit')}
-          >
-            Perspektywa 3D
-          </button>
-          <button
-            className={`btn-cinematic ${cameraView === 'iso' ? 'primary' : 'secondary'}`}
-            style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-            onClick={() => setCameraView('iso')}
-          >
-            Izometria
-          </button>
-        </div>
-
         <p className={styles.controlsList}>
+          <b className={styles.controlKey}>KLIKNIJ NA EKRAN:</b> Włącz rozglądanie się myszką (Unturned FPS)<br />
           <b className={styles.controlKey}>WASD:</b> Poruszanie / Latanie<br />
           <b className={styles.controlKey}>Q / E:</b> Dół / Góra (NoClip)<br />
           <b className={styles.controlKey}>LMB:</b> Stawianie w gnieździe<br />
-          <b className={styles.controlKey}>R:</b> Obrót | <b>1-6:</b> Wybór klocka
+          <b className={styles.controlKey}>R:</b> Obrót | <b>1-6:</b> Wybór klocka | <b>ESC:</b> Odblokuj mysz
         </p>
       </div>
     </div>
   );
 }
+
