@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useRef, useEffect, Suspense } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { Grid, Environment, Edges, Sparkles, ContactShadows, SoftShadows, Box, Cylinder, useTexture } from '@react-three/drei';
+import { Grid, Environment, Edges, Sparkles, ContactShadows, SoftShadows, Box, Cylinder } from '@react-three/drei';
 import * as THREE from 'three';
 
 import styles from '@/777_addons/styles/Builder3D.module.css';
@@ -63,30 +63,7 @@ interface Item3DProps {
   onPointerDown: (e: THREE.Event | any, id: string) => void;
 }
 
-function TexturedMaterial({ textureUrl, color }: { textureUrl: string; color: THREE.Color }) {
-  const texture = useTexture(textureUrl);
-
-  useEffect(() => {
-    if (texture) {
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(1, 1);
-      texture.needsUpdate = true;
-    }
-  }, [texture]);
-
-  return (
-    <meshStandardMaterial
-      map={texture}
-      color={color}
-      roughness={0.3}
-      metalness={0.1}
-      emissive={new THREE.Color(0x1e2634)}
-    />
-  );
-}
-
-function ItemMaterial({ def, color, isTargeted }: { def: BuildItem; color: THREE.Color; isTargeted: boolean }) {
+function ItemMaterial({ color, isTargeted }: { color: THREE.Color; isTargeted: boolean }) {
   if (isTargeted) {
     return (
       <meshStandardMaterial
@@ -98,19 +75,12 @@ function ItemMaterial({ def, color, isTargeted }: { def: BuildItem; color: THREE
       />
     );
   }
-  if (def.texture && def.texture.startsWith('/')) {
-    return (
-      <Suspense fallback={<meshStandardMaterial color={color} roughness={0.3} emissive={new THREE.Color(0x1e2634)} />}>
-        <TexturedMaterial textureUrl={def.texture} color={color} />
-      </Suspense>
-    );
-  }
   return (
     <meshStandardMaterial
       color={color}
-      roughness={0.3}
-      metalness={0.1}
-      emissive={new THREE.Color(0x1e2634)}
+      roughness={0.35}
+      metalness={0.2}
+      envMapIntensity={0.8}
     />
   );
 }
@@ -140,7 +110,7 @@ const Item3D = ({
 
   const rawColor = (item.customColor && item.customColor !== 'clear') ? item.customColor : (def.color && def.color !== 'clear' ? def.color : '#94a3b8');
   const baseColorHex = rawColor.startsWith('#') || rawColor.startsWith('rgb') ? rawColor : '#94a3b8';
-  const color = new THREE.Color(baseColorHex);
+  const color = useMemo(() => new THREE.Color(baseColorHex), [baseColorHex]);
   
   const edgeColor = isTargetedForDemolish ? '#ef4444' : isSelected ? '#10b981' : '#38bdf8';
 
@@ -199,7 +169,7 @@ const Item3D = ({
     return (
       <group position={[posX, height / 2 + heightOffset, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
         <Box args={[width, height, length]} castShadow receiveShadow userData={{ itemId: item.id }}>
-          <ItemMaterial def={def} color={color} isTargeted={isTargetedForDemolish} />
+          <ItemMaterial color={color} isTargeted={isTargetedForDemolish} />
           <Edges scale={1.01} color={edgeColor} opacity={1} transparent />
         </Box>
       </group>
@@ -208,7 +178,7 @@ const Item3D = ({
     return (
       <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
         <Box args={[width, 3.0, 0.4]} castShadow receiveShadow userData={{ itemId: item.id }}>
-          <ItemMaterial def={def} color={color} isTargeted={isTargetedForDemolish} />
+          <ItemMaterial color={color} isTargeted={isTargetedForDemolish} />
           <Edges scale={1.01} color={edgeColor} opacity={1} transparent />
         </Box>
       </group>
@@ -217,7 +187,7 @@ const Item3D = ({
     return (
       <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
         <Cylinder args={[0.4, 0.4, 3.0, 16]} castShadow receiveShadow userData={{ itemId: item.id }}>
-          <ItemMaterial def={def} color={color} isTargeted={isTargetedForDemolish} />
+          <ItemMaterial color={color} isTargeted={isTargetedForDemolish} />
           <Edges scale={1.02} color={edgeColor} opacity={1} transparent threshold={15} />
         </Cylinder>
       </group>
@@ -240,7 +210,7 @@ const Item3D = ({
       <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow userData={{ itemId: item.id }}>
           <extrudeGeometry args={[shape, extrudeSettings]} />
-          <ItemMaterial def={def} color={color} isTargeted={isTargetedForDemolish} />
+          <ItemMaterial color={color} isTargeted={isTargetedForDemolish} />
           <Edges scale={1.01} color={edgeColor} opacity={1} transparent threshold={15} />
         </mesh>
       </group>
@@ -618,7 +588,7 @@ function FPSPlacementController({
   return null;
 }
 
-// Unturned 3D Held Item in Hand (with High-Tech Demolition Sledgehammer for Remover Tool)
+// Unturned 3D Held Item Model (Compact Demolition Tool in lower right FOV)
 function HeldItem3D({ activeDef }: { activeDef?: BuildItem }) {
   const { camera } = useThree();
   const meshRef = useRef<THREE.Group>(null);
@@ -626,7 +596,7 @@ function HeldItem3D({ activeDef }: { activeDef?: BuildItem }) {
 
   useFrame((_, delta) => {
     if (!meshRef.current || !activeDef) return;
-    time.current += delta * 4;
+    time.current += delta * 3;
 
     const forward = new THREE.Vector3();
     camera.getWorldDirection(forward);
@@ -637,18 +607,18 @@ function HeldItem3D({ activeDef }: { activeDef?: BuildItem }) {
     const up = new THREE.Vector3();
     up.crossVectors(right, forward).normalize();
 
-    const bobbingY = Math.sin(time.current) * 0.02;
-    const bobbingX = Math.cos(time.current * 0.8) * 0.015;
+    const bobbingY = Math.sin(time.current) * 0.01;
+    const bobbingX = Math.cos(time.current * 0.8) * 0.01;
 
+    // Compact item positioned neatly in lower right corner of screen
     const handPos = camera.position.clone()
-      .addScaledVector(forward, 0.85)
-      .addScaledVector(right, 0.4 + bobbingX)
-      .addScaledVector(up, -0.3 + bobbingY);
+      .addScaledVector(forward, 0.9)
+      .addScaledVector(right, 0.45 + bobbingX)
+      .addScaledVector(up, -0.35 + bobbingY);
 
     meshRef.current.position.copy(handPos);
     meshRef.current.quaternion.copy(camera.quaternion);
     meshRef.current.rotateY(-Math.PI / 6);
-    meshRef.current.rotateX(Math.PI / 10);
   });
 
   if (!activeDef) return null;
@@ -656,17 +626,13 @@ function HeldItem3D({ activeDef }: { activeDef?: BuildItem }) {
   if (activeDef.shape === 'remover' || activeDef.id === 'remover_tool') {
     return (
       <group ref={meshRef}>
-        {/* Heavy Sledgehammer Handle */}
-        <Cylinder args={[0.04, 0.04, 1.0, 12]} position={[0, -0.2, 0]}>
+        <Cylinder args={[0.02, 0.02, 0.4, 12]} position={[0, -0.1, 0]}>
           <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.8} />
         </Cylinder>
-        {/* Heavy Red Metallic Hammer Head */}
-        <Box args={[0.25, 0.35, 0.55]} position={[0, 0.25, 0]}>
-          <meshStandardMaterial color="#ef4444" roughness={0.2} metalness={0.9} emissive="#991b1b" emissiveIntensity={0.6} />
-          <Edges scale={1.05} color="#ff0000" opacity={0.9} transparent />
+        <Box args={[0.1, 0.15, 0.2]} position={[0, 0.1, 0]}>
+          <meshStandardMaterial color="#ef4444" roughness={0.2} metalness={0.8} emissive="#991b1b" emissiveIntensity={0.5} />
+          <Edges scale={1.05} color="#ff0000" opacity={0.8} transparent />
         </Box>
-        {/* Energy Pulse Light */}
-        <pointLight position={[0, 0.25, 0.2]} color="#ef4444" intensity={3} distance={4} />
       </group>
     );
   }
@@ -676,7 +642,7 @@ function HeldItem3D({ activeDef }: { activeDef?: BuildItem }) {
 
   return (
     <group ref={meshRef}>
-      <Box args={[0.3, 0.3, 0.3]} castShadow>
+      <Box args={[0.15, 0.15, 0.15]}>
         <meshStandardMaterial color={color} roughness={0.3} metalness={0.4} />
         <Edges scale={1.05} color="#10b981" opacity={0.9} transparent />
       </Box>
@@ -819,7 +785,7 @@ export default function Builder3D({
           setTargetedItemId={setTargetedItemId}
         />
 
-        {/* Unturned 3D Held Item Model (Custom Demolition Hammer when Wyburzanie is selected) */}
+        {/* Unturned 3D Held Item Model (Compact in lower right FOV) */}
         <HeldItem3D activeDef={activeDef} />
 
         <Grid
@@ -899,7 +865,7 @@ export default function Builder3D({
         </Suspense>
       </Canvas>
 
-      {/* Unturned Style Crosshair Overlay (Turns Red when aiming Demolish Tool) */}
+      {/* Unturned Style Crosshair Overlay */}
       <div className={styles.fpsCrosshair}>
         <div className={styles.crosshairDot} style={{ background: isDemolishActive ? '#ef4444' : '#10b981', boxShadow: isDemolishActive ? '0 0 10px #ef4444' : '0 0 8px #10b981' }} />
       </div>
