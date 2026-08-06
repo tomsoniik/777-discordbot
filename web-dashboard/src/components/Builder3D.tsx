@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useRef, useEffect, Suspense } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Grid, Environment, Edges, Sparkles, ContactShadows, SoftShadows, Box, Cylinder } from '@react-three/drei';
+import { OrbitControls, Grid, Environment, Edges, Sparkles, ContactShadows, SoftShadows, Box, Cylinder, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
 import styles from '@/777_addons/styles/Builder3D.module.css';
@@ -60,6 +60,47 @@ interface Item3DProps {
   currentFloor: number;
   showBedAreas: boolean;
   onPointerDown: (e: THREE.Event | any, id: string) => void;
+}
+
+function TexturedMaterial({ textureUrl, color }: { textureUrl: string; color: THREE.Color }) {
+  const texture = useTexture(textureUrl);
+
+  useEffect(() => {
+    if (texture) {
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(1, 1);
+      texture.needsUpdate = true;
+    }
+  }, [texture]);
+
+  return (
+    <meshStandardMaterial
+      map={texture}
+      color={color}
+      roughness={0.3}
+      metalness={0.1}
+      emissive={new THREE.Color(0x1e2634)}
+    />
+  );
+}
+
+function ItemMaterial({ def, color }: { def: BuildItem; color: THREE.Color }) {
+  if (def.texture && def.texture.startsWith('/')) {
+    return (
+      <Suspense fallback={<meshStandardMaterial color={color} roughness={0.3} emissive={new THREE.Color(0x1e2634)} />}>
+        <TexturedMaterial textureUrl={def.texture} color={color} />
+      </Suspense>
+    );
+  }
+  return (
+    <meshStandardMaterial
+      color={color}
+      roughness={0.3}
+      metalness={0.1}
+      emissive={new THREE.Color(0x1e2634)}
+    />
+  );
 }
 
 const Item3D = ({
@@ -147,12 +188,7 @@ const Item3D = ({
     return (
       <group position={[posX, height / 2 + heightOffset, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
         <Box args={[width, height, length]} castShadow receiveShadow>
-          <meshStandardMaterial
-            color={color}
-            emissive={new THREE.Color(0x2a3242)}
-            roughness={0.2}
-            metalness={0.1}
-          />
+          <ItemMaterial def={def} color={color} />
           <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.9} transparent />
         </Box>
       </group>
@@ -161,12 +197,7 @@ const Item3D = ({
     return (
       <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
         <Box args={[width, 3.0, 0.4]} castShadow receiveShadow>
-          <meshStandardMaterial
-            color={color}
-            emissive={new THREE.Color(0x222a36)}
-            roughness={0.2}
-            metalness={0.1}
-          />
+          <ItemMaterial def={def} color={color} />
           <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.9} transparent />
         </Box>
       </group>
@@ -175,12 +206,7 @@ const Item3D = ({
     return (
       <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
         <Cylinder args={[0.4, 0.4, 3.0, 16]} castShadow receiveShadow>
-          <meshStandardMaterial
-            color={color}
-            emissive={new THREE.Color(0x1e3a8a)}
-            roughness={0.2}
-            metalness={0.1}
-          />
+          <ItemMaterial def={def} color={color} />
           <Edges scale={1.02} color={edgeColor} opacity={isSelected ? 1 : 0.9} transparent threshold={15} />
         </Cylinder>
       </group>
@@ -204,12 +230,7 @@ const Item3D = ({
       <group position={[posX, heightOffset, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
           <extrudeGeometry args={[shape, extrudeSettings]} />
-          <meshStandardMaterial
-            color={color}
-            emissive={new THREE.Color(0x2a3242)}
-            roughness={0.2}
-            metalness={0.1}
-          />
+          <ItemMaterial def={def} color={color} />
           <Edges scale={1.01} color={edgeColor} opacity={isSelected ? 1 : 0.9} transparent threshold={15} />
         </mesh>
       </group>
