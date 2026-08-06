@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useMemo, useState, useRef, useEffect, Suspense } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { Grid, Environment, Edges, Sparkles, ContactShadows, SoftShadows, Box, Cylinder } from '@react-three/drei';
+import { Grid, Environment, Edges, Sparkles, ContactShadows, SoftShadows } from '@react-three/drei';
 import * as THREE from 'three';
 
 import styles from '@/777_addons/styles/Builder3D.module.css';
@@ -68,17 +68,17 @@ function ItemMaterial({ color, isTargeted }: { color: THREE.Color; isTargeted: b
     return (
       <meshStandardMaterial
         color="#ef4444"
-        roughness={0.1}
-        metalness={0.8}
+        roughness={0.2}
+        metalness={0.6}
         emissive={new THREE.Color(0x991b1b)}
-        emissiveIntensity={0.8}
+        emissiveIntensity={0.6}
       />
     );
   }
   return (
     <meshStandardMaterial
       color={color}
-      roughness={0.35}
+      roughness={0.4}
       metalness={0.2}
       envMapIntensity={0.8}
     />
@@ -140,15 +140,16 @@ const Item3D = ({
     return (
       <group position={[posX, spawnY, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
         <group>
-          <Box args={[bedWidth, bedHeight, bedLength]} position={[0, bedPosY, 0]} castShadow receiveShadow userData={{ itemId: item.id }}>
+          <mesh position={[0, bedPosY, 0]} castShadow receiveShadow userData={{ itemId: item.id }}>
+            <boxGeometry args={[bedWidth, bedHeight, bedLength]} />
             <meshStandardMaterial
               color={isTargetedForDemolish ? "#ef4444" : "#ff4757"}
               emissive={isTargetedForDemolish ? "#991b1b" : "#7f1d1d"}
               roughness={0.2}
               metalness={0.1}
             />
-            <Edges scale={1.05} color={edgeColor} opacity={1} transparent />
-          </Box>
+            <Edges scale={1.02} color={edgeColor} opacity={1} transparent />
+          </mesh>
 
           {showBedAreas && (
             <>
@@ -168,28 +169,31 @@ const Item3D = ({
   } else if (def.shape === 'square') {
     return (
       <group position={[posX, height / 2 + heightOffset, posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
-        <Box args={[width, height, length]} castShadow receiveShadow userData={{ itemId: item.id }}>
+        <mesh castShadow receiveShadow userData={{ itemId: item.id }}>
+          <boxGeometry args={[width, height, length]} />
           <ItemMaterial color={color} isTargeted={isTargetedForDemolish} />
-          <Edges scale={1.01} color={edgeColor} opacity={1} transparent />
-        </Box>
+          <Edges scale={1.005} color={edgeColor} opacity={1} transparent />
+        </mesh>
       </group>
     );
   } else if (def.shape === 'wall') {
     return (
       <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
-        <Box args={[width, 3.0, 0.4]} castShadow receiveShadow userData={{ itemId: item.id }}>
+        <mesh castShadow receiveShadow userData={{ itemId: item.id }}>
+          <boxGeometry args={[width, 3.0, 0.4]} />
           <ItemMaterial color={color} isTargeted={isTargetedForDemolish} />
-          <Edges scale={1.01} color={edgeColor} opacity={1} transparent />
-        </Box>
+          <Edges scale={1.005} color={edgeColor} opacity={1} transparent />
+        </mesh>
       </group>
     );
   } else if (def.shape === 'pillar') {
     return (
       <group position={[posX, floorOffset + 1.5 + (isRoof ? 0 : 0.2), posZ]} rotation={[0, rotY, 0]} onPointerDown={handlePointerDown} userData={{ itemId: item.id }}>
-        <Cylinder args={[0.4, 0.4, 3.0, 16]} castShadow receiveShadow userData={{ itemId: item.id }}>
+        <mesh castShadow receiveShadow userData={{ itemId: item.id }}>
+          <cylinderGeometry args={[0.4, 0.4, 3.0, 16]} />
           <ItemMaterial color={color} isTargeted={isTargetedForDemolish} />
           <Edges scale={1.02} color={edgeColor} opacity={1} transparent threshold={15} />
-        </Cylinder>
+        </mesh>
       </group>
     );
   } else {
@@ -240,46 +244,51 @@ const GhostMesh3D = ({
   if (activeDef.shape === 'bed') {
     return (
       <group position={position} rotation={[0, rotY, 0]}>
-        <Box args={[20 * SCALE, 0.5, 40 * SCALE]} position={[0, 0.25, 0]}>
+        <mesh position={[0, 0.25, 0]}>
+          <boxGeometry args={[20 * SCALE, 0.5, 40 * SCALE]} />
           <meshStandardMaterial color={color} transparent opacity={0.35} />
           <Edges scale={1.02} color={color} transparent opacity={0.9} />
-        </Box>
+        </mesh>
       </group>
     );
   } else if (activeDef.shape === 'square') {
     return (
       <group position={position} rotation={[0, rotY, 0]}>
-        <Box args={[width, height, length]}>
+        <mesh>
+          <boxGeometry args={[width, height, length]} />
           <meshStandardMaterial color={color} transparent opacity={0.35} />
           <Edges scale={1.02} color={color} transparent opacity={0.9} />
-        </Box>
+        </mesh>
       </group>
     );
   } else if (activeDef.shape === 'wall') {
     return (
       <group position={position} rotation={[0, rotY, 0]}>
-        <Box args={[width, 3.0, 0.4]}>
+        <mesh>
+          <boxGeometry args={[width, 3.0, 0.4]} />
           <meshStandardMaterial color={color} transparent opacity={0.35} />
           <Edges scale={1.02} color={color} transparent opacity={0.9} />
-        </Box>
+        </mesh>
       </group>
     );
   } else if (activeDef.shape === 'pillar') {
     return (
       <group position={position} rotation={[0, rotY, 0]}>
-        <Cylinder args={[0.4, 0.4, 3.0, 16]}>
+        <mesh>
+          <cylinderGeometry args={[0.4, 0.4, 3.0, 16]} />
           <meshStandardMaterial color={color} transparent opacity={0.35} />
           <Edges scale={1.02} color={color} transparent opacity={0.9} />
-        </Cylinder>
+        </mesh>
       </group>
     );
   } else {
     return (
       <group position={position} rotation={[0, rotY, 0]}>
-        <Box args={[width, height, width]}>
+        <mesh>
+          <boxGeometry args={[width, height, width]} />
           <meshStandardMaterial color={color} transparent opacity={0.35} />
           <Edges scale={1.02} color={color} transparent opacity={0.9} />
-        </Box>
+        </mesh>
       </group>
     );
   }
@@ -588,68 +597,6 @@ function FPSPlacementController({
   return null;
 }
 
-// Unturned 3D Held Item Model (Compact Demolition Tool in lower right FOV)
-function HeldItem3D({ activeDef }: { activeDef?: BuildItem }) {
-  const { camera } = useThree();
-  const meshRef = useRef<THREE.Group>(null);
-  const time = useRef(0);
-
-  useFrame((_, delta) => {
-    if (!meshRef.current || !activeDef) return;
-    time.current += delta * 3;
-
-    const forward = new THREE.Vector3();
-    camera.getWorldDirection(forward);
-    
-    const right = new THREE.Vector3();
-    right.crossVectors(forward, camera.up).normalize();
-
-    const up = new THREE.Vector3();
-    up.crossVectors(right, forward).normalize();
-
-    const bobbingY = Math.sin(time.current) * 0.01;
-    const bobbingX = Math.cos(time.current * 0.8) * 0.01;
-
-    // Compact item positioned neatly in lower right corner of screen
-    const handPos = camera.position.clone()
-      .addScaledVector(forward, 0.9)
-      .addScaledVector(right, 0.45 + bobbingX)
-      .addScaledVector(up, -0.35 + bobbingY);
-
-    meshRef.current.position.copy(handPos);
-    meshRef.current.quaternion.copy(camera.quaternion);
-    meshRef.current.rotateY(-Math.PI / 6);
-  });
-
-  if (!activeDef) return null;
-
-  if (activeDef.shape === 'remover' || activeDef.id === 'remover_tool') {
-    return (
-      <group ref={meshRef}>
-        <Cylinder args={[0.02, 0.02, 0.4, 12]} position={[0, -0.1, 0]}>
-          <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.8} />
-        </Cylinder>
-        <Box args={[0.1, 0.15, 0.2]} position={[0, 0.1, 0]}>
-          <meshStandardMaterial color="#ef4444" roughness={0.2} metalness={0.8} emissive="#991b1b" emissiveIntensity={0.5} />
-          <Edges scale={1.05} color="#ff0000" opacity={0.8} transparent />
-        </Box>
-      </group>
-    );
-  }
-
-  const rawColor = activeDef.color && activeDef.color !== 'clear' ? activeDef.color : '#94a3b8';
-  const color = new THREE.Color(rawColor.startsWith('#') || rawColor.startsWith('rgb') ? rawColor : '#94a3b8');
-
-  return (
-    <group ref={meshRef}>
-      <Box args={[0.15, 0.15, 0.15]}>
-        <meshStandardMaterial color={color} roughness={0.3} metalness={0.4} />
-        <Edges scale={1.05} color="#10b981" opacity={0.9} transparent />
-      </Box>
-    </group>
-  );
-}
-
 export default function Builder3D({
   placedItems,
   buildItems,
@@ -785,9 +732,6 @@ export default function Builder3D({
           setTargetedItemId={setTargetedItemId}
         />
 
-        {/* Unturned 3D Held Item Model (Compact in lower right FOV) */}
-        <HeldItem3D activeDef={activeDef} />
-
         <Grid
           position={[0, -0.01, 0]}
           args={[200, 200]}
@@ -813,56 +757,54 @@ export default function Builder3D({
 
         <ContactShadows position={[0, 0, 0]} opacity={0.6} scale={100} blur={2} far={10} />
 
-        <Suspense fallback={null}>
-          <group>
-            {placedItems.map(item => {
-              let def = buildItems.find(d => d.id === item.itemId);
-              if (!def) {
-                const idLower = (item.itemId || '').toLowerCase();
-                const fallbackShape: ShapeType = idLower.includes('wall') ? 'wall' :
-                  idLower.includes('pillar') ? 'pillar' :
-                  idLower.includes('bed') ? 'bed' :
-                  idLower.includes('tri') ? 'triangle' : 'square';
+        <group>
+          {placedItems.map(item => {
+            let def = buildItems.find(d => d.id === item.itemId);
+            if (!def) {
+              const idLower = (item.itemId || '').toLowerCase();
+              const fallbackShape: ShapeType = idLower.includes('wall') ? 'wall' :
+                idLower.includes('pillar') ? 'pillar' :
+                idLower.includes('bed') ? 'bed' :
+                idLower.includes('tri') ? 'triangle' : 'square';
 
-                def = {
-                  id: item.itemId || 'structure',
-                  name: 'Structure',
-                  shape: fallbackShape,
-                  materialClass: 'structure',
-                  color: idLower.includes('bed') ? '#ff4757' : '#777777',
-                  texture: '/custom_roof.png',
-                  costs: {}
-                };
-              }
-              const isSelected = selectedItemIds.includes(item.id);
-              const isTargetedForDemolish = targetedItemId === item.id;
-              return (
-                <Item3D
-                  key={item.id}
-                  item={item}
-                  def={def}
-                  allItems={placedItems}
-                  buildDefs={buildItems}
-                  isSelected={isSelected}
-                  isTargetedForDemolish={isTargetedForDemolish}
-                  currentFloor={currentFloor}
-                  showBedAreas={showBedAreas}
-                  onPointerDown={handleItemPointerDown}
-                />
-              );
-            })}
-
-            {/* Ghost Mesh preview for placement */}
-            {activeDef && ghostPos && !isDemolishActive && (
-              <GhostMesh3D
-                activeDef={activeDef}
-                position={ghostPos}
-                rotation={ghostRot}
-                isValid={true}
+              def = {
+                id: item.itemId || 'structure',
+                name: 'Structure',
+                shape: fallbackShape,
+                materialClass: 'structure',
+                color: idLower.includes('bed') ? '#ff4757' : '#777777',
+                texture: '/custom_roof.png',
+                costs: {}
+              };
+            }
+            const isSelected = selectedItemIds.includes(item.id);
+            const isTargetedForDemolish = targetedItemId === item.id;
+            return (
+              <Item3D
+                key={item.id}
+                item={item}
+                def={def}
+                allItems={placedItems}
+                buildDefs={buildItems}
+                isSelected={isSelected}
+                isTargetedForDemolish={isTargetedForDemolish}
+                currentFloor={currentFloor}
+                showBedAreas={showBedAreas}
+                onPointerDown={handleItemPointerDown}
               />
-            )}
-          </group>
-        </Suspense>
+            );
+          })}
+
+          {/* Ghost Mesh preview for placement */}
+          {activeDef && ghostPos && !isDemolishActive && (
+            <GhostMesh3D
+              activeDef={activeDef}
+              position={ghostPos}
+              rotation={ghostRot}
+              isValid={true}
+            />
+          )}
+        </group>
       </Canvas>
 
       {/* Unturned Style Crosshair Overlay */}
