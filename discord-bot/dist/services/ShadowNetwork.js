@@ -39,10 +39,16 @@ class ShadowNetwork {
             logger_1.logger.error(e, '[ShadowNetwork] Błąd zapisu powiązania:');
         }
     }
+    static scrapeCache = new Map();
     /**
      * Buduje podstawową siatkę znajomych dla gracza. Bezpieczne dla profili prywatnych!
      */
     static async scrapeFriends(steamId) {
+        // Zabezpieczenie przed spamowaniem Steam API (cache 1 godzina)
+        const lastScraped = this.scrapeCache.get(steamId);
+        if (lastScraped && Date.now() - lastScraped < 3600000)
+            return;
+        this.scrapeCache.set(steamId, Date.now());
         const apiKey = env_1.ENV.STEAM_API_KEY;
         if (!apiKey)
             return;

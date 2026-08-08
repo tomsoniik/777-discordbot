@@ -68,6 +68,10 @@ class UnturnedTracker {
             }
             for (const chunk of chunks) {
                 const res = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${apiKey}&steamids=${chunk.join(',')}`);
+                if (!res.ok) {
+                    logger_1.logger.warn(`Błąd Steam API GetPlayerSummaries: ${res.status}`);
+                    continue;
+                }
                 const data = await res.json();
                 const players = data.response?.players || [];
                 for (const player of players) {

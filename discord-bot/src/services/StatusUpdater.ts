@@ -58,15 +58,17 @@ class StatusUpdaterManager {
 
     public async generateEmbed(): Promise<EmbedBuilder> {
         const embed = new EmbedBuilder()
-            .setTitle('🌐 Status Serwerów Unturned')
-            .setColor('#1db954')
-            .setDescription('Aktualna liczba graczy i stan serwerów w czasie rzeczywistym. Odświeża się co minutę.')
+            .setTitle('🌍 STATUS SERWERÓW UNBEATEN')
+            .setColor('#00ffaa')
+            .setFooter({ text: 'Aktualizacja co 1 minutę' })
             .setTimestamp();
 
         let totalPlayers = 0;
         let onlineServersCount = 0;
 
         for (const [key, server] of Object.entries(PREDEFINED_SERVERS)) {
+            // Dodajemy opóźnienie 1.5s aby nie dostać rate limitu od Steam API
+            await new Promise(r => setTimeout(r, 1500));
             const status = await A2SQuery.getServerStatus(server.ip, server.port, server.serverId);
             const displayName = server.displayName || key.toUpperCase();
 

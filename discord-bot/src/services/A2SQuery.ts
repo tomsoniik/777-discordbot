@@ -64,6 +64,9 @@ export class A2SQuery {
                     const res = await fetch(
                         `https://api.steampowered.com/IGameServersService/GetServerList/v1/?key=${ENV.STEAM_API_KEY}&filter=${filter}`,
                     );
+                    if (!res.ok) {
+                        throw new Error(`Steam API responded with status ${res.status}`);
+                    }
                     const data: any = await res.json();
                     const server = data.response?.servers?.[0];
 

@@ -49,6 +49,9 @@ class A2SQuery {
                 }
                 if (filter) {
                     const res = await fetch(`https://api.steampowered.com/IGameServersService/GetServerList/v1/?key=${env_1.ENV.STEAM_API_KEY}&filter=${filter}`);
+                    if (!res.ok) {
+                        throw new Error(`Steam API responded with status ${res.status}`);
+                    }
                     const data = await res.json();
                     const server = data.response?.servers?.[0];
                     if (server) {
