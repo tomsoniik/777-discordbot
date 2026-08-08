@@ -142,7 +142,7 @@ export class UnturnedTracker {
                             const settings = await prisma.botSettings.findUnique({ where: { id: 1 } });
                             const channelId = settings?.defaultChannelId;
                             if (channelId) {
-                                const channel = this.client.channels.cache.get(channelId);
+                                const channel = await this.client.channels.fetch(channelId).catch(() => null);
                                 if (channel && channel.isTextBased() && 'send' in channel) {
                                     const embed = new EmbedBuilder()
                                         .setTitle('👋 GRACZ OPUŚCIŁ SERWER')
@@ -329,7 +329,7 @@ export class UnturnedTracker {
                         const settings = await prisma.botSettings.findUnique({ where: { id: 1 } });
                         const channelId = settings?.defaultChannelId;
                         if (channelId) {
-                            const channel = this.client.channels.cache.get(channelId);
+                            const channel = await this.client.channels.fetch(channelId).catch(() => null);
                             if (channel && channel.isTextBased() && 'send' in channel) {
                                 const title = isServerChange
                                     ? '🔄 ALARM ŚLEDZENIA (ZMIANA SERWERA) 🔄'
