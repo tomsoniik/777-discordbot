@@ -6,6 +6,7 @@ const discord_js_1 = require("discord.js");
 const commands_1 = require("../commands");
 const env_1 = require("../config/env");
 const UnturnedTracker_1 = require("../services/UnturnedTracker");
+const StatusUpdater_1 = require("../services/StatusUpdater");
 async function onReady(client) {
     logger_1.logger.info(`Bot logged in as ${client.user?.tag}`);
     try {
@@ -26,4 +27,5 @@ async function onReady(client) {
     }
     const tracker = new UnturnedTracker_1.UnturnedTracker(client);
     tracker.start();
+    StatusUpdater_1.statusUpdater.init(client);
 }

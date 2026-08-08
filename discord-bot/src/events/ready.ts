@@ -3,6 +3,7 @@ import { Client, REST, Routes } from 'discord.js';
 import { commands } from '../commands';
 import { ENV } from '../config/env';
 import { UnturnedTracker } from '../services/UnturnedTracker';
+import { statusUpdater } from '../services/StatusUpdater';
 
 export async function onReady(client: Client) {
     logger.info(`Bot logged in as ${client.user?.tag}`);
@@ -26,4 +27,6 @@ export async function onReady(client: Client) {
 
     const tracker = new UnturnedTracker(client);
     tracker.start();
+
+    statusUpdater.init(client);
 }

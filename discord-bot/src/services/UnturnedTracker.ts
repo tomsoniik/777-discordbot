@@ -282,10 +282,16 @@ export class UnturnedTracker {
                         let playersInfo = 'Brak danych';
 
                         try {
-                            const qIp = matchedServerConfig?.ip || '0.0.0.0';
-                            const qPort = matchedServerConfig?.port || 0;
-                            const qServerId =
-                                matchedServerConfig?.serverId || (foundIpPort.includes(':') ? undefined : foundIpPort);
+                            let qIp = matchedServerConfig?.ip || '0.0.0.0';
+                            let qPort = matchedServerConfig?.port || 0;
+                            let qServerId = matchedServerConfig?.serverId || (foundIpPort.includes(':') ? undefined : foundIpPort);
+
+                            if ((!matchedServerConfig || qIp === '0.0.0.0') && foundIpPort.includes(':')) {
+                                const parts = foundIpPort.split(':');
+                                qIp = parts[0];
+                                qPort = parseInt(parts[1], 10) || 0;
+                                qServerId = undefined;
+                            }
 
                             const serverInfo = await A2SQuery.getServerStatus(qIp, qPort, qServerId);
 

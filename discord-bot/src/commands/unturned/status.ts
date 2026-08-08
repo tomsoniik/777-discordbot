@@ -1,54 +1,20 @@
 import { logger } from '../../utils/logger';
-import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import { Command } from '../../types';
-import { PREDEFINED_SERVERS } from '../../services/UnturnedTracker';
-import { A2SQuery } from '../../services/A2SQuery';
+import { statusUpdater } from '../../services/StatusUpdater';
 
 export const statusCommand: Command = {
     data: new SlashCommandBuilder()
         .setName('status')
-        .setDescription('Sprawdź aktualny status i liczbę graczy na wszystkich serwerach Unbeaten'),
+        .setDescription('Tworzy panel ze statusem serwerów odświeżający się co 1 minutę'),
     execute: async (interaction: ChatInputCommandInteraction) => {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply();
 
         try {
-            const embed = new EmbedBuilder()
-                .setTitle('🌐 Status Serwerów Unturned')
-                .setColor('#1db954')
-                .setDescription('Aktualna liczba graczy i stan serwerów w czasie rzeczywistym:')
-                .setTimestamp();
+            const embed = await statusUpdater.generateEmbed();
+            const message = await interaction.editReply({ embeds: [embed] });
 
-            let totalPlayers = 0;
-            let onlineServersCount = 0;
-
-            for (const [key, server] of Object.entries(PREDEFINED_SERVERS)) {
-                const status = await A2SQuery.getServerStatus(server.ip, server.port, server.serverId);
-
-                const displayName = server.displayName || key.toUpperCase();
-
-                if (status) {
-                    onlineServersCount++;
-                    totalPlayers += status.playersCount;
-
-                    embed.addFields({
-                        name: `🟢 ${displayName}`,
-                        value: `Graczy: **${status.playersCount}/${status.maxPlayers}** | Mapa: \`${status.map}\`\n🔗 \`https://join.unbeaten.gg/${status.ipPort}\``,
-                        inline: false,
-                    });
-                } else {
-                    embed.addFields({
-                        name: `🔴 ${displayName}`,
-                        value: `Brak odpowiedzi lub serwer offline`,
-                        inline: false,
-                    });
-                }
-            }
-
-            embed.setFooter({
-                text: `Aktywne serwery: ${onlineServersCount}/${Object.keys(PREDEFINED_SERVERS).length} | Łącznie graczy: ${totalPlayers}`,
-            });
-
-            await interaction.editReply({ embeds: [embed] });
+            await statusUpdater.addPanel(message.channelId, message.id);
         } catch (e) {
             logger.error(e as Error, 'Błąd podczas wykonywania komendy /status:');
             await interaction.editReply('❌ Wystąpił błąd podczas pobierania statusu serwerów.');
